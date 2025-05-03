@@ -58,6 +58,9 @@ Value	Name	Pos	Pts
 The system includes visualization capabilities to plot player value against projected points, helping users to visually assess player value.
 
 # Using the Optimizer
+
+The Optimization Engine processes player data from an Excel file, formulates a linear programming problem, and solves it to find the optimal player selections. It can generate multiple lineup variations by iteratively solving the problem with additional constraints.
+
 The Fantasy Football Salary Cap Draft Optimizer is a Jupyter notebook application that requires the following workflow:
 
 Prepare player data in Excel format with Value, Points, Name, and Position columns
