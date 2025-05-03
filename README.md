@@ -68,7 +68,6 @@ Configure the salary cap and position requirements in the notebook
 Run the notebook to generate optimized lineups
 Review the output Excel file containing the selected players and lineup statistics
 The optimizer allows for multiple lineup variations by iteratively introducing constraints that force the solver to find different combinations of players, providing fantasy football managers with multiple viable draft strategies.
-
 ![Screenshot](opti.png)
 
 # Conclusion
