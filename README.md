@@ -1,5 +1,5 @@
 # SalaryCapFantasyFootballDraftOptimizer
-view webpage at following link (https://deepwiki.com/nbergeland/SalaryCapFantasyFootballDraftOptimizer#overview)
+View webpage at following link (https://deepwiki.com/nbergeland/SalaryCapFantasyFootballDraftOptimizer#overview)
 
 The Fantasy Football Salary Cap Draft Optimizer is a tool designed to help fantasy football managers optimize their player selections while adhering to salary cap constraints. It uses linear programming techniques to mathematically determine the optimal combination of players that maximizes projected fantasy points within the constraints of position requirements and a specified salary cap.
 
