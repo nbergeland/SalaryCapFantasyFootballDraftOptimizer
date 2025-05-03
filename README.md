@@ -18,7 +18,8 @@ Customizable salary cap values
 The system is built around a single Jupyter notebook that handles the entire optimization process from data loading to solution generation.
 
 # Components and Workflow
-Technology Stack
+![Screenshot](components.png)
+# Technology Stack
 The system leverages several Python libraries to accomplish its optimization tasks:
 
 Library	Purpose
