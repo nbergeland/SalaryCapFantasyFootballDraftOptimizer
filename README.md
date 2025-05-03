@@ -30,8 +30,9 @@ plotly.express	Data visualization
 
 # Optimization Process in Detail
 The core of the system is the linear programming optimization that selects the best combination of players.
+![Screenshot](optimization.png)
 
-Optimization Model
+# Optimization Model
 The linear programming model can be described as:
 
 Decision Variables: Binary variables (0 or 1) for each player, indicating whether they are selected
@@ -43,7 +44,7 @@ Constraints:
 
 # Input Data Structure
 The input data is expected to be an Excel file with columns for player values (salaries), projected points, names, and positions.
-
+![Screenshot](structure.png)
 Example of the input data format:
 
 Value	Name	Pos	Pts
