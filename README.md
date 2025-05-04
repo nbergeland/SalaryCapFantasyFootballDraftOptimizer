@@ -72,5 +72,5 @@ The optimizer allows for multiple lineup variations by iteratively introducing c
 # Conclusion
 The Fantasy Football Salary Cap Draft Optimizer provides a powerful mathematical approach to solving the complex problem of maximizing fantasy points while adhering to salary cap constraints and position requirements. By leveraging linear programming techniques, it can generate optimal and near-optimal lineups, giving fantasy football managers data-driven insights for their draft strategy.
 
-View webpage at following link (https://deepwiki.com/nbergeland/SalaryCapFantasyFootballDraftOptimizer#overview)
+View webpage at following link for greater detail: (https://deepwiki.com/nbergeland/SalaryCapFantasyFootballDraftOptimizer#overview)
 
