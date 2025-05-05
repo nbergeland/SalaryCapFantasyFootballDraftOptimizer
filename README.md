@@ -22,10 +22,14 @@ The system is built around a single Jupyter notebook that handles the entire opt
 The system leverages several Python libraries to accomplish its optimization tasks:
 
 Library	Purpose
-pandas	Data loading and manipulation
-PuLP	Linear programming optimization
-openpyxl	Excel file generation
-plotly.express	Data visualization
+
+- pandas - Data loading and manipulation
+
+- PuLP -	Linear programming optimization
+
+- openpyxl - Excel file generation
+
+- plotly.express - Data visualization
 
 # Optimization Process in Detail
 The core of the system is the linear programming optimization that selects the best combination of players.
