@@ -22,7 +22,7 @@ The system is built around a single Jupyter notebook that handles the entire opt
 # Technology Stack
 The system leverages several Python libraries to accomplish its optimization tasks:
 
-Library	Purpose
+**Library	& Purpose**
 
 - pandas - Data loading and manipulation
 
