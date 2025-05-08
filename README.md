@@ -40,11 +40,13 @@ The core of the system is the linear programming optimization that selects the b
 The linear programming model can be described as:
 
 Decision Variables: Binary variables (0 or 1) for each player, indicating whether they are selected
+
 Objective Function: Maximize the sum of (projected points × selection decision) for all players
+
 Constraints:
-  Position constraints (e.g., exactly 1 quarterback, 3 running backs, etc.)
-  Salary cap constraint (sum of selected players' salaries ≤ cap)
-  For generating multiple lineups, constraints to force different solutions
+  - Position constraints (e.g., exactly 1 quarterback, 3 running backs, etc.)
+  - Salary cap constraint (sum of selected players' salaries ≤ cap)
+  - For generating multiple lineups, constraints to force different solutions
 
 # Input Data Structure
 The input data is expected to be an Excel file with columns for player values (salaries), projected points, names, and positions.
