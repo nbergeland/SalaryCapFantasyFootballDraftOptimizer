@@ -5,13 +5,14 @@ The Fantasy Football Salary Cap Draft Optimizer is a tool designed to help fanta
 This page provides a high-level overview of the system's purpose, architecture, and functionality. 
 
 # Purpose and Key Features
-The Fantasy Football Salary Cap Draft Optimizer addresses a common challenge in salary cap fantasy football leagues: selecting the best possible lineup while staying under a salary cap. Key features include:
+The Fantasy Football Salary Cap Draft Optimizer addresses a common challenge in salary cap fantasy football leagues: selecting the best possible lineup while staying under a salary cap. 
 
-Maximization of projected fantasy points
-Adherence to salary cap constraints
-Compliance with position requirements
-Generation of multiple viable lineup alternatives
-Customizable salary cap values
+Key features include:
+1. Maximization of projected fantasy points
+2. Adherence to salary cap constraints
+3. Compliance with position requirements
+4. Generation of multiple viable lineup alternatives
+5. Customizable salary cap values
 
 # System Architecture
 The system is built around a single Jupyter notebook that handles the entire optimization process from data loading to solution generation.
