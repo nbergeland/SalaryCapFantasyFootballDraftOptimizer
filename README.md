@@ -39,8 +39,10 @@ Feature highlights:
   after any specific player goes, and a stamp on every pick in the draft log.
 - **League sync** — pair with your real draft: **Sleeper** live auto-sync (league
   settings, budget, and every pick with its price via Sleeper's public API — no
-  login), and **ESPN** paste-sync (open your league's JSON while logged in, paste,
-  re-paste to re-sync). Requires opening `index.html` locally or via GitHub Pages.
+  login), **ESPN** paste-sync (open your league's JSON while logged in, paste,
+  re-paste to re-sync), and **Yahoo** paste-sync (copy the Draft Results page or the
+  draft room's results panel; prices and your team are detected automatically).
+  Sleeper sync requires opening `index.html` locally or via GitHub Pages.
 - **Live inflation** — tracks money actually leaving the room vs expected values and
   re-prices every remaining player (the classic auction-inflation correction).
 - **Risk appetite dial** — tilt the objective toward ceilings (league-winner hunting)

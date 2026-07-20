@@ -325,6 +325,21 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
           <button class="primary" id="esApply">Apply picks</button>
         </p>
         <p class="note" id="esStatus"></p>
+
+        <h3 style="margin-top:14px">Yahoo — paste sync</h3>
+        <p class="note">Yahoo's API needs an OAuth app + server, which a local page can't
+          do — so paste instead: open your league's <b>Draft Results</b> page (or the
+          Results panel inside the live draft room), select all, copy, paste below.
+          Re-paste anytime to re-sync; already-recorded picks are skipped. Auction
+          prices ($) are picked up automatically.</p>
+        <p>
+          <input type="text" id="yhTeam" placeholder="My Yahoo team name" style="width:200px">
+          <span class="note">picks apply in the order pasted — paste whole rounds top-to-bottom
+            so snake round math stays true</span>
+        </p>
+        <textarea id="yhPaste" placeholder="Round 1&#10;1. Bijan Robinson (RB - ATL) $68 Berg's Best&#10;2. Ja'Marr Chase (WR - Cin) $61 The Rivals&#10;…"></textarea>
+        <p><button class="primary" id="yhApply">Apply picks</button></p>
+        <p class="note" id="yhStatus"></p>
       </div>
       <div class="card">
         <h2>2026 offseason briefing</h2>
@@ -404,9 +419,10 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         (the bundled 2026 set is a July consensus snapshot — refresh it the week of your
         draft). Apply boosts/fades for late news.</li>
       <li><b>Pairing with your real draft:</b> in <i>Data &amp; News → League sync</i>,
-        connect Sleeper (live auto-sync of every pick and price) or ESPN (paste-sync).
-        Synced picks flow into the log exactly like manual ones — you can stop logging
-        by hand entirely in a Sleeper auction.</li>
+        connect Sleeper (live auto-sync of every pick and price), ESPN (paste the league
+        JSON), or Yahoo (paste the Draft Results text). Synced picks flow into the log
+        exactly like manual ones — you can stop logging by hand entirely in a Sleeper
+        auction.</li>
       <li><b>Every nomination (auction):</b> type the player's name, click the row (or
         dot). The sticky bar shows the one number that matters — <b>Max bid</b>. Bid to
         it, never past it.</li>
@@ -1729,6 +1745,53 @@ function espnApply(){
       (res.unmatched.length>4?"…":"") : "")+".");
 }
 
+/* ---------- Yahoo (free-text paste) ---------- */
+const yhStatus=t=>{ $("#yhStatus").textContent=t; };
+// Parse copied Yahoo draft-results text: find the longest known player name in
+// each line, take the first $price on the line, flag "mine" by team-name match.
+function yahooParse(text, myTeam){
+  const entries=S.players
+    .map(p=>({p, n:normName(p.name)}))
+    .filter(e=>e.p.pos!=="DST" && e.n.length>=5)
+    .sort((a,b)=>b.n.length-a.n.length);
+  const dsts=S.players.filter(p=>p.pos==="DST")
+    .map(p=>({p, nick:normName(p.name).replace(/dst$/,""), abbr:p.team.toLowerCase()}));
+  const my=(myTeam||"").trim().toLowerCase();
+  const picks=[];
+  for(const raw of text.split(/\r?\n/)){
+    const line=raw.trim();
+    if(line.length<6) continue;
+    const ln=normName(line);
+    let hit=null;
+    if(/\b(def|dst|d\/st)\b/i.test(line)){
+      hit=(dsts.find(d=>d.nick && ln.includes(d.nick))
+        || dsts.find(d=>d.abbr.length>=2 && ln.includes(d.abbr)))?.p || null;
+    }
+    if(!hit){
+      const e=entries.find(e=>ln.includes(e.n));  // longest name wins (sorted)
+      hit=e? e.p : null;
+    }
+    if(!hit) continue;
+    const price=(line.match(/\$\s?(\d+)/)||[])[1];
+    picks.push({name:hit.name, pos:hit.pos, team:hit.team,
+      price:+price||1, mine: my? line.toLowerCase().includes(my) : false});
+  }
+  return picks;
+}
+function yahooApply(){
+  const text=$("#yhPaste").value;
+  if(!text.trim()){ yhStatus("Paste the draft results text first."); return; }
+  const my=$("#yhTeam").value;
+  const picks=yahooParse(text, my);
+  if(!picks.length){ yhStatus("No recognizable picks found — make sure the paste "+
+    "includes player names (and check spelling against the pool)."); return; }
+  const res=applyExternalPicks(picks);
+  yhStatus(`Recognized ${picks.length} picks — ${res.applied} new applied, `+
+    `${res.skipped} already in`+
+    (my.trim()? "" : " · tip: fill in your team name so your picks land on your roster")+
+    (res.unmatched.length? `, unmatched: ${res.unmatched.slice(0,4).join(", ")}` : "")+".");
+}
+
 /* ---------- settings ---------- */
 function settingsToForm(){
   const s=S.settings;
@@ -1848,6 +1911,7 @@ function bind(){
   $("#esSeason").addEventListener("input",esLinkSync); esLinkSync();
   $("#esRead").addEventListener("click",espnRead);
   $("#esApply").addEventListener("click",espnApply);
+  $("#yhApply").addEventListener("click",yahooApply);
   $("#themeBtn").addEventListener("click",()=>{
     const cur=document.documentElement.dataset.theme;
     const next=cur==="dark"?"light":cur==="light"?"dark":
@@ -1872,7 +1936,7 @@ window.APP={get S(){return S},get M(){return M},get R(){return R},
   recompute,draftPlayer,undo,importCSV,importRows,importXLSX,parseXLSX,
   solveCompletion,posTable,combine,playerId,normPos,parseCSV,mapHeaders,
   SYNC,applyExternalPicks,sleeperFind,sleeperLoad,sleeperSync,espnRead,espnApply,
-  normName,matchPlayer,buildNameIndex};
+  yahooParse,yahooApply,normName,matchPlayer,buildNameIndex};
 </script>
 </body>
 </html>
