@@ -136,6 +136,7 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
   <h1>BERG SHEETS</h1><span class="season">2026</span>
   <span class="asof" id="asof"></span>
   <span class="spacer"></span>
+  <button id="syncBtn" title="Connect your Sleeper / ESPN / Yahoo league">⚡ League sync</button>
   <button id="themeBtn" title="Toggle light/dark">◐</button>
   <button id="exportBtn">Export draft</button>
   <button id="importBtn">Import</button>
@@ -1171,7 +1172,10 @@ function renderTiles(){
     const {myBudget, optBudget, benchOpen} = budgetForOptimizer(assign);
     tileLbl("#tBudget","My budget left");
     $("#tBudget").textContent = fmt$(myBudget);
-    tileSub("#tBudget", `${fmt$(optBudget)} for starters after bench reserve (${benchOpen} bench open)`);
+    const lg=budgetLedger();
+    const pace = lg && Math.abs(lg.diff)>1
+      ? ` · ${fmt$(Math.abs(lg.diff))} ${lg.diff>0?"over":"under"} value so far` : "";
+    tileSub("#tBudget", `${fmt$(optBudget)} for starters after bench reserve (${benchOpen} bench open)${pace}`);
     tileLbl("#tMaxBid","Max single bid");
     $("#tMaxBid").textContent = fmt$(Math.max(0, myBudget-(spotsOpen+benchOpen-1)));
     tileSub("#tMaxBid","keep $1 for every other open spot");
@@ -1272,8 +1276,16 @@ function renderRoster(){
   const a = myRosterAssignment();
   const el = $("#roster"); el.innerHTML="";
   const snake=isSnake();
+  const rowFor=p=>M.rows.find(r=>r.p===p);
   const pickLabel=p=>{
-    if(!snake) return fmt$(p.drafted.price);
+    if(!snake){
+      const r=rowFor(p);
+      const d=r? Math.round(p.drafted.price - r.blended) : 0;
+      const chip = Math.abs(d)>=1
+        ? ` <span class="${d>0?"down":"up"}" title="paid ${fmt$(p.drafted.price)} vs model value ${fmt$(r.blended)}">${d>0?"+":"−"}$${Math.abs(d)}</span>`
+        : "";
+      return fmt$(p.drafted.price)+chip;
+    }
     const e=S.log.find(x=>x.id===playerId(p));
     return e? roundDotPick(e.n) : "—";
   };
@@ -1290,6 +1302,36 @@ function renderRoster(){
   for(let i=0;i<(S.settings.slots.FLEX||0);i++) slotRow("FLEX", a.flex[i]);
   const bn=S.settings.bench;
   for(let i=0;i<bn;i++) slotRow("Bench", a.bench[i]);
+  if(!snake){
+    const lg=budgetLedger();
+    if(lg){
+      const d=document.createElement("div"); d.className="lognote"; d.style.marginTop="8px";
+      let html=`Spent <b>${fmt$(lg.paid)}</b> on ${lg.count} player${lg.count===1?"":"s"} · model value ${fmt$(lg.value)} → `+
+        (lg.diff>1? `<span class="down">${fmt$(lg.diff)} over budget pace</span> — hunt bargains from here`
+        : lg.diff<-1? `<span class="up">${fmt$(-lg.diff)} under budget pace</span> — you can afford to push a bid`
+        : `right on value`);
+      if(lg.surplus!=null && lg.surplus>2)
+        html+=`<br><span class="down">${fmt$(lg.surplus)} would go unspent</span> even after the optimal completion — `+
+          `loosen up: unspent money is wasted value.`;
+      d.innerHTML=html;
+      el.appendChild(d);
+    }
+  }
+}
+// auction pacing: what I've paid vs what the model says my players are worth,
+// plus money even the optimal completion can't spend
+function budgetLedger(){
+  const mine=S.players.filter(p=>p.drafted&&p.drafted.mine);
+  if(!mine.length) return null;
+  let paid=0, value=0;
+  for(const p of mine){
+    const r=M.rows.find(r=>r.p===p);
+    paid+=p.drafted.price; value+=r? r.blended : p.drafted.price;
+  }
+  const surplus = R.sol && !R.sol.snake
+    ? R.sol.B - R.sol.chosen.reduce((a,r)=>a+r.adj,0) : null;
+  return {count:mine.length, paid, value:Math.round(value),
+    diff:Math.round(paid-value), surplus};
 }
 
 function renderOptimal(){
@@ -1383,7 +1425,11 @@ function renderNominate(){
 
 function renderLog(){
   const el=$("#log"); el.innerHTML="";
-  if(!S.log.length){ el.innerHTML='<p class="note">No picks yet. Record every sale — the model feeds on prices.</p>'; return;}
+  if(!S.log.length){ el.innerHTML='<p class="note">No picks yet. Record every sale — '+
+    'the model feeds on prices. Or <a href="#" id="logSyncLink">connect your league</a> '+
+    '(Sleeper live-sync, ESPN/Yahoo paste) and picks flow in on their own.</p>';
+    el.querySelector("#logSyncLink").addEventListener("click",e=>{e.preventDefault();gotoSync();});
+    return;}
   const list=S.log.slice().reverse();
   for(const e of list){
     const idx=S.log.indexOf(e);
@@ -1831,13 +1877,23 @@ function renderAll(){
   if(S.sel) selectPlayer(S.sel);           // keep block bar fresh after recompute
   else $("#block").classList.add("hidden");
 }
+function showTab(tab){
+  document.querySelectorAll("nav.tabs button").forEach(x=>
+    x.classList.toggle("active", x.dataset.tab===tab));
+  for(const t of ["draft","data","settings","guide"])
+    document.getElementById("tab-"+t).classList.toggle("hidden", t!==tab);
+  if(tab==="draft") renderScatter();
+}
+function gotoSync(){
+  showTab("data");
+  const el=$("#slUser");
+  el.closest(".card").scrollIntoView({behavior:"smooth", block:"start"});
+  el.focus();
+}
 function bind(){
-  document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>{
-    document.querySelectorAll("nav.tabs button").forEach(x=>x.classList.toggle("active",x===b));
-    for(const t of ["draft","data","settings","guide"])
-      document.getElementById("tab-"+t).classList.toggle("hidden", t!==b.dataset.tab);
-    if(b.dataset.tab==="draft") renderScatter();
-  }));
+  document.querySelectorAll("nav.tabs button").forEach(b=>
+    b.addEventListener("click",()=>showTab(b.dataset.tab)));
+  $("#syncBtn").addEventListener("click",gotoSync);
   const chips=$("#posChips");
   for(const p of ["ALL","QB","RB","WR","TE","FLEX","K","DST"]){
     const c=document.createElement("button");
