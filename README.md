@@ -30,13 +30,20 @@ Feature highlights:
   provably optimal for your remaining slots/budget, re-solved live.
 - **Max-bid advisor** — the largest price at which winning a player still beats the
   best roster you could build without them. Bid to it, never past it.
+- **Positional scarcity** — how much of each position's market value ($) is still on
+  the board: a live per-position strip, a "Pos left" column showing what remains
+  after any specific player goes, and a stamp on every pick in the draft log.
+- **League sync** — pair with your real draft: **Sleeper** live auto-sync (league
+  settings, budget, and every pick with its price via Sleeper's public API — no
+  login), and **ESPN** paste-sync (open your league's JSON while logged in, paste,
+  re-paste to re-sync). Requires opening `index.html` locally or via GitHub Pages.
 - **Live inflation** — tracks money actually leaving the room vs expected values and
   re-prices every remaining player (the classic auction-inflation correction).
-- **VORP dollar model** — replacement-level-based intrinsic values, blendable with
-  market AAV.
 - **Risk appetite dial** — tilt the objective toward ceilings (league-winner hunting)
   or floors.
 - **Nomination ideas** — expensive players you don't want, to drain rival budgets.
+- **CSV *and* Excel import** — the legacy `auc_values_ALL.xlsx` sheet format imports
+  directly, stat columns and all, with no conversion.
 - **Draft log with undo, JSON export/import, CSV export**, dark/light theme.
 
 ## 📓 Python engine & notebook

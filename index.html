@@ -33,6 +33,7 @@ body{margin:0;background:var(--page);color:var(--ink);
   font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
 h1{font-size:18px;margin:0}
 h2{font-size:14px;margin:0 0 8px;color:var(--ink)}
+h3{font-size:13px;margin:10px 0 4px;color:var(--ink)}
 a{color:var(--accent)}
 header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;
   padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface);
@@ -180,7 +181,7 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
             <th data-k="pos">Pos</th><th data-k="aav" title="Market average auction value">AAV</th>
             <th data-k="adj" title="Blended value × live inflation">Adj$</th>
             <th data-k="rpts" title="Risk-adjusted projection under your scoring">Proj</th>
-            <th data-k="vorp" title="Points above replacement starter">VORP</th>
+            <th data-k="left" title="Share of this position's market value still on the board if this player is drafted">Pos left</th>
             <th data-k="maxbid" title="Bid up to this; past it, passing is optimal">Max bid</th>
             <th></th>
           </tr></thead>
@@ -278,6 +279,54 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
     </div>
     <div>
       <div class="card">
+        <h2>League sync — pair with your real draft</h2>
+        <p class="note">Live sync needs direct network access: open <code>index.html</code>
+          locally or via GitHub Pages. The claude.ai artifact copy runs in a sandbox that
+          blocks outside requests, so use it standalone or with CSV/Excel import.</p>
+
+        <h3>Sleeper — live auto-sync</h3>
+        <p>
+          <input type="text" id="slUser" placeholder="Sleeper username" style="width:150px">
+          <input type="number" id="slSeason" value="2026" style="width:74px" title="Season">
+          <button id="slFind">Find leagues</button>
+        </p>
+        <p>
+          <select id="slLeague" style="max-width:220px"></select>
+          <button id="slLoad">Load league</button>
+        </p>
+        <p>
+          My team: <select id="slMyTeam" style="max-width:170px"></select>
+          <label class="note"><input type="checkbox" id="slApplySettings" checked>
+            apply league settings</label>
+        </p>
+        <p>
+          <button class="primary" id="slSyncNow">Sync picks now</button>
+          <button id="slAuto">▶ Auto-sync every 5s</button>
+        </p>
+        <p class="note" id="slStatus">Reads your league, roster slots, auction budget and
+          every pick (with prices) from Sleeper's public API — no login needed.</p>
+
+        <h3 style="margin-top:14px">ESPN — paste sync</h3>
+        <p>
+          <input type="text" id="esLeague" placeholder="League ID" style="width:110px">
+          <input type="number" id="esSeason" value="2026" style="width:74px" title="Season">
+          <a id="esLink" href="#" target="_blank" rel="noopener">open league JSON ↗</a>
+        </p>
+        <p class="note">ESPN blocks cross-site reads from private leagues (login cookies),
+          so full auto-sync isn't possible from a static page. Instead: log into ESPN in
+          this browser, click the link above, copy the whole JSON page, paste below, and
+          re-paste whenever you want to re-sync — picks and prices apply in one shot.</p>
+        <textarea id="esPaste" placeholder='Paste the ESPN league JSON here…' style="min-height:70px"></textarea>
+        <p>
+          <button id="esRead">Read JSON</button>
+          My team: <select id="esMyTeam" style="max-width:170px"></select>
+          <label class="note"><input type="checkbox" id="esApplySettings" checked>
+            apply budget/slots</label>
+          <button class="primary" id="esApply">Apply picks</button>
+        </p>
+        <p class="note" id="esStatus"></p>
+      </div>
+      <div class="card">
         <h2>2026 offseason briefing</h2>
         <p class="note" id="newsAsOf"></p>
         <div id="news"></div>
@@ -349,14 +398,19 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         <i>Settings</i>. Import a fresh projections/values CSV in <i>Data &amp; News</i>
         (the bundled 2026 set is a July consensus snapshot — refresh it the week of your
         draft). Apply boosts/fades for late news.</li>
+      <li><b>Pairing with your real draft:</b> in <i>Data &amp; News → League sync</i>,
+        connect Sleeper (live auto-sync of every pick and price) or ESPN (paste-sync).
+        Synced picks flow into the log exactly like manual ones — you can stop logging
+        by hand entirely in a Sleeper auction.</li>
       <li><b>Every nomination:</b> type the player's name, click the row (or dot). The
         sticky bar shows the one number that matters — <b>Max bid</b>. Bid to it, never past it.</li>
       <li><b>Every sale:</b> record it — <i>I won it</i> or <i>Someone else</i>, with the
         real price. Everything (budget, inflation, values, optimal completion, max bids)
-        recomputes instantly, and the draft log stamps each pick with the position's
-        scarcity — the % of that position's draftable value now off the board. The
-        scarcity strip above the pool shows all positions live: when RB crosses ~70%,
-        the tier cliff is close.</li>
+        recomputes instantly, and the draft log stamps each pick with how much of that
+        position's market value is still on the board. The strip above the pool shows
+        all positions live, and the "Pos left" column shows what would remain after
+        each specific player goes — when RB drops under ~30% left, the tier cliff
+        is on you.</li>
       <li><b>Nominating:</b> use <i>Nomination ideas</i> — expensive players you don't
         want. Money they burn elsewhere is discount on your targets.</li>
       <li><b>Trust the completion card:</b> if it says your best roster needs a $34 WR
@@ -501,16 +555,23 @@ function rebuildModel(){
     r.adj = r.p.drafted ? r.p.drafted.price
           : Math.max(1, Math.round(1 + (r.blended-1)*M.infl));
   M.moneyLeft = moneyLeft; M.spent = spent;
-  // positional scarcity: share of each position's draftable VORP already drafted
-  M.scarcity = {};
+  // positional scarcity: share of each position's market value ($) still on the
+  // board. Dollar-based (the sheet's Value/AAV column), not VORP.
+  M.posValue = {};
   for(const pos of POSITIONS){
-    let total=0, gone=0;
+    let total=0, left=0;
     for(const r of rows){
-      if(r.p.pos!==pos || r.p.out || r.vorp<=0) continue;
-      total += r.vorp;
-      if(r.p.drafted) gone += r.vorp;
+      if(r.p.pos!==pos || r.p.out) continue;
+      const v = Math.max(1, r.p.aav);
+      total += v;
+      if(!r.p.drafted) left += v;
     }
-    M.scarcity[pos] = total>0 ? Math.round(100*gone/total) : 0;
+    M.posValue[pos] = {total, left, pct: total>0 ? Math.round(100*left/total) : 0};
+  }
+  for(const r of rows){   // % of the position's value left if THIS player also goes
+    const pv = M.posValue[r.p.pos];
+    r.leftAfter = (!r.p.drafted && pv.total>0)
+      ? Math.max(0, Math.round(100*(pv.left - Math.max(1,r.p.aav))/pv.total)) : null;
   }
 }
 
@@ -752,11 +813,14 @@ function recompute(){
 }
 
 /* ============================ draft actions ============================ */
-function draftPlayer(p, price, mine){
+function applyPick(p, price, mine){  // shared by manual drafting and league sync
   p.drafted = {price:Math.max(1,Math.round(price)), mine};
-  rebuildModel();   // cheap; snapshots post-pick positional scarcity for the log
+  rebuildModel();   // cheap; snapshots post-pick positional value remaining
   S.log.push({id:playerId(p), name:p.name, pos:p.pos, price:p.drafted.price,
-    mine, n:S.log.length+1, scar:M.scarcity[p.pos]});
+    mine, n:S.log.length+1, left:M.posValue[p.pos].pct});
+}
+function draftPlayer(p, price, mine){
+  applyPick(p, price, mine);
   S.sel=null; recompute();
 }
 function undo(idx){
@@ -917,11 +981,11 @@ async function importXLSX(buf, mode, w){
 }
 function exportCSV(){
   const sc=S.settings.scoring;
-  const lines=[["Name","Team","Pos","AAV","Proj","VORP","Fair$","Adj$","MaxBid","Boost%","Out","Drafted","Price","Mine"].join(",")];
+  const lines=[["Name","Team","Pos","AAV","Proj","PosLeftAfter%","Fair$","Adj$","MaxBid","Boost%","Out","Drafted","Price","Mine"].join(",")];
   for(const r of M.rows){
     const id=playerId(r.p);
     lines.push([`"${r.p.name}"`,r.p.team,r.p.pos,r.p.aav,r.pts0.toFixed(1),
-      r.vorp,Math.round(r.fair),r.adj,(R.bids.get(id)??""),r.p.boost||0,
+      (r.leftAfter??""),Math.round(r.fair),r.adj,(R.bids.get(id)??""),r.p.boost||0,
       r.p.out?1:"",r.p.drafted?1:"",r.p.drafted?r.p.drafted.price:"",
       r.p.drafted&&r.p.drafted.mine?1:""].join(","));
   }
@@ -970,7 +1034,7 @@ function renderPool(){
       case "name": return r.p.name; case "team": return r.p.team;
       case "pos": return r.p.pos; case "aav": return r.p.aav;
       case "adj": return r.adj; case "rpts": return r.rpts;
-      case "vorp": return r.vorp; case "maxbid": return R.bids.get(id)??-1;
+      case "left": return r.leftAfter??101; case "maxbid": return R.bids.get(id)??-1;
     }};
   rows.sort((a,b)=>{const va=val(a),vb=val(b);
     return (typeof va==="string"? va.localeCompare(vb): va-vb)*poolSort.dir;});
@@ -985,7 +1049,7 @@ function renderPool(){
     tr.innerHTML = `<td class="l">${esc(r.p.name)}${r.p.out?' <span class="pill">OUT</span>':""}${r.p.note?` <span class="pill" title="${esc(r.p.note)}">ⓘ</span>`:""}</td>
       <td>${esc(r.p.team)}</td><td><span class="pos ${r.p.pos}">${r.p.pos}</span></td>
       <td>${fmt$(r.p.aav)}</td><td><b>${fmt$(r.adj)}</b></td>
-      <td>${r.rpts.toFixed(0)}</td><td>${r.vorp>0?r.vorp.toFixed(0):"·"}</td>
+      <td>${r.rpts.toFixed(0)}</td><td>${r.leftAfter!=null?r.leftAfter+"%":"—"}</td>
       <td>${r.p.drafted?"—": bid===0?'<span class="down">pass</span>':bid!=null?"<b>"+fmt$(bid)+"</b>":"…"}</td>
       <td>${r.p.drafted?
         `<button class="small" data-act="undo" data-id="${id}">undo</button>`:
@@ -997,9 +1061,8 @@ function renderPool(){
     tb.appendChild(tr);
   }
   $("#poolNote").textContent =
-    `${rows.length} shown · replacement levels: ` +
-    POSITIONS.map(p=>`${p} ${M.repl[p].toFixed(0)}`).join(" · ") +
-    ` · Adj$ includes ${Math.round((M.infl-1)*100)}% inflation`;
+    `${rows.length} shown · "Pos left" = % of the position's market value remaining if that player is drafted · ` +
+    `Adj$ includes ${Math.round((M.infl-1)*100)}% inflation`;
   document.querySelectorAll("#pool th[data-k]").forEach(th=>{
     th.classList.toggle("sorted", th.dataset.k===poolSort.k);});
 }
@@ -1007,12 +1070,12 @@ function renderPool(){
 function renderScarcity(){
   const el=$("#scarcity"); el.innerHTML="";
   const lab=document.createElement("span");
-  lab.className="slabel"; lab.textContent="Position value gone:";
+  lab.className="slabel"; lab.textContent="Position value remaining:";
   el.appendChild(lab);
   const posColor={QB:"var(--qb)",RB:"var(--rb)",WR:"var(--wr)",TE:"var(--te)",
     K:"var(--muted)",DST:"var(--muted)"};
   for(const pos of POSITIONS){
-    const pct=M.scarcity[pos]??0;
+    const pct=M.posValue[pos]?.pct??0;
     const d=document.createElement("span"); d.className="sitem";
     d.innerHTML=`<b>${pos}</b><span class="track"><span class="fill"
       style="width:${pct}%;background:${posColor[pos]}"></span></span>${pct}%`;
@@ -1082,7 +1145,7 @@ function renderLog(){
     const d=document.createElement("div"); d.className="roster-slot";
     d.innerHTML=`<span class="nm">#${e.n} <span class="pos ${e.pos}">${e.pos}</span>
       ${esc(e.name)} ${e.mine?'<span class="pill up">me</span>':""}
-      ${e.scar!=null?`<span class="pill" title="Share of ${e.pos} draftable value gone after this pick">${e.pos} ${e.scar}% gone</span>`:""}</span>
+      ${e.left!=null?`<span class="pill" title="Share of ${e.pos} market value still on the board after this pick">${e.pos} ${e.left}% left</span>`:""}</span>
       <span>${fmt$(e.price)} <button class="small" data-i="${idx}">undo</button></span>`;
     d.querySelector("button").addEventListener("click",()=>undo(idx));
     el.appendChild(d);
@@ -1133,7 +1196,7 @@ function renderScatter(){
     hit.addEventListener("mousemove",e=>{
       tip.style.display="block"; tip.style.left=(e.clientX+14)+"px"; tip.style.top=(e.clientY+8)+"px";
       tip.innerHTML=`<b>${esc(r.p.name)}</b> ${esc(r.p.team)} · ${r.p.pos}<br>
-        AAV ${fmt$(r.p.aav)} → Adj ${fmt$(r.adj)}<br>${r.rpts.toFixed(0)} pts · VORP ${r.vorp.toFixed(0)}
+        AAV ${fmt$(r.p.aav)} → Adj ${fmt$(r.adj)}<br>${r.rpts.toFixed(0)} pts · ${r.leftAfter!=null?r.p.pos+" "+r.leftAfter+"% left after him":""}
         ${drafted? "<br>drafted "+fmt$(r.p.drafted.price):("<br>max bid "+(R.bids.get(playerId(r.p))===0?"pass":fmt$(R.bids.get(playerId(r.p))??0)))}`;});
     hit.addEventListener("mouseleave",()=>tip.style.display="none");
     hit.addEventListener("click",()=>selectPlayer(playerId(r.p)));
@@ -1195,7 +1258,7 @@ function selectPlayer(id){
   if(!r || r.p.drafted){ S.sel=null; $("#block").classList.add("hidden"); renderPool(); return; }
   $("#block").classList.remove("hidden");
   $("#blockWho").textContent = `${r.p.name} (${r.p.team} ${r.p.pos})`;
-  $("#blockAav").textContent = `AAV ${fmt$(r.p.aav)} · Adj ${fmt$(r.adj)} · ${r.rpts.toFixed(0)} pts · ${r.p.pos} ${M.scarcity[r.p.pos]??0}% gone`;
+  $("#blockAav").textContent = `AAV ${fmt$(r.p.aav)} · Adj ${fmt$(r.adj)} · ${r.rpts.toFixed(0)} pts · ${r.p.pos} ${M.posValue[r.p.pos]?.pct??0}% left (${r.leftAfter??0}% after him)`;
   const bid = R.bids.get(id);
   const v=$("#blockVerdict");
   if(bid===0){ v.textContent="PASS — doesn't make your roster even at $1"; v.className="verdict down"; }
@@ -1210,6 +1273,211 @@ function blockAction(mine){
   draftPlayer(r.p, +$("#blockPrice").value||1, mine);
   $("#block").classList.add("hidden");
   $("#search").value=""; $("#search").focus();
+}
+
+/* =====================================================================
+   LEAGUE SYNC — Sleeper (live polling) + ESPN (paste)
+   ===================================================================== */
+const SYNC = {sl:{userId:null, leagues:[], league:null, users:[], draftId:null,
+                  applied:new Set(), timer:null},
+              es:{data:null, playersById:null}};
+
+function normName(s){ return String(s).toLowerCase()
+  .replace(/\b(jr|sr|ii|iii|iv|v)\b\.?/g,"").replace(/[^a-z]/g,""); }
+function buildNameIndex(){
+  const idx=new Map();
+  for(const p of S.players){
+    const n=normName(p.name);
+    idx.set(n+"|"+p.pos, p);
+    if(!idx.has(n)) idx.set(n, p);
+  }
+  return idx;
+}
+function matchPlayer(idx, name, pos, team){
+  if(pos==="DST"){
+    const t=String(team||"").toUpperCase();
+    return S.players.find(p=>p.pos==="DST" &&
+      (p.team===t || normName(p.name).startsWith(normName(name).slice(0,6)))) || null;
+  }
+  return idx.get(normName(name)+"|"+pos) || idx.get(normName(name)) || null;
+}
+// list: [{name,pos,team,price,mine}] — applies new picks, skips already-drafted
+function applyExternalPicks(list){
+  const idx=buildNameIndex();
+  let applied=0, skipped=0; const unmatched=[];
+  for(const pk of list){
+    if(!pk.name || !pk.pos){ skipped++; continue; }
+    const p=matchPlayer(idx, pk.name, pk.pos, pk.team);
+    if(!p){ unmatched.push(pk.name); continue; }
+    if(p.drafted){ skipped++; continue; }
+    applyPick(p, pk.price||1, !!pk.mine); applied++;
+  }
+  if(applied) recompute();
+  return {applied, skipped, unmatched};
+}
+
+/* ---------- Sleeper ---------- */
+async function slFetch(path){
+  const r = await fetch("https://api.sleeper.app/v1/"+path);
+  if(!r.ok) throw new Error("Sleeper API "+r.status);
+  return r.json();
+}
+const slStatus = t => { $("#slStatus").textContent = t; };
+async function sleeperFind(){
+  try{
+    const u=$("#slUser").value.trim(), season=$("#slSeason").value||"2026";
+    if(!u){ slStatus("Enter your Sleeper username first."); return; }
+    slStatus("Looking up "+u+"…");
+    const user=await slFetch("user/"+encodeURIComponent(u));
+    if(!user || !user.user_id){ slStatus("User not found."); return; }
+    SYNC.sl.userId=user.user_id;
+    const leagues=await slFetch(`user/${user.user_id}/leagues/nfl/${season}`);
+    SYNC.sl.leagues=leagues||[];
+    const sel=$("#slLeague"); sel.innerHTML="";
+    for(const lg of SYNC.sl.leagues){
+      const o=document.createElement("option"); o.value=lg.league_id;
+      o.textContent=lg.name; sel.appendChild(o);
+    }
+    slStatus(SYNC.sl.leagues.length
+      ? `Found ${SYNC.sl.leagues.length} league(s) — pick one and Load league.`
+      : "No leagues for that season.");
+  }catch(e){ slStatus("Couldn't reach Sleeper ("+e.message+"). If you're on the "+
+    "claude.ai artifact, its sandbox blocks outside requests — run index.html locally."); }
+}
+async function sleeperLoad(){
+  try{
+    const lid=$("#slLeague").value;
+    if(!lid){ slStatus("Find and choose a league first."); return; }
+    slStatus("Loading league…");
+    const [league, users, drafts] = await Promise.all([
+      slFetch("league/"+lid), slFetch(`league/${lid}/users`),
+      slFetch(`league/${lid}/drafts`)]);
+    SYNC.sl.league=league; SYNC.sl.users=users||[];
+    const draft=(drafts||[])[0]||null;
+    SYNC.sl.draftId=draft? draft.draft_id : null;
+    SYNC.sl.applied=new Set();
+    const sel=$("#slMyTeam"); sel.innerHTML="";
+    for(const us of SYNC.sl.users){
+      const o=document.createElement("option"); o.value=us.user_id;
+      o.textContent=us.display_name||us.user_id;
+      if(us.user_id===SYNC.sl.userId) o.selected=true;
+      sel.appendChild(o);
+    }
+    if($("#slApplySettings").checked){
+      const s=S.settings;
+      s.teams=league.total_rosters||s.teams;
+      if(draft&&draft.settings&&draft.settings.budget) s.cap=draft.settings.budget;
+      const rp=league.roster_positions||[];
+      const cnt=k=>rp.filter(x=>x===k).length;
+      s.slots={QB:cnt("QB"),RB:cnt("RB"),WR:cnt("WR"),TE:cnt("TE"),
+        FLEX:cnt("FLEX")+cnt("SUPER_FLEX"),K:cnt("K"),DST:cnt("DEF")};
+      s.bench=cnt("BN");
+      const sc=league.scoring_settings||{};
+      if(sc.rec!=null) s.scoring.rec=sc.rec;
+      if(sc.pass_td!=null) s.scoring.passTd=sc.pass_td;
+      if(sc.pass_int!=null) s.scoring.int=sc.pass_int;
+      if(sc.pass_yd) s.scoring.passYd=Math.round(1/sc.pass_yd);
+      if(sc.rush_yd) s.scoring.rushYd=Math.round(1/sc.rush_yd);
+      if(sc.rush_td!=null) s.scoring.td=sc.rush_td;
+      s.scoring.preset="custom";
+      settingsToForm(); recompute();
+    }
+    slStatus(`Loaded "${league.name}" (${league.total_rosters} teams`+
+      (draft? `, draft ${draft.status}${draft.type==="auction"?", auction":""}` : ", no draft found")+
+      `). Pick your team, then Sync.`);
+  }catch(e){ slStatus("Load failed: "+e.message); }
+}
+async function sleeperSync(){
+  try{
+    if(!SYNC.sl.draftId){ slStatus("Load a league (with a draft) first."); return; }
+    const picks=await slFetch(`draft/${SYNC.sl.draftId}/picks`);
+    const me=$("#slMyTeam").value;
+    const fresh=[];
+    for(const pk of (picks||[])){
+      const key=pk.player_id||String(pk.pick_no);
+      if(SYNC.sl.applied.has(key)) continue;
+      SYNC.sl.applied.add(key);
+      const md=pk.metadata||{};
+      fresh.push({
+        name:(md.first_name||"")+" "+(md.last_name||""),
+        pos:normPos(md.position), team:md.team,
+        price:+(md.amount||0)||1,
+        mine: pk.picked_by===me});
+    }
+    const res=applyExternalPicks(fresh);
+    slStatus(`Synced ${picks?picks.length:0} picks — ${res.applied} new applied, `+
+      `${res.skipped} already in`+(res.unmatched.length?
+      `, unmatched: ${res.unmatched.slice(0,4).join(", ")}${res.unmatched.length>4?"…":""}`:"")+
+      ` · ${new Date().toLocaleTimeString()}`);
+  }catch(e){ slStatus("Sync failed: "+e.message); }
+}
+function sleeperAutoToggle(){
+  if(SYNC.sl.timer){
+    clearInterval(SYNC.sl.timer); SYNC.sl.timer=null;
+    $("#slAuto").textContent="▶ Auto-sync every 5s";
+  }else{
+    SYNC.sl.timer=setInterval(sleeperSync, 5000);
+    $("#slAuto").textContent="⏸ Stop auto-sync";
+    sleeperSync();
+  }
+}
+
+/* ---------- ESPN ---------- */
+const ES_POS={1:"QB",2:"RB",3:"WR",4:"TE",5:"K",16:"DST"};
+const esStatus=t=>{ $("#esStatus").textContent=t; };
+function espnUrl(){
+  const id=$("#esLeague").value.trim(), season=$("#esSeason").value||"2026";
+  return `https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${season}`+
+    `/segments/0/leagues/${id}?view=mDraftDetail&view=mTeam&view=mRoster&view=mSettings`;
+}
+function espnRead(){
+  try{
+    const data=JSON.parse($("#esPaste").value);
+    SYNC.es.data=data;
+    const byId=new Map();
+    for(const t of (data.teams||[]))
+      for(const e of ((t.roster&&t.roster.entries)||[])){
+        const pl=e.playerPoolEntry&&e.playerPoolEntry.player;
+        if(pl) byId.set(pl.id,{name:pl.fullName,pos:ES_POS[pl.defaultPositionId]||null});
+      }
+    SYNC.es.playersById=byId;
+    const sel=$("#esMyTeam"); sel.innerHTML="";
+    for(const t of (data.teams||[])){
+      const o=document.createElement("option"); o.value=t.id;
+      o.textContent=t.name||((t.location||"")+" "+(t.nickname||"")).trim()||("Team "+t.id);
+      sel.appendChild(o);
+    }
+    const picks=(data.draftDetail&&data.draftDetail.picks)||[];
+    esStatus(`Read OK: ${data.teams?data.teams.length:0} teams, ${byId.size} rostered `+
+      `players, ${picks.length} draft picks. Pick your team and Apply.`);
+  }catch(e){ esStatus("Couldn't parse that JSON: "+e.message); }
+}
+function espnApply(){
+  const data=SYNC.es.data;
+  if(!data){ esStatus("Read JSON first."); return; }
+  if($("#esApplySettings").checked && data.settings){
+    const st=data.settings, s=S.settings;
+    if(st.draftSettings&&st.draftSettings.auctionBudget)
+      s.cap=st.draftSettings.auctionBudget;
+    const ls=(st.rosterSettings&&st.rosterSettings.lineupSlotCounts)||null;
+    if(ls){ const g=i=>+ls[i]||0;
+      s.slots={QB:g(0),RB:g(2),WR:g(4),TE:g(6),FLEX:g(23),K:g(17),DST:g(16)};
+      s.bench=g(20);
+    }
+    if(data.teams) s.teams=data.teams.length||s.teams;
+    settingsToForm();
+  }
+  const me=+$("#esMyTeam").value;
+  const picks=((data.draftDetail&&data.draftDetail.picks)||[]).map(pk=>{
+    const pl=SYNC.es.playersById.get(pk.playerId)||{};
+    return {name:pl.name, pos:pl.pos, team:"",
+      price:+(pk.bidAmount||0)||1, mine:pk.teamId===me};
+  });
+  const res=applyExternalPicks(picks);
+  if(!res.applied) recompute();  // settings may still have changed
+  esStatus(`Applied ${res.applied} new picks, ${res.skipped} already in`+
+    (res.unmatched.length? `, unmatched: ${res.unmatched.slice(0,4).join(", ")}`+
+      (res.unmatched.length>4?"…":"") : "")+".");
 }
 
 /* ---------- settings ---------- */
@@ -1311,8 +1579,20 @@ function bind(){
   $("#resetBtn").addEventListener("click",()=>{
     if(!confirm("Clear the draft log and un-draft everyone? (Pool and settings stay.)")) return;
     for(const p of S.players) p.drafted=null;
-    S.log=[]; S.sel=null; recompute();
+    S.log=[]; S.sel=null;
+    SYNC.sl.applied=new Set();
+    if(SYNC.sl.timer) sleeperAutoToggle();
+    recompute();
   });
+  $("#slFind").addEventListener("click",sleeperFind);
+  $("#slLoad").addEventListener("click",sleeperLoad);
+  $("#slSyncNow").addEventListener("click",sleeperSync);
+  $("#slAuto").addEventListener("click",sleeperAutoToggle);
+  const esLinkSync=()=>{ $("#esLink").href=espnUrl(); };
+  $("#esLeague").addEventListener("input",esLinkSync);
+  $("#esSeason").addEventListener("input",esLinkSync); esLinkSync();
+  $("#esRead").addEventListener("click",espnRead);
+  $("#esApply").addEventListener("click",espnApply);
   $("#themeBtn").addEventListener("click",()=>{
     const cur=document.documentElement.dataset.theme;
     const next=cur==="dark"?"light":cur==="light"?"dark":
@@ -1335,7 +1615,9 @@ recompute();
 // expose for headless tests
 window.APP={get S(){return S},get M(){return M},get R(){return R},
   recompute,draftPlayer,undo,importCSV,importRows,importXLSX,parseXLSX,
-  solveCompletion,posTable,combine,playerId,normPos,parseCSV,mapHeaders};
+  solveCompletion,posTable,combine,playerId,normPos,parseCSV,mapHeaders,
+  SYNC,applyExternalPicks,sleeperFind,sleeperLoad,sleeperSync,espnRead,espnApply,
+  normName,matchPlayer,buildNameIndex};
 </script>
 </body>
 </html>
