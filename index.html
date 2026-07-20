@@ -1,0 +1,1942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BERG SHEETS — 2026</title>
+<style>
+:root{
+  color-scheme: light;
+  --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10);
+  --good:#006300; --bad:#d03b3b; --accent:#2a78d6;
+  --qb:#2a78d6; --rb:#008300; --wr:#e87ba4; --te:#eda100; --k:#52514e; --dst:#52514e;
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme: dark;
+    --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+    --good:#0ca30c; --bad:#e66767; --accent:#3987e5;
+    --qb:#3987e5; --rb:#008300; --wr:#d55181; --te:#c98500; --k:#c3c2b7; --dst:#c3c2b7;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+  --good:#0ca30c; --bad:#e66767; --accent:#3987e5;
+  --qb:#3987e5; --rb:#008300; --wr:#d55181; --te:#c98500; --k:#c3c2b7; --dst:#c3c2b7;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);
+  font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+h1{font-size:18px;margin:0}
+h2{font-size:14px;margin:0 0 8px;color:var(--ink)}
+h3{font-size:13px;margin:10px 0 4px;color:var(--ink)}
+a{color:var(--accent)}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+  padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface);
+  position:sticky;top:0;z-index:30}
+.season{background:var(--accent);color:#fff;border-radius:999px;padding:1px 10px;
+  font-weight:600;font-size:12px}
+.asof{color:var(--muted);font-size:12px}
+.spacer{flex:1}
+button,select,input,textarea{font:inherit;color:var(--ink)}
+button{background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:5px 11px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.small{padding:2px 8px;font-size:12px;border-radius:6px}
+input[type=text],input[type=number],select,textarea{background:var(--surface);
+  border:1px solid var(--border);border-radius:8px;padding:5px 9px}
+input[type=number]{width:74px}
+nav.tabs{display:flex;gap:2px;padding:8px 16px 0;background:var(--page)}
+nav.tabs button{border:1px solid transparent;border-bottom:none;background:none;
+  border-radius:8px 8px 0 0;padding:7px 16px;color:var(--ink-2)}
+nav.tabs button.active{background:var(--surface);border-color:var(--border);
+  color:var(--ink);font-weight:600}
+main{padding:14px 16px 60px;max-width:1440px;margin:0 auto}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:12px 14px;margin-bottom:14px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:10px;margin-bottom:14px}
+.tile{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:10px 14px}
+.tile .lbl{font-size:12px;color:var(--ink-2)}
+.tile .val{font-size:24px;font-weight:650;margin-top:2px}
+.tile .sub{font-size:11px;color:var(--muted)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px}
+@media (max-width:980px){.layout{grid-template-columns:1fr}}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--border);border-radius:999px;padding:2px 11px;
+  cursor:pointer;background:none;font-size:13px;color:var(--ink-2)}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.poolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.poolbar input[type=text]{flex:1;min-width:140px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:4px 7px;border-bottom:1px solid var(--grid);
+  white-space:nowrap}
+th{color:var(--muted);font-weight:500;font-size:12px;cursor:pointer;user-select:none;
+  position:sticky;top:0;background:var(--surface);z-index:5}
+th.sorted{color:var(--ink)}
+td.l,th.l{text-align:left}
+tr.inopt td{background:color-mix(in srgb,var(--accent) 8%,transparent)}
+tr.gone td{color:var(--muted);text-decoration:line-through}
+tr.mine td{color:var(--good);font-weight:600}
+tr.sel td{outline:2px solid var(--accent);outline-offset:-2px}
+.pos{display:inline-block;min-width:30px;text-align:center;border-radius:6px;
+  font-size:11px;font-weight:700;padding:1px 5px;color:#fff}
+.pos.QB{background:var(--qb)}.pos.RB{background:var(--rb)}
+.pos.WR{background:var(--wr)}.pos.TE{background:var(--te)}
+.pos.K,.pos.DST{background:none;color:var(--ink-2);border:1px solid var(--axis)}
+.tblwrap{max-height:560px;overflow:auto;border:1px solid var(--grid);border-radius:8px}
+.block{position:sticky;bottom:0;z-index:20;background:var(--surface);
+  border:1px solid var(--accent);border-radius:12px;padding:10px 14px;
+  display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px;
+  box-shadow:0 4px 18px rgba(0,0,0,.15)}
+.block .who{font-weight:650}
+.block .verdict{font-size:17px;font-weight:700}
+.roster-slot{display:flex;justify-content:space-between;gap:8px;
+  padding:3px 0;border-bottom:1px dashed var(--grid);font-size:13px}
+.roster-slot .nm{overflow:hidden;text-overflow:ellipsis}
+.roster-slot .empty{color:var(--muted)}
+.lognote{font-size:12px;color:var(--muted)}
+.newsitem{padding:5px 0;border-bottom:1px dashed var(--grid);font-size:13px}
+.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.field{display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:3px 0}
+.field label{color:var(--ink-2)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);
+  margin:4px 0 2px}
+.scarcity{display:flex;gap:12px;flex-wrap:wrap;align-items:center;
+  font-size:11px;color:var(--ink-2);margin:0 0 8px;
+  font-variant-numeric:tabular-nums}
+.scarcity .slabel{color:var(--muted)}
+.scarcity .sitem{display:inline-flex;align-items:center;gap:5px}
+.scarcity .track{width:44px;height:5px;border-radius:3px;background:var(--grid);
+  overflow:hidden}
+.scarcity .fill{height:100%;border-radius:3px}
+.legend .sw{display:inline-block;width:10px;height:10px;border-radius:3px;
+  margin-right:5px;vertical-align:-1px}
+#tooltip{position:fixed;pointer-events:none;background:var(--surface);
+  border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;
+  box-shadow:0 3px 14px rgba(0,0,0,.18);z-index:60;display:none;max-width:230px}
+.note{font-size:12px;color:var(--muted)}
+.pill{font-size:11px;border:1px solid var(--border);border-radius:999px;
+  padding:0 8px;color:var(--ink-2)}
+.up{color:var(--good)} .down{color:var(--bad)}
+textarea{width:100%;min-height:110px;font-family:ui-monospace,monospace;font-size:12px}
+.hidden{display:none!important}
+svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+</style>
+</head>
+<body>
+<header>
+  <h1>BERG SHEETS</h1><span class="season">2026</span>
+  <span class="asof" id="asof"></span>
+  <span class="spacer"></span>
+  <button id="themeBtn" title="Toggle light/dark">◐</button>
+  <button id="exportBtn">Export draft</button>
+  <button id="importBtn">Import</button>
+  <input type="file" id="importFile" class="hidden" accept=".json">
+  <button id="resetBtn">Reset draft</button>
+</header>
+
+<nav class="tabs">
+  <button data-tab="draft" class="active">Draft</button>
+  <button data-tab="data">Data &amp; News</button>
+  <button data-tab="settings">Settings</button>
+  <button data-tab="guide">Guide</button>
+</nav>
+
+<main>
+<!-- ============================ DRAFT TAB ============================ -->
+<section id="tab-draft">
+  <div class="tiles">
+    <div class="tile"><div class="lbl">My budget left</div>
+      <div class="val" id="tBudget">–</div><div class="sub" id="tBudgetSub"></div></div>
+    <div class="tile"><div class="lbl">Max single bid</div>
+      <div class="val" id="tMaxBid">–</div><div class="sub">keep $1 for every other open spot</div></div>
+    <div class="tile"><div class="lbl">Starter spots open</div>
+      <div class="val" id="tSpots">–</div><div class="sub" id="tSpotsSub"></div></div>
+    <div class="tile"><div class="lbl">Room inflation</div>
+      <div class="val" id="tInfl">–</div><div class="sub">prices vs expected values</div></div>
+    <div class="tile"><div class="lbl">Best finishable roster</div>
+      <div class="val" id="tProj">–</div><div class="sub">projected pts, my picks + optimal completion</div></div>
+  </div>
+
+  <div class="layout">
+    <div>
+      <div class="card">
+        <div class="poolbar">
+          <input type="text" id="search" placeholder="Search player / team… (type during nominations)">
+          <span class="chips" id="posChips"></span>
+          <label class="note"><input type="checkbox" id="hideDrafted" checked> hide drafted</label>
+        </div>
+        <div class="scarcity" id="scarcity" title="Share of each position's draftable value (positive-VORP players) already off the board"></div>
+        <div class="tblwrap"><table id="pool">
+          <thead><tr>
+            <th class="l" data-k="name">Player</th><th data-k="team">Team</th>
+            <th data-k="pos">Pos</th><th data-k="aav" title="Market average auction value">AAV</th>
+            <th data-k="adj" title="Blended value × live inflation">Adj$</th>
+            <th data-k="rpts" title="Risk-adjusted projection under your scoring">Proj</th>
+            <th data-k="left" title="Share of this position's market value still on the board if this player is drafted">Pos left</th>
+            <th data-k="maxbid" title="Bid up to this; past it, passing is optimal">Max bid</th>
+            <th></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <div class="note" id="poolNote"></div>
+      </div>
+
+      <div class="card">
+        <h2>Value map — price vs. projection</h2>
+        <div class="legend" id="scatterLegend"></div>
+        <div id="scatter"></div>
+        <div class="note">Dots above the pack at their price are bargains. Drafted players fade out.
+          K/DST are minimum-bid players and are omitted. Hover for details; click a dot to
+          put that player on the block. The pool table above is the accessible/precise view
+          of this chart.</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>My roster</h2>
+        <div id="roster"></div>
+      </div>
+      <div class="card">
+        <h2>Optimal completion</h2>
+        <div class="note" style="margin-bottom:6px">Best way to finish your starters with the
+          money you have left — recomputed after every pick. Adj$ is the price it assumes.</div>
+        <div id="optimal"></div>
+      </div>
+      <div class="card">
+        <h2>Nomination ideas</h2>
+        <div class="note" style="margin-bottom:6px">Big names you should <em>not</em> buy —
+          nominate them to drain other budgets.</div>
+        <div id="nominate"></div>
+      </div>
+      <div class="card">
+        <h2>Draft log</h2>
+        <div id="log"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="block hidden" id="block">
+    <span>On the block:</span><span class="who" id="blockWho"></span>
+    <span class="pill" id="blockAav"></span>
+    <span class="verdict" id="blockVerdict"></span>
+    <span class="spacer"></span>
+    <label id="blockPriceWrap">$ <input type="number" id="blockPrice" min="1" value="1" style="width:64px"></label>
+    <button class="primary" id="blockMine">I won it</button>
+    <button id="blockGone">Someone else</button>
+    <button id="blockClose">✕</button>
+  </div>
+</section>
+
+<!-- ============================ DATA TAB ============================ -->
+<section id="tab-data" class="hidden">
+  <div class="layout">
+    <div>
+      <div class="card">
+        <h2>Player pool</h2>
+        <p class="note" id="dataMeta"></p>
+        <p class="note">Fine-tune any player for your season: <b>boost/fade</b> (%) folds in
+          news the projections haven't caught up to; <b>OUT</b> removes them from
+          optimization without deleting them.</p>
+        <div class="tblwrap" style="max-height:480px"><table id="editTable">
+          <thead><tr><th class="l">Player</th><th>Pos</th><th>AAV</th><th>Proj</th>
+          <th>Boost %</th><th>OUT</th></tr></thead><tbody></tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <h2>Import projections / auction values (CSV or Excel)</h2>
+        <p class="note">Export a cheat sheet from FantasyPros, ESPN, RotoWire, Draft Sharks,
+          etc. right before your draft and drop it here — <b>.csv or .xlsx</b>. Columns are
+          auto-detected (player, team, position, auction value, projected points, and
+          optional stat-level columns like pass/rush/rec yards &amp; TDs — stat columns
+          enable exact rescoring under your league's settings). The legacy
+          <code>auc_values_ALL.xlsx</code> sheet format imports directly, stat columns
+          and all — keep building your sheet the way that's worked for you.</p>
+        <p>
+          <input type="file" id="csvFile" accept=".csv,.txt,.xlsx">
+          <select id="importMode">
+            <option value="merge">Merge into current pool (blend projections)</option>
+            <option value="replace">Replace entire pool</option>
+          </select>
+          <label class="note">blend weight of new source
+            <input type="number" id="blendW" min="0" max="1" step="0.1" value="0.6" style="width:60px"></label>
+        </p>
+        <p class="note">…or paste CSV text:</p>
+        <textarea id="csvPaste" placeholder="Name,Team,Pos,AAV,Points&#10;Bijan Robinson,ATL,RB,63,320"></textarea>
+        <p><button class="primary" id="csvImportBtn">Import</button>
+          <button id="csvExportBtn">Export current pool as CSV</button></p>
+        <p class="note" id="importReport"></p>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h2>League sync — pair with your real draft</h2>
+        <p class="note">Live sync needs direct network access: open <code>index.html</code>
+          locally or via GitHub Pages. The claude.ai artifact copy runs in a sandbox that
+          blocks outside requests, so use it standalone or with CSV/Excel import.</p>
+
+        <h3>Sleeper — live auto-sync</h3>
+        <p>
+          <input type="text" id="slUser" placeholder="Sleeper username" style="width:150px">
+          <input type="number" id="slSeason" value="2026" style="width:74px" title="Season">
+          <button id="slFind">Find leagues</button>
+        </p>
+        <p>
+          <select id="slLeague" style="max-width:220px"></select>
+          <button id="slLoad">Load league</button>
+        </p>
+        <p>
+          My team: <select id="slMyTeam" style="max-width:170px"></select>
+          <label class="note"><input type="checkbox" id="slApplySettings" checked>
+            apply league settings</label>
+        </p>
+        <p>
+          <button class="primary" id="slSyncNow">Sync picks now</button>
+          <button id="slAuto">▶ Auto-sync every 5s</button>
+        </p>
+        <p class="note" id="slStatus">Reads your league, roster slots, auction budget and
+          every pick (with prices) from Sleeper's public API — no login needed.</p>
+
+        <h3 style="margin-top:14px">ESPN — paste sync</h3>
+        <p>
+          <input type="text" id="esLeague" placeholder="League ID" style="width:110px">
+          <input type="number" id="esSeason" value="2026" style="width:74px" title="Season">
+          <a id="esLink" href="#" target="_blank" rel="noopener">open league JSON ↗</a>
+        </p>
+        <p class="note">ESPN blocks cross-site reads from private leagues (login cookies),
+          so full auto-sync isn't possible from a static page. Instead: log into ESPN in
+          this browser, click the link above, copy the whole JSON page, paste below, and
+          re-paste whenever you want to re-sync — picks and prices apply in one shot.</p>
+        <textarea id="esPaste" placeholder='Paste the ESPN league JSON here…' style="min-height:70px"></textarea>
+        <p>
+          <button id="esRead">Read JSON</button>
+          My team: <select id="esMyTeam" style="max-width:170px"></select>
+          <label class="note"><input type="checkbox" id="esApplySettings" checked>
+            apply budget/slots</label>
+          <button class="primary" id="esApply">Apply picks</button>
+        </p>
+        <p class="note" id="esStatus"></p>
+
+        <h3 style="margin-top:14px">Yahoo — paste sync</h3>
+        <p class="note">Yahoo's API needs an OAuth app + server, which a local page can't
+          do — so paste instead: open your league's <b>Draft Results</b> page (or the
+          Results panel inside the live draft room), select all, copy, paste below.
+          Re-paste anytime to re-sync; already-recorded picks are skipped. Auction
+          prices ($) are picked up automatically.</p>
+        <p>
+          <input type="text" id="yhTeam" placeholder="My Yahoo team name" style="width:200px">
+          <span class="note">picks apply in the order pasted — paste whole rounds top-to-bottom
+            so snake round math stays true</span>
+        </p>
+        <textarea id="yhPaste" placeholder="Round 1&#10;1. Bijan Robinson (RB - ATL) $68 Berg's Best&#10;2. Ja'Marr Chase (WR - Cin) $61 The Rivals&#10;…"></textarea>
+        <p><button class="primary" id="yhApply">Apply picks</button></p>
+        <p class="note" id="yhStatus"></p>
+      </div>
+      <div class="card">
+        <h2>2026 offseason briefing</h2>
+        <p class="note" id="newsAsOf"></p>
+        <div id="news"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ SETTINGS TAB ============================ -->
+<section id="tab-settings" class="hidden">
+  <div class="settings-grid">
+    <div class="card">
+      <h2>League</h2>
+      <div class="field"><label>Draft type</label>
+        <select id="s_mode"><option value="auction">Salary cap (auction)</option>
+        <option value="snake">Snake</option></select></div>
+      <div class="field"><label>Teams</label><input type="number" id="s_teams" min="4" max="20"></div>
+      <div class="field"><label>My draft slot (snake)</label><input type="number" id="s_slot" min="1" max="20"></div>
+      <div class="field"><label>Budget per team ($)</label><input type="number" id="s_cap" min="50" max="1000"></div>
+      <div class="field"><label>Bench spots</label><input type="number" id="s_bench" min="0" max="12"></div>
+      <div class="field"><label>Reserve per bench spot ($)</label><input type="number" id="s_benchRes" min="1" max="20"></div>
+      <p class="note">Budget/reserve apply to auction; draft slot applies to snake.</p>
+    </div>
+    <div class="card">
+      <h2>Starting slots</h2>
+      <div class="field"><label>QB</label><input type="number" id="s_QB" min="0" max="3"></div>
+      <div class="field"><label>RB</label><input type="number" id="s_RB" min="0" max="5"></div>
+      <div class="field"><label>WR</label><input type="number" id="s_WR" min="0" max="5"></div>
+      <div class="field"><label>TE</label><input type="number" id="s_TE" min="0" max="3"></div>
+      <div class="field"><label>FLEX (RB/WR/TE)</label><input type="number" id="s_FLEX" min="0" max="4"></div>
+      <div class="field"><label>K</label><input type="number" id="s_K" min="0" max="2"></div>
+      <div class="field"><label>DST</label><input type="number" id="s_DST" min="0" max="2"></div>
+    </div>
+    <div class="card">
+      <h2>Scoring</h2>
+      <div class="field"><label>Preset</label>
+        <select id="s_preset"><option value="ppr">Full PPR</option>
+        <option value="half">Half PPR</option><option value="std">Standard</option>
+        <option value="custom">Custom</option></select></div>
+      <div class="field"><label>Points per reception</label><input type="number" id="s_rec" step="0.25"></div>
+      <div class="field"><label>Pass yds per point</label><input type="number" id="s_passYd" step="1"></div>
+      <div class="field"><label>Pass TD</label><input type="number" id="s_passTd" step="1"></div>
+      <div class="field"><label>INT</label><input type="number" id="s_int" step="1"></div>
+      <div class="field"><label>Rush/rec yds per point</label><input type="number" id="s_rushYd" step="1"></div>
+      <div class="field"><label>Rush/rec TD</label><input type="number" id="s_td" step="1"></div>
+      <p class="note">Stat-level rescoring applies to imported rows that carry stat columns;
+        other rows keep their source's PPR-based projection.</p>
+    </div>
+    <div class="card">
+      <h2>Model</h2>
+      <div class="field"><label>Risk appetite (λ)</label>
+        <input type="range" id="s_risk" min="-1" max="1" step="0.1" style="flex:1">
+        <span id="s_riskVal" class="pill"></span></div>
+      <p class="note">Positive chases ceilings (league-winner hunting), negative protects
+        floors (safe roster). Applied as a position-volatility adjustment, or exact
+        floor/ceiling columns when your import has them.</p>
+      <div class="field"><label>Value model blend</label>
+        <input type="range" id="s_blend" min="0" max="1" step="0.05" style="flex:1">
+        <span id="s_blendVal" class="pill"></span></div>
+      <p class="note">0 = trust market prices (AAV), 1 = trust the VORP model's intrinsic
+        dollars. The blend feeds Adj$, inflation, and the optimizer's assumed prices.</p>
+    </div>
+  </div>
+  <p><button class="primary" id="applySettings">Apply settings</button>
+     <span class="note" id="settingsNote"></span></p>
+</section>
+
+<!-- ============================ GUIDE TAB ============================ -->
+<section id="tab-guide" class="hidden">
+  <div class="card" style="max-width:820px">
+    <h2>How to run your draft with this app</h2>
+    <ol style="line-height:1.9">
+      <li><b>Before draft day:</b> set your league's budget, roster and scoring in
+        <i>Settings</i>. Import a fresh projections/values CSV in <i>Data &amp; News</i>
+        (the bundled 2026 set is a July consensus snapshot — refresh it the week of your
+        draft). Apply boosts/fades for late news.</li>
+      <li><b>Pairing with your real draft:</b> in <i>Data &amp; News → League sync</i>,
+        connect Sleeper (live auto-sync of every pick and price), ESPN (paste the league
+        JSON), or Yahoo (paste the Draft Results text). Synced picks flow into the log
+        exactly like manual ones — you can stop logging by hand entirely in a Sleeper
+        auction.</li>
+      <li><b>Every nomination (auction):</b> type the player's name, click the row (or
+        dot). The sticky bar shows the one number that matters — <b>Max bid</b>. Bid to
+        it, never past it.</li>
+      <li><b>Snake drafts:</b> switch Draft type to Snake in Settings and set your draft
+        slot. The board flips to pick-order thinking: market rank and expected round per
+        player, an availability call against your next pick ("likely / risky / gone by
+        then"), a <i>Take-now urgency</i> list ranked by how many points you lose by
+        waiting, and a round-by-round projected plan. Log every pick (yours and others')
+        so the pick counter stays true — or let Sleeper sync do it. Import a CSV with an
+        ADP column for sharper availability; otherwise market values stand in.</li>
+      <li><b>Every sale:</b> record it — <i>I won it</i> or <i>Someone else</i>, with the
+        real price. Everything (budget, inflation, values, optimal completion, max bids)
+        recomputes instantly, and the draft log stamps each pick with how much of that
+        position's market value is still on the board. The strip above the pool shows
+        all positions live, and the "Pos left" column shows what would remain after
+        each specific player goes — when RB drops under ~30% left, the tier cliff
+        is on you.</li>
+      <li><b>Nominating:</b> use <i>Nomination ideas</i> — expensive players you don't
+        want. Money they burn elsewhere is discount on your targets.</li>
+      <li><b>Trust the completion card:</b> if it says your best roster needs a $34 WR
+        tier-2, don't panic-spend $50 on tier-1. The plan updates as the room overpays
+        (inflation &gt; 0) or underpays.</li>
+    </ol>
+    <p class="note">Method details: see <code>MODELING.md</code> in the repo. The optimizer is an
+      exact dynamic program equivalent to the original integer LP — provably optimal
+      completion, re-solved in milliseconds after every pick. Values are VORP-based dollars
+      blended with market AAV and corrected for live auction inflation.</p>
+  </div>
+</section>
+</main>
+
+<div id="tooltip"></div>
+
+<script>
+"use strict";
+/* =====================================================================
+   BUNDLED DATA — 2026 consensus snapshot (spliced at build time).
+   ===================================================================== */
+const BUNDLED = /*__DATA__*/{"meta":{"asOf":"2026-07-20","format":"PPR, 12-team, $200 budget","sources":["https://www.fantasynerds.com/nfl/auction","https://www.si.com/fantasy/2026-football-quarterback-rankings-seasonal-leagues","https://g.espncdn.com/s/ffldraftkit/26/NFL26_CS_PPR300.pdf?adddata=2026CS_PPR300","https://www.espn.com/fantasy/football/story/_/id/48711830/2026-fantasy-football-rankings-ppr-field-yates","https://www.pff.com/news/fantasy-football-rankings-ppr-top-100","https://www.draftsharks.com/auction-values/ppr","https://www.rotowire.com/football/auction-values.php","https://www.footballguys.com/salary-cap-auction-values","https://draftexpertpro.com/auction-values","https://www.fantasylife.com/articles/fantasy/fantasy-football-auction-values-to-avoid-in-2026-ashton-jeanty","https://www.fantasylife.com/articles/fantasy/auction-fantasy-football-quarterback-strategy-patrick-mahomes","https://www.fantasylife.com/articles/fantasy/aj-brown-fantasy-football-outlook-after-trade","https://www.nbcsports.com/fantasy/football/news/2026-nfl-offseason-moves-instant-fantasy-reaction-to-latest-free-agent-signings-and-trades","https://www.espn.com/fantasy/football/story/_/id/47899702/nfl-free-agency-2026-fantasy-football-impact-signings-trades-grades","https://www.profootballnetwork.com/fantasy-football/qb-fantasy-football-rankings-july-2026/","https://www.profootballnetwork.com/fantasy-football/fantasy-football-injury-updates-everything-you-need-to-know-in-july-2026/","https://www.cbssports.com/fantasy/football/news/tight-end-tiers-fantasy-football-rankings-2026/","https://www.cbssports.com/fantasy/football/news/fantasy-football-fallout-patriots-trade-for-a-j-brown-boosts-drake-maye-and-elevates-devonta-smith/","https://sports.yahoo.com/fantasy/article/2026-fantasy-football-rankings-justin-boone-draft-rb-running-back-204202587.html","https://sports.yahoo.com/fantasy/article/2026-fantasy-football-defense-rankings-dst-160155913.html","https://www.espn.com/fantasy/football/story/_/page/FFPreseasonRank26K/nfl-fantasy-football-draft-rankings-2026-k-kicker","https://www.si.com/onsi/fantasy/rankings/2026-fantasy-football-running-back-rankings-omarion-hampton-climbs-into-the-top-5","https://www.rotoballer.com/2026-fantasy-football-rookie-rankings-top-80-july-updates/1892988","https://athlonsports.com/nfl/nfl-best-1st-round-wide-receiver-2026-carnell-tate-jordyn-tyson-makai-lemon","https://www.detroitfootball.net/p/lions-are-trading-david-montgomery","https://ftnfantasy.com/nfl/should-you-draft-brock-bowers-or-trey-mcbride-in-2026","https://www.espn.com/fantasy/football/story/_/page/FFSleepBustBreak26-49030808/fantasy-football-2026-rankings-nfl-sleepers-breakouts-busts","https://www.cbssports.com/fantasy/football/news/2026-outlook-jonathan-taylor/"]},"news":["A.J. Brown traded from Eagles to Patriots; instantly Drake Maye's No. 1 and a high-end fantasy WR1, while DeVonta Smith inherits the Eagles' top role.","Drake Maye's ADP has climbed all summer since the A.J. Brown trade; he led the NFL in completion rate (72%) and YPA (8.9) in 2025 and has QB1-overall upside at a QB2 price.","Tua Tagovailoa released by Miami (record dead-cap charge) and signed a 1-year deal with Atlanta; Malik Willis signed 3yr/$67.5M to be the Dolphins' starter.","Jaylen Waddle traded from Miami to Denver; profiles as a high-end WR2 with WR1 upside catching passes from Bo Nix (recovered from a broken ankle in the AFC Divisional round).","DJ Moore traded from Chicago to Buffalo, reuniting with Joe Brady; opens ~150 vacated targets in Chicago for Rome Odunze and breakout favorite Luther Burden III.","Kyler Murray signed with Minnesota at a bargain rate; Justin Jefferson (mild July hamstring strain) is a prime bounce-back pick and top value among first-round WRs.","Geno Smith traded from Las Vegas to Seattle; the Raiders drafted Fernando Mendoza No. 1 overall, but Kirk Cousins could start much of the season.","David Montgomery traded from Detroit to Houston in March; Jahmyr Gibbs is set up for his biggest workload yet and is the 1.01 in some rankings.","Jeremiyah Love drafted No. 3 overall by Arizona - the highest-paid RB in the NFL - and should be the feature back despite a room with Conner, Benson, and free-agent addition Tyler Allgeier (2yr/$12.25M).","Rookie WR landing spots: Carnell Tate top-5 to Tennessee (with Cam Ward), Jordyn Tyson top-10 to New Orleans, Makai Lemon top-20 to Philadelphia opposite DeVonta Smith.","Ashton Jeanty's auction price ($43-48 market) is widely flagged as too high; Fantasy Life values him at $30 after a 3.7 YPC rookie season (RB8 rank, priced like RB4-6).","Patrick Mahomes is returning from an ACL tear; projections are conservative, making him a potential auction value on the QB1/QB2 borderline.","Daniel Jones tore his ACL late in a career 2025 season; Jonathan Taylor averaged ~24 PPR PPG with Jones healthy vs 13.3 after, making Jones' health the swing factor for the Colts (also affects TE Tyler Warren).","Tyreek Hill was released by Miami after a dislocated knee with ACL/LCL tears; he remains unsigned and may not be ready until midseason.","Matthew Stafford is the reigning NFL MVP and ranks in the QB league-winner tier alongside Maye and Lamar Jackson.","Breece Hall re-signed with the Jets (3yr/$45.75M) but his receiving usage has cratered (95 targets in 2023 to 48 in 2025); ranked around RB19.","San Francisco's WR room is in trouble: Brandon Aiyuk not expected until midseason, Jauan Jennings re-aggravated his calf with no timeline, and Ricky Pearsall is nursing a hamstring - a target vacuum for a returning George Kittle (Achilles, Week 1 possible).","Travis Etienne Jr. signed with the Saints, opening a lead-role breakout path for Bhayshul Tuten in Jacksonville; Rico Dowdle signed with Pittsburgh; Rachaad White is now Washington's pass-catching back.","Travis Kelce is back for 2026 despite retirement speculation, but projections (~74-770-4) and fading efficiency make him a fade at cost.","Myles Garrett, coming off breaking the single-season sack record, joined the Rams - making LAR a top-3 fantasy defense alongside Houston and Seattle.","Omarion Hampton is a dark-horse No. 1 overall RB with new Chargers OC Mike McDaniel; climbed into the top 5 at the position.","Christian McCaffrey (2025 overall PPR RB1) turns 30 by camp off a 450-touch season, and Derrick Henry is 32 - both carry regression warnings; Saquon Barkley (down 2025, 4.1 YPC) is the popular bounce-back.","Kyle Pitts signed a 3-year, $53M extension with Atlanta in late June and gets Tua at QB.","Only four TEs are going over $10 in auctions: Brock Bowers, Trey McBride, Colston Loveland, and Tyler Warren; George Kittle is up to TE7 as his Achilles rehab accelerates.","Consensus elite QB auction tier: Josh Allen ($27) down through Lamar Jackson, Jayden Daniels, Jalen Hurts, and Joe Burrow ($21)."],"players":[{"name":"Josh Allen","team":"BUF","pos":"QB","aav":27,"pts":395,"src":"sourced","note":"Consensus QB1, $27; DJ Moore added; Joe Brady continuity"},{"name":"Lamar Jackson","team":"BAL","pos":"QB","aav":24,"pts":378,"src":"sourced","note":"Top-5 QB tier ($27-21); bounce-back after injury-marred 2025; new offense"},{"name":"Jayden Daniels","team":"WAS","pos":"QB","aav":23,"pts":368,"src":"sourced","note":"Top-5 QB tier; bounce-back candidate in new offense; QB1-overall upside"},{"name":"Jalen Hurts","team":"PHI","pos":"QB","aav":22,"pts":360,"src":"sourced","note":"Top-5 QB tier; rushing TD floor"},{"name":"Joe Burrow","team":"CIN","pos":"QB","aav":21,"pts":355,"src":"sourced","note":"Rounds out consensus elite tier at $21"},{"name":"Drake Maye","team":"NE","pos":"QB","aav":15,"pts":350,"src":"est","note":"ADP climbing all summer since A.J. Brown trade; QB1-overall upside at QB2 price"},{"name":"Matthew Stafford","team":"LAR","pos":"QB","aav":14,"pts":346,"src":"est","note":"Reigning MVP; league-winner tier"},{"name":"Justin Herbert","team":"LAC","pos":"QB","aav":11,"pts":332,"src":"est","note":"PFN QB8"},{"name":"Caleb Williams","team":"CHI","pos":"QB","aav":10,"pts":328,"src":"est","note":"QB7 in PPG last year; year 2 in Ben Johnson offense"},{"name":"Bo Nix","team":"DEN","pos":"QB","aav":9,"pts":322,"src":"est","note":"Broke ankle in AFC Divisional; full go for camp; Waddle added"},{"name":"Dak Prescott","team":"DAL","pos":"QB","aav":8,"pts":315,"src":"est","note":"Pickens/Lamb duo"},{"name":"Patrick Mahomes","team":"KC","pos":"QB","aav":7,"pts":310,"src":"est","note":"Returning from ACL tear; QB1/QB2 borderline price, top-5 upside"},{"name":"Baker Mayfield","team":"TB","pos":"QB","aav":7,"pts":308,"src":"est","note":"Ranked between QB14-21 across sources"},{"name":"C.J. Stroud","team":"HOU","pos":"QB","aav":6,"pts":302,"src":"est","note":"Montgomery trade helps balance"},{"name":"Jordan Love","team":"GB","pos":"QB","aav":6,"pts":300,"src":"est","note":"On July camp injury tracker"},{"name":"Kyler Murray","team":"MIN","pos":"QB","aav":5,"pts":292,"src":"est","note":"Signed with Vikings at bargain rate; Jefferson elevates him"},{"name":"Cam Ward","team":"TEN","pos":"QB","aav":5,"pts":288,"src":"est","note":"Year 2; rookie alpha Carnell Tate added"},{"name":"Jared Goff","team":"DET","pos":"QB","aav":4,"pts":284,"src":"est","note":"High-floor pocket producer"},{"name":"Daniel Jones","team":"IND","pos":"QB","aav":4,"pts":280,"src":"est","note":"Tore ACL late 2025 after career year; health is the Colts' pivot point"},{"name":"Trevor Lawrence","team":"JAC","pos":"QB","aav":3,"pts":272,"src":"est","note":"Steady QB2"},{"name":"Justin Fields","team":"NYJ","pos":"QB","aav":3,"pts":268,"src":"est","note":"Rushing floor"},{"name":"Tua Tagovailoa","team":"ATL","pos":"QB","aav":2,"pts":258,"src":"est","note":"Released by MIA (record dead cap); 1-yr prove-it deal with Falcons"},{"name":"Geno Smith","team":"SEA","pos":"QB","aav":1,"pts":240,"src":"est","note":"Traded from LV to Seattle"},{"name":"Fernando Mendoza","team":"LV","pos":"QB","aav":1,"pts":225,"src":"est","note":"No. 1 overall pick; Kirk Cousins may start early in season"},{"name":"Bijan Robinson","team":"ATL","pos":"RB","aav":63,"pts":330,"src":"sourced","note":"Consensus No. 1 overall; Fantasy Nerds $63"},{"name":"Jahmyr Gibbs","team":"DET","pos":"RB","aav":61,"pts":326,"src":"sourced","note":"David Montgomery traded to HOU; biggest workload yet"},{"name":"Jonathan Taylor","team":"IND","pos":"RB","aav":54,"pts":305,"src":"sourced","note":"Elite w/ Daniel Jones healthy (~24 PPG); Jones ACL recovery adds risk"},{"name":"Christian McCaffrey","team":"SF","pos":"RB","aav":53,"pts":300,"src":"sourced","note":"2025 PPR RB1 but age-30 season off 450 touches; regression flags"},{"name":"James Cook","team":"BUF","pos":"RB","aav":50,"pts":292,"src":"sourced","note":"Fantasy Nerds $50; lead back in Joe Brady offense"},{"name":"De'Von Achane","team":"MIA","pos":"RB","aav":49,"pts":290,"src":"est","note":"SI top-8 overall; heavy volume, but new-era MIA offense w/ Malik Willis"},{"name":"Derrick Henry","team":"BAL","pos":"RB","aav":47,"pts":285,"src":"sourced","note":"Age 32 but 'elite until proven otherwise'"},{"name":"Omarion Hampton","team":"LAC","pos":"RB","aav":46,"pts":282,"src":"est","note":"Dark horse RB1 overall under new OC Mike McDaniel"},{"name":"Saquon Barkley","team":"PHI","pos":"RB","aav":42,"pts":272,"src":"est","note":"Down 2025 (4.1 YPC); prime bounce-back candidate"},{"name":"Ashton Jeanty","team":"LV","pos":"RB","aav":40,"pts":262,"src":"sourced","note":"Market $43-48 flagged as too high (Fantasy Life values $30); 3.7 YPC as rookie"},{"name":"Chase Brown","team":"CIN","pos":"RB","aav":34,"pts":250,"src":"est","note":"RB10 by ADP; called one of the best values in drafts"},{"name":"Josh Jacobs","team":"GB","pos":"RB","aav":33,"pts":247,"src":"est","note":"Aging workhorse tier but locked-in volume"},{"name":"Bucky Irving","team":"TB","pos":"RB","aav":32,"pts":244,"src":"est","note":"Lead back; Gainwell handles change-of-pace"},{"name":"Jeremiyah Love","team":"ARI","pos":"RB","aav":28,"pts":237,"src":"est","note":"Rookie, No. 3 overall pick, highest-paid RB; crowded room (Conner/Benson/Allgeier)"},{"name":"TreVeyon Henderson","team":"NE","pos":"RB","aav":26,"pts":232,"src":"est","note":"Year 2 breakout candidate in ascending Patriots offense"},{"name":"Quinshon Judkins","team":"CLE","pos":"RB","aav":24,"pts":226,"src":"est","note":"Bell-cow role in Cleveland"},{"name":"Kyren Williams","team":"LAR","pos":"RB","aav":22,"pts":220,"src":"est","note":"Still the lead, but Blake Corum pushing for work"},{"name":"Travis Etienne Jr.","team":"NO","pos":"RB","aav":21,"pts":217,"src":"est","note":"Signed with Saints; fresh start as lead back, RB18 in mocks"},{"name":"Breece Hall","team":"NYJ","pos":"RB","aav":20,"pts":214,"src":"est","note":"Re-signed 3yr/$45.75M; receiving usage fell to 48 targets"},{"name":"RJ Harvey","team":"DEN","pos":"RB","aav":19,"pts":210,"src":"est","note":"Lead role in Denver backfield"},{"name":"Kenneth Walker III","team":"SEA","pos":"RB","aav":17,"pts":204,"src":"est","note":"Rookie Jadarian Price added behind him"},{"name":"Bhayshul Tuten","team":"JAC","pos":"RB","aav":16,"pts":200,"src":"est","note":"Etienne departed; clear path to high-end RB2 breakout"},{"name":"David Montgomery","team":"HOU","pos":"RB","aav":15,"pts":196,"src":"est","note":"Traded DET-to-HOU in March; early-down lead role"},{"name":"Javonte Williams","team":"DAL","pos":"RB","aav":14,"pts":192,"src":"est","note":"Dallas lead back"},{"name":"Chuba Hubbard","team":"CAR","pos":"RB","aav":14,"pts":190,"src":"est","note":"Lead for now; healthy Jonathon Brooks could push him"},{"name":"Tony Pollard","team":"TEN","pos":"RB","aav":14,"pts":189,"src":"est","note":"Volume-based RB2/3"},{"name":"D'Andre Swift","team":"CHI","pos":"RB","aav":13,"pts":186,"src":"est","note":"Ben Johnson offense; Monangai mixes in"},{"name":"Alvin Kamara","team":"NO","pos":"RB","aav":13,"pts":185,"src":"est","note":"Aging; Etienne signing cuts into workload"},{"name":"Cam Skattebo","team":"NYG","pos":"RB","aav":12,"pts":182,"src":"est","note":"Physical committee lead with Tracy"},{"name":"James Conner","team":"ARI","pos":"RB","aav":12,"pts":180,"src":"est","note":"Crowded room after Love pick and Allgeier signing"},{"name":"Rachaad White","team":"WAS","pos":"RB","aav":11,"pts":176,"src":"est","note":"Washington's best pass-catching back; sneaky PPR RB2"},{"name":"Jacory Croskey-Merritt","team":"WAS","pos":"RB","aav":10,"pts":172,"src":"est","note":"Early-down side of WAS committee"},{"name":"Jaylen Warren","team":"PIT","pos":"RB","aav":9,"pts":167,"src":"est","note":"Crowded PIT backfield after Dowdle signing"},{"name":"Tyrone Tracy Jr.","team":"NYG","pos":"RB","aav":9,"pts":166,"src":"est","note":"Passing-downs role"},{"name":"Isiah Pacheco","team":"KC","pos":"RB","aav":9,"pts":165,"src":"est","note":"Committee with Hunt"},{"name":"Jonathon Brooks","team":"CAR","pos":"RB","aav":9,"pts":164,"src":"est","note":"Two ACL tears; encouraging offseason reports, could take lead job"},{"name":"Aaron Jones Sr.","team":"MIN","pos":"RB","aav":8,"pts":161,"src":"est","note":"Aging committee back"},{"name":"Woody Marks","team":"HOU","pos":"RB","aav":8,"pts":160,"src":"est","note":"Pass-game role behind Montgomery"},{"name":"Zach Charbonnet","team":"SEA","pos":"RB","aav":8,"pts":159,"src":"est","note":"Valuable handcuff/committee piece"},{"name":"Blake Corum","team":"LAR","pos":"RB","aav":8,"pts":158,"src":"est","note":"Pushing Kyren Williams for touches"},{"name":"Kaleb Johnson","team":"PIT","pos":"RB","aav":8,"pts":157,"src":"est","note":"Year 2; part of three-way PIT committee"},{"name":"Trey Benson","team":"ARI","pos":"RB","aav":8,"pts":156,"src":"est","note":"Buried by Love pick but talented insurance"},{"name":"Rhamondre Stevenson","team":"NE","pos":"RB","aav":7,"pts":152,"src":"est","note":"Complement to TreVeyon Henderson"},{"name":"Rico Dowdle","team":"PIT","pos":"RB","aav":7,"pts":151,"src":"est","note":"Signed from CAR; committee role"},{"name":"Kyle Monangai","team":"CHI","pos":"RB","aav":7,"pts":149,"src":"est","note":"Top-50 RB; change-of-pace behind Swift"},{"name":"Kenneth Gainwell","team":"TB","pos":"RB","aav":7,"pts":148,"src":"est","note":"Standalone PPR appeal; RB2 upside if role grows"},{"name":"Brian Robinson Jr.","team":"ATL","pos":"RB","aav":6,"pts":143,"src":"est","note":"Grinder behind Bijan"},{"name":"Ollie Gordon II","team":"MIA","pos":"RB","aav":6,"pts":141,"src":"est","note":"Goal-line thunder to Achane's lightning"},{"name":"Jadarian Price","team":"SEA","pos":"RB","aav":6,"pts":140,"src":"est","note":"Rookie; top-50 positional rank"},{"name":"Braelon Allen","team":"NYJ","pos":"RB","aav":5,"pts":135,"src":"est","note":"Goal-line competition for Breece Hall"},{"name":"Tyjae Spears","team":"TEN","pos":"RB","aav":5,"pts":133,"src":"est","note":"On July camp injury tracker"},{"name":"Isaac Guerendo","team":"SF","pos":"RB","aav":5,"pts":132,"src":"est","note":"Premier CMC insurance"},{"name":"Tank Bigsby","team":"JAC","pos":"RB","aav":4,"pts":127,"src":"est","note":"Early-down complement to Tuten"},{"name":"Ray Davis","team":"BUF","pos":"RB","aav":4,"pts":125,"src":"est","note":"Cook handcuff"},{"name":"Tyler Allgeier","team":"ARI","pos":"RB","aav":4,"pts":124,"src":"est","note":"Signed 2yr/$12.25M; crowded backfield"},{"name":"Jaydon Blue","team":"DAL","pos":"RB","aav":4,"pts":122,"src":"est","note":"Speed change-up behind Javonte"},{"name":"Kareem Hunt","team":"KC","pos":"RB","aav":3,"pts":117,"src":"est","note":"Veteran committee piece"},{"name":"Austin Ekeler","team":"WAS","pos":"RB","aav":3,"pts":116,"src":"est","note":"Veteran depth"},{"name":"Kimani Vidal","team":"LAC","pos":"RB","aav":3,"pts":112,"src":"est","note":"Hampton backup"},{"name":"Devin Neal","team":"NO","pos":"RB","aav":3,"pts":110,"src":"est","note":"Depth behind Etienne/Kamara"},{"name":"Puka Nacua","team":"LAR","pos":"WR","aav":59,"pts":328,"src":"sourced","note":"Fantasy Nerds $59; NFL-best 96.3 PFF receiving grade since 2024"},{"name":"Ja'Marr Chase","team":"CIN","pos":"WR","aav":58,"pts":326,"src":"sourced","note":"Fantasy Nerds $58; elite target volume"},{"name":"Jaxon Smith-Njigba","team":"SEA","pos":"WR","aav":52,"pts":305,"src":"sourced","note":"Fantasy Nerds $52; new QB Geno Smith arrives via trade"},{"name":"Amon-Ra St. Brown","team":"DET","pos":"WR","aav":48,"pts":298,"src":"sourced","note":"Fantasy Nerds $48; PPR machine"},{"name":"Justin Jefferson","team":"MIN","pos":"WR","aav":47,"pts":295,"src":"sourced","note":"Market $45-50; bounce-back pick w/ Kyler Murray; mild hamstring in July"},{"name":"CeeDee Lamb","team":"DAL","pos":"WR","aav":46,"pts":290,"src":"est","note":"DraftExpertPro fair $55/target $51; consensus market a bit lower"},{"name":"A.J. Brown","team":"NE","pos":"WR","aav":44,"pts":284,"src":"est","note":"Traded to Patriots; sure-fire WR1 with Drake Maye"},{"name":"Nico Collins","team":"HOU","pos":"WR","aav":42,"pts":280,"src":"est","note":"Third 1,000-yard season in four years; top-10 WR again"},{"name":"Drake London","team":"ATL","pos":"WR","aav":34,"pts":262,"src":"est","note":"Tua Tagovailoa now at QB on 1-yr deal"},{"name":"Brian Thomas Jr.","team":"JAC","pos":"WR","aav":33,"pts":259,"src":"est","note":"Clear alpha in Jacksonville"},{"name":"George Pickens","team":"DAL","pos":"WR","aav":32,"pts":256,"src":"est","note":"Career year in Dallas 2025: 93-1,429-9"},{"name":"Ladd McConkey","team":"LAC","pos":"WR","aav":30,"pts":250,"src":"est","note":"Herbert's No. 1; McDaniel scheme fit"},{"name":"Tee Higgins","team":"CIN","pos":"WR","aav":30,"pts":249,"src":"est","note":"Top-tier WR2 with weekly WR1 spike"},{"name":"Jaylen Waddle","team":"DEN","pos":"WR","aav":28,"pts":244,"src":"est","note":"Traded MIA-to-DEN; high-end WR2 with WR1 upside; ADP riser"},{"name":"DeVonta Smith","team":"PHI","pos":"WR","aav":28,"pts":243,"src":"est","note":"Finally the No. 1 role after A.J. Brown trade"},{"name":"Garrett Wilson","team":"NYJ","pos":"WR","aav":26,"pts":238,"src":"est","note":"Target hog"},{"name":"Marvin Harrison Jr.","team":"ARI","pos":"WR","aav":25,"pts":234,"src":"est","note":"Year 3; offense boosted by Jeremiyah Love pick"},{"name":"Tetairoa McMillan","team":"CAR","pos":"WR","aav":24,"pts":230,"src":"est","note":"Second-year ascent"},{"name":"Rome Odunze","team":"CHI","pos":"WR","aav":24,"pts":228,"src":"est","note":"150 targets vacated by DJ Moore/Zaccheaus departures"},{"name":"Malik Nabers","team":"NYG","pos":"WR","aav":23,"pts":226,"src":"sourced","note":"NFFC price in line with $23; cost falling all summer in redraft"},{"name":"Chris Olave","team":"NO","pos":"WR","aav":22,"pts":221,"src":"est","note":"Climbing in WR tiers; improved Saints offense"},{"name":"Davante Adams","team":"LAR","pos":"WR","aav":22,"pts":220,"src":"est","note":"Field Yates WR20 (No. 51 overall)"},{"name":"Rashee Rice","team":"KC","pos":"WR","aav":20,"pts":215,"src":"est","note":"Target-heavy role; Mahomes returning from ACL"},{"name":"Terry McLaurin","team":"WAS","pos":"WR","aav":20,"pts":214,"src":"est","note":"Jayden Daniels' clear top option"},{"name":"Emeka Egbuka","team":"TB","pos":"WR","aav":19,"pts":211,"src":"est","note":"Ascending No. 1 in Tampa"},{"name":"Zay Flowers","team":"BAL","pos":"WR","aav":19,"pts":209,"src":"est","note":"Lamar bounce-back beneficiary"},{"name":"Luther Burden III","team":"CHI","pos":"WR","aav":18,"pts":206,"src":"est","note":"ESPN WR28 ADP; popular top-5-ceiling breakout in Ben Johnson offense"},{"name":"Jameson Williams","team":"DET","pos":"WR","aav":18,"pts":204,"src":"est","note":"Big-play WR2"},{"name":"DJ Moore","team":"BUF","pos":"WR","aav":18,"pts":203,"src":"est","note":"Traded to Bills; reunites with Joe Brady; WR2 value at flex cost"},{"name":"DK Metcalf","team":"PIT","pos":"WR","aav":17,"pts":200,"src":"est","note":"Vertical alpha"},{"name":"Xavier Worthy","team":"KC","pos":"WR","aav":16,"pts":196,"src":"est","note":"Speed role expands"},{"name":"Jayden Higgins","team":"HOU","pos":"WR","aav":15,"pts":193,"src":"est","note":"6-4 red-zone mismatch; year-2 breakout with Stroud"},{"name":"Travis Hunter","team":"JAC","pos":"WR","aav":15,"pts":191,"src":"est","note":"Two-way usage; year 2"},{"name":"Carnell Tate","team":"TEN","pos":"WR","aav":14,"pts":188,"src":"est","note":"Rookie, top-5 pick; clearest alpha path, Cam Ward QB"},{"name":"Courtland Sutton","team":"DEN","pos":"WR","aav":14,"pts":186,"src":"est","note":"Waddle arrival trims target share"},{"name":"Makai Lemon","team":"PHI","pos":"WR","aav":13,"pts":183,"src":"est","note":"Rookie (top-20 pick); big slot role opposite DeVonta; hamstring 100%"},{"name":"Jordan Addison","team":"MIN","pos":"WR","aav":13,"pts":181,"src":"est","note":"No. 2 to Jefferson"},{"name":"Jordyn Tyson","team":"NO","pos":"WR","aav":12,"pts":178,"src":"est","note":"Rookie, top-10 pick; explosive ceiling in improved Saints offense"},{"name":"Matthew Golden","team":"GB","pos":"WR","aav":12,"pts":177,"src":"est","note":"WR2 upside at WR4 price in ascending GB offense"},{"name":"Ricky Pearsall","team":"SF","pos":"WR","aav":11,"pts":172,"src":"est","note":"Hamstring in camp, but huge SF target vacuum (Aiyuk/Jennings out)"},{"name":"Calvin Ridley","team":"TEN","pos":"WR","aav":10,"pts":168,"src":"est","note":"Tate pick caps upside"},{"name":"Jayden Reed","team":"GB","pos":"WR","aav":9,"pts":161,"src":"est","note":"Slot juice, spike weeks"},{"name":"Jerry Jeudy","team":"CLE","pos":"WR","aav":9,"pts":160,"src":"est","note":"Volume-based WR3"},{"name":"Mike Evans","team":"TB","pos":"WR","aav":8,"pts":158,"src":"est","note":"Field Yates WR39 (No. 94); age showing but TD equity"},{"name":"Deebo Samuel Sr.","team":"WAS","pos":"WR","aav":8,"pts":155,"src":"est","note":"YAC role in Washington"},{"name":"Keon Coleman","team":"BUF","pos":"WR","aav":8,"pts":154,"src":"est","note":"DJ Moore arrival caps target share"},{"name":"Josh Downs","team":"IND","pos":"WR","aav":8,"pts":153,"src":"est","note":"PPR slot; Daniel Jones health a factor"},{"name":"Tre Harris","team":"LAC","pos":"WR","aav":7,"pts":149,"src":"est","note":"Year-2 role growth"},{"name":"Michael Pittman Jr.","team":"IND","pos":"WR","aav":7,"pts":147,"src":"est","note":"Possession volume"},{"name":"Khalil Shakir","team":"BUF","pos":"WR","aav":7,"pts":146,"src":"est","note":"Reliable slot for Allen"},{"name":"Marvin Mims Jr.","team":"DEN","pos":"WR","aav":6,"pts":141,"src":"est","note":"Gadget/deep role"},{"name":"Cooper Kupp","team":"SEA","pos":"WR","aav":6,"pts":139,"src":"est","note":"Age decline; JSN dominates targets"},{"name":"Quentin Johnston","team":"LAC","pos":"WR","aav":6,"pts":138,"src":"est","note":"TD-dependent"},{"name":"Chris Godwin","team":"TB","pos":"WR","aav":5,"pts":133,"src":"est","note":"Injury history; crowded room with Egbuka/Evans"},{"name":"Rashid Shaheed","team":"NO","pos":"WR","aav":5,"pts":131,"src":"est","note":"Deep threat"},{"name":"Jauan Jennings","team":"SF","pos":"WR","aav":5,"pts":130,"src":"est","note":"Re-aggravated calf; no timeline to return in camp"},{"name":"Wan'Dale Robinson","team":"NYG","pos":"WR","aav":5,"pts":129,"src":"est","note":"Target volume, low aDOT"},{"name":"Romeo Doubs","team":"NE","pos":"WR","aav":5,"pts":128,"src":"est","note":"Signed with Patriots; No. 2 to A.J. Brown"},{"name":"Xavier Legette","team":"CAR","pos":"WR","aav":5,"pts":127,"src":"est","note":"Boom/bust WR4"},{"name":"Jakobi Meyers","team":"JAC","pos":"WR","aav":4,"pts":124,"src":"sourced","note":"ESPN cheat sheet WR40, $4"},{"name":"Cedric Tillman","team":"CLE","pos":"WR","aav":4,"pts":121,"src":"est","note":"Red-zone size"},{"name":"Darnell Mooney","team":"ATL","pos":"WR","aav":4,"pts":120,"src":"est","note":"Field stretcher for Tua"},{"name":"Christian Kirk","team":"HOU","pos":"WR","aav":4,"pts":118,"src":"est","note":"Slot depth"},{"name":"Brandon Aiyuk","team":"SF","pos":"WR","aav":4,"pts":108,"src":"est","note":"Not expected back until midseason"},{"name":"Marquise Brown","team":"KC","pos":"WR","aav":3,"pts":113,"src":"est","note":"Depth speed"},{"name":"Alec Pierce","team":"IND","pos":"WR","aav":3,"pts":110,"src":"est","note":"Deep-ball specialist"},{"name":"Tyreek Hill","team":"FA","pos":"WR","aav":2,"pts":90,"src":"est","note":"Released by MIA after dislocated knee/ACL/LCL; may not play until midseason; unsigned"},{"name":"Brock Bowers","team":"LV","pos":"TE","aav":26,"pts":235,"src":"est","note":"TE1 (ADP ~pick 22); played through knee injury in 2025, TE3 in PPG"},{"name":"Trey McBride","team":"ARI","pos":"TE","aav":24,"pts":228,"src":"est","note":"18.6 PPR PPG in 2025; target monster"},{"name":"Colston Loveland","team":"CHI","pos":"TE","aav":14,"pts":192,"src":"est","note":"One of only 4 TEs going over $10 in auctions"},{"name":"Tyler Warren","team":"IND","pos":"TE","aav":13,"pts":186,"src":"est","note":"TE6 in PPG thru Wk 10 as rookie before Daniel Jones' ACL tear"},{"name":"Sam LaPorta","team":"DET","pos":"TE","aav":9,"pts":168,"src":"est","note":"High expectations for 2026"},{"name":"George Kittle","team":"SF","pos":"TE","aav":7,"pts":158,"src":"est","note":"Torn Achilles recovery going well; Week 1 return possible; TE7"},{"name":"Tucker Kraft","team":"GB","pos":"TE","aav":6,"pts":150,"src":"est","note":"Recovering from injury; talent locked in when healthy"},{"name":"Harold Fannin Jr.","team":"CLE","pos":"TE","aav":6,"pts":148,"src":"est","note":"Standout from 2025 rookie TE class"},{"name":"Dallas Goedert","team":"PHI","pos":"TE","aav":5,"pts":140,"src":"est","note":"Candidate to rise with A.J. Brown targets vacated"},{"name":"T.J. Hockenson","team":"MIN","pos":"TE","aav":5,"pts":138,"src":"est","note":"Kyler arrival steadies offense"},{"name":"Kyle Pitts","team":"ATL","pos":"TE","aav":4,"pts":132,"src":"est","note":"Signed 3yr/$53M extension in June; Tua at QB"},{"name":"Isaiah Likely","team":"BAL","pos":"TE","aav":4,"pts":130,"src":"est","note":"High expectations heading into 2026"},{"name":"Travis Kelce","team":"KC","pos":"TE","aav":4,"pts":128,"src":"est","note":"Back for 2026, no retirement; projected ~74-770-4; efficiency fading"},{"name":"David Njoku","team":"CLE","pos":"TE","aav":3,"pts":122,"src":"est","note":"Splits work with Fannin"},{"name":"Chigoziem Okonkwo","team":"TEN","pos":"TE","aav":3,"pts":118,"src":"est","note":"Breakout buzz"},{"name":"Dalton Kincaid","team":"BUF","pos":"TE","aav":3,"pts":116,"src":"est","note":"Allen's middle-field option"},{"name":"Jake Ferguson","team":"DAL","pos":"TE","aav":2,"pts":108,"src":"est","note":"TD-dependent"},{"name":"Zach Ertz","team":"WAS","pos":"TE","aav":2,"pts":105,"src":"est","note":"Veteran floor"},{"name":"Brenton Strange","team":"JAC","pos":"TE","aav":2,"pts":100,"src":"est","note":"Ascending role"},{"name":"Brandon Aubrey","team":"DAL","pos":"K","aav":2,"pts":150,"src":"est","note":"First K off the board; 1st-1st-3rd finishes in three seasons"},{"name":"Jake Bates","team":"DET","pos":"K","aav":1,"pts":145,"src":"est","note":"Led NFL in XPs two straight years; huge leg"},{"name":"Jason Myers","team":"SEA","pos":"K","aav":1,"pts":142,"src":"est","note":"Breakout 2025 season"},{"name":"Ka'imi Fairbairn","team":"HOU","pos":"K","aav":1,"pts":140,"src":"est","note":"Among most consistent kickers"},{"name":"Tyler Loop","team":"BAL","pos":"K","aav":1,"pts":138,"src":"est","note":"8.5 FPG as rookie; healthier Lamar boosts opportunities"},{"name":"Cameron Dicker","team":"LAC","pos":"K","aav":1,"pts":135,"src":"est","note":"High-volume offense"},{"name":"Chase McLaughlin","team":"TB","pos":"K","aav":1,"pts":133,"src":"est","note":"Accurate with deep range"},{"name":"Harrison Butker","team":"KC","pos":"K","aav":1,"pts":132,"src":"est","note":"Bounce-back with Mahomes returning"},{"name":"Evan McPherson","team":"CIN","pos":"K","aav":1,"pts":131,"src":"est","note":"High-scoring offense"},{"name":"Wil Lutz","team":"DEN","pos":"K","aav":1,"pts":130,"src":"est","note":"Improved offense with Waddle"},{"name":"Texans D/ST","team":"HOU","pos":"DST","aav":3,"pts":140,"src":"est","note":"Expected first DST drafted in 2026"},{"name":"Seahawks D/ST","team":"SEA","pos":"DST","aav":2,"pts":135,"src":"est","note":"Highest-scoring DST in 2025; fewest PPG allowed (17.2)"},{"name":"Rams D/ST","team":"LAR","pos":"DST","aav":2,"pts":132,"src":"est","note":"Added sack record-breaker Myles Garrett plus Watson/McDuffie in secondary"},{"name":"Eagles D/ST","team":"PHI","pos":"DST","aav":1,"pts":128,"src":"est","note":"Back-to-back DST7 finishes; elite turnover margin"},{"name":"Broncos D/ST","team":"DEN","pos":"DST","aav":1,"pts":126,"src":"est","note":"Elite pass rush"},{"name":"Lions D/ST","team":"DET","pos":"DST","aav":1,"pts":124,"src":"est","note":"Easiest early schedule in NFL; injury regression positive"},{"name":"Chargers D/ST","team":"LAC","pos":"DST","aav":1,"pts":122,"src":"est","note":"Best opening schedule (ARI, LV)"},{"name":"Ravens D/ST","team":"BAL","pos":"DST","aav":1,"pts":120,"src":"est","note":"Perennially stout"},{"name":"Steelers D/ST","team":"PIT","pos":"DST","aav":1,"pts":118,"src":"est","note":"Watt-led pass rush"},{"name":"Vikings D/ST","team":"MIN","pos":"DST","aav":1,"pts":116,"src":"est","note":"Flores pressure packages"}]}/*__END_DATA__*/;
+
+/* ============================ constants ============================ */
+const POSITIONS = ["QB","RB","WR","TE","K","DST"];
+const FLEX_POS = ["RB","WR","TE"];
+const POS_VOL = {QB:.10,RB:.16,WR:.15,TE:.18,K:.08,DST:.12}; // volatility heuristic
+const SCATTER_COLORS = {QB:"var(--qb)",RB:"var(--rb)",WR:"var(--wr)",TE:"var(--te)"};
+const LS_KEY = "sc-draft-companion-v1";
+
+/* ============================ state ============================ */
+const defaultSettings = () => ({
+  mode:"auction", teams:12, snakeSlot:1, cap:200, bench:6, benchRes:1,
+  slots:{QB:1,RB:2,WR:2,TE:1,FLEX:1,K:1,DST:1},
+  scoring:{preset:"ppr",rec:1,passYd:25,passTd:4,int:-2,rushYd:10,td:6},
+  risk:0, blend:0.35,
+});
+const isSnake = () => S.settings.mode==="snake";
+let S = {settings:defaultSettings(), players:[], log:[], sel:null};
+
+function playerId(p){ return (p.name+"|"+p.pos).toLowerCase(); }
+function normPos(raw){
+  let p = String(raw||"").toUpperCase().replace(/[^A-Z/]/g,"");
+  if(p.startsWith("DEF")||p==="DST"||p==="D/ST"||p==="D") return "DST";
+  if(p==="PK") return "K";
+  for(const q of POSITIONS) if(p.startsWith(q)) return q;
+  return null;
+}
+function freshPlayer(o){
+  return {name:o.name, team:o.team||"", pos:o.pos, aav:Math.max(1,Math.round(o.aav||1)),
+    pts:+o.pts||0, stats:o.stats||null, floor:o.floor??null, ceil:o.ceil??null,
+    adp:o.adp??null, note:o.note||"", src:o.src||"", boost:0, out:false, drafted:null};
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){ const s = JSON.parse(raw);
+      if(s && s.players && s.players.length){ S = s; S.sel=null; return; } }
+  }catch(e){ console.warn("state load failed", e); }
+  S.players = BUNDLED.players.map(freshPlayer);
+}
+function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(
+  {settings:S.settings, players:S.players, log:S.log})); }catch(e){} }
+
+/* ============================ scoring ============================ */
+function scorePlayer(p, sc){
+  if(!p.stats) return p.pts;
+  const st = p.stats;
+  return +( (st.pass_yd||0)/sc.passYd + (st.pass_td||0)*sc.passTd
+    + (st.int||0)*sc.int + ((st.rush_yd||0)+(st.rec_yd||0))/sc.rushYd
+    + ((st.rush_td||0)+(st.rec_td||0))*sc.td + (st.rec||0)*sc.rec ).toFixed(1);
+}
+function riskAdj(p, base, lambda){
+  if(lambda>0 && p.ceil!=null) return base + lambda*(p.ceil-base);
+  if(lambda<0 && p.floor!=null) return base + lambda*(base-p.floor);
+  return base * (1 + lambda*(POS_VOL[p.pos]??.12));
+}
+
+/* =====================================================================
+   MODEL — computed on every change: scoring → VORP → dollars → inflation
+   ===================================================================== */
+let M = null; // model cache: {rows, infl, repl, budgetInfo}
+
+function starterCounts(){
+  const {slots, teams} = S.settings;
+  const counts = {};
+  for(const pos of POSITIONS) counts[pos] = (slots[pos]||0)*teams;
+  // allocate league FLEX starters to RB/WR/TE by best remaining projection
+  let flexN = (slots.FLEX||0)*teams;
+  if(flexN>0){
+    const overflow = [];
+    for(const pos of FLEX_POS){
+      const sorted = M.tmpByPos[pos]||[];
+      for(let i=counts[pos]; i<Math.min(sorted.length, counts[pos]+flexN); i++)
+        overflow.push({pos, pts:sorted[i].pts0});
+    }
+    overflow.sort((a,b)=>b.pts-a.pts);
+    for(let i=0;i<Math.min(flexN, overflow.length);i++) counts[overflow[i].pos]++;
+  }
+  return counts;
+}
+
+function rebuildModel(){
+  const sc = S.settings.scoring, lambda = S.settings.risk;
+  const rows = S.players.map(p=>{
+    const pts0 = +scorePlayer(p, sc) * (1 + (p.boost||0)/100);
+    return {p, pts0, rpts:+riskAdj(p, pts0, lambda).toFixed(1)};
+  });
+  M = {rows, tmpByPos:{}};
+  for(const pos of POSITIONS)
+    M.tmpByPos[pos] = rows.filter(r=>r.p.pos===pos && !r.p.out)
+                          .sort((a,b)=>b.pts0-a.pts0);
+  // replacement level per position
+  const counts = starterCounts();
+  M.repl = {};
+  for(const pos of POSITIONS){
+    const sorted = M.tmpByPos[pos], n = counts[pos];
+    M.repl[pos] = n>0 && sorted.length ? (sorted[Math.min(n,sorted.length)-1].pts0) : 0;
+  }
+  // VORP + intrinsic dollars
+  const {teams,cap,bench,slots} = S.settings;
+  const rosterSize = Object.values(slots).reduce((a,b)=>a+b,0)+bench;
+  const discretionary = teams*(cap-rosterSize);
+  let vorpSum = 0;
+  for(const r of rows){ r.vorp = +(r.pts0 - M.repl[r.p.pos]).toFixed(1);
+    if(!r.p.out && r.vorp>0) vorpSum += r.vorp; }
+  for(const r of rows)
+    r.fair = 1 + (r.vorp>0 && vorpSum>0 ? discretionary*r.vorp/vorpSum : 0);
+  // blended value (market ↔ model)
+  const w = S.settings.blend;
+  for(const r of rows) r.blended = +(w*r.fair + (1-w)*r.p.aav).toFixed(1);
+  // live inflation
+  const totalMoney = teams*cap, totalSpots = teams*rosterSize;
+  const spent = S.log.reduce((a,e)=>a+e.price,0);
+  const spotsFilled = S.log.length;
+  const moneyLeft = totalMoney - spent, spotsLeft = totalSpots - spotsFilled;
+  const discLeft = moneyLeft - spotsLeft;
+  const undrafted = rows.filter(r=>!r.p.drafted && !r.p.out)
+      .sort((a,b)=>b.blended-a.blended).slice(0, Math.max(0,spotsLeft));
+  const expDisc = undrafted.reduce((a,r)=>a+Math.max(0,r.blended-1),0);
+  M.infl = expDisc>0 ? Math.min(2, Math.max(.5, discLeft/expDisc)) : 1;
+  for(const r of rows)
+    r.adj = r.p.drafted ? r.p.drafted.price
+          : Math.max(1, Math.round(1 + (r.blended-1)*M.infl));
+  M.moneyLeft = moneyLeft; M.spent = spent;
+  // positional scarcity: share of each position's market value ($) still on the
+  // board. Dollar-based (the sheet's Value/AAV column), not VORP.
+  M.posValue = {};
+  for(const pos of POSITIONS){
+    let total=0, left=0;
+    for(const r of rows){
+      if(r.p.pos!==pos || r.p.out) continue;
+      const v = Math.max(1, r.p.aav);
+      total += v;
+      if(!r.p.drafted) left += v;
+    }
+    M.posValue[pos] = {total, left, pct: total>0 ? Math.round(100*left/total) : 0};
+  }
+  for(const r of rows){   // % of the position's value left if THIS player also goes
+    const pv = M.posValue[r.p.pos];
+    r.leftAfter = (!r.p.drafted && pv.total>0)
+      ? Math.max(0, Math.round(100*(pv.left - Math.max(1,r.p.aav))/pv.total)) : null;
+  }
+  // market rank for snake availability: explicit ADP when present, else the
+  // market-value ordering (AAV desc, projection as tiebreak)
+  const ranked = rows.slice().sort((a,b)=>{
+    const aa=a.p.adp??null, ba=b.p.adp??null;
+    if(aa!=null && ba!=null) return aa-ba;
+    if(aa!=null) return -1;
+    if(ba!=null) return 1;
+    return (b.p.aav-a.p.aav) || (b.rpts-a.rpts);
+  });
+  ranked.forEach((r,i)=>{ r.mrank = i+1; });
+}
+
+/* =====================================================================
+   OPTIMIZER — exact DP, equivalent to the ILP (see MODELING.md §2.1)
+   ===================================================================== */
+function myRosterAssignment(){
+  const slots = S.settings.slots;
+  const mine = S.players.filter(p=>p.drafted && p.drafted.mine);
+  const starters = {}; for(const pos of POSITIONS) starters[pos]=[];
+  const flex = [], benchList = [];
+  for(const p of mine.sort((a,b)=>b.pts-a.pts)){
+    if(starters[p.pos].length < (slots[p.pos]||0)) starters[p.pos].push(p);
+    else if(FLEX_POS.includes(p.pos) && flex.length < (slots.FLEX||0)) flex.push(p);
+    else benchList.push(p);
+  }
+  const remaining = {};
+  for(const pos of POSITIONS) remaining[pos] = Math.max(0,(slots[pos]||0)-starters[pos].length);
+  const flexOpen = Math.max(0,(slots.FLEX||0)-flex.length);
+  return {starters, flex, bench:benchList, remaining, flexOpen};
+}
+
+function budgetForOptimizer(assign){
+  const {cap, bench, benchRes} = S.settings;
+  const spentByMe = S.log.filter(e=>e.mine).reduce((a,e)=>a+e.price,0);
+  const myBudget = cap - spentByMe;
+  const benchOpen = Math.max(0, bench - assign.bench.length);
+  return {myBudget, benchOpen,
+    optBudget: Math.max(0, myBudget - benchOpen*benchRes)};
+}
+
+// knapsack table for one position: exactly j players, cost ≤ c.
+// Solution chains are immutable linked nodes {i, prev} — O(1) per improvement.
+function posTable(cands, need, B){
+  const NEG = -1e9;
+  const dp = [], picks = [];
+  for(let j=0;j<=need;j++){ dp.push(new Float64Array(B+1).fill(j?NEG:0));
+    picks.push(new Array(B+1).fill(null)); }
+  for(let i=0;i<cands.length;i++){
+    const cost = cands[i].cost, val = cands[i].val;
+    for(let j=need;j>=1;j--){
+      const dpj=dp[j], dpp=dp[j-1], pkj=picks[j], pkp=picks[j-1];
+      for(let c=B;c>=cost;c--){
+        const base = dpp[c-cost];
+        if(base>NEG/2 && base+val > dpj[c]){
+          dpj[c] = base+val; pkj[c] = {i, prev:pkp[c-cost]};
+        }
+      }
+    }
+  }
+  for(let j=1;j<=need;j++){ const dpj=dp[j], pkj=picks[j]; // make tables "≤ cost c"
+    for(let c=1;c<=B;c++) if(dpj[c-1] > dpj[c]){ dpj[c]=dpj[c-1]; pkj[c]=pkj[c-1]; } }
+  return {dp, picks};
+}
+
+function combine(groups, B){          // groups: [{key, table, need, cands}]
+  const NEG=-1e9;
+  let comb = new Float64Array(B+1).fill(0);
+  let cpicks = new Array(B+1).fill(null);  // nodes {g, node, prev}
+  for(const g of groups){
+    if(g.need===0) continue;
+    const nd = new Float64Array(B+1).fill(NEG);
+    const np = new Array(B+1).fill(null);
+    const T = g.table.dp[g.need], TP = g.table.picks[g.need];
+    for(let c=0;c<=B;c++){
+      const base = comb[c];
+      if(base<NEG/2) continue;
+      for(let c2=0;c+c2<=B;c2++){
+        const tv = T[c2];
+        if(tv<NEG/2) continue;
+        const v = base+tv;
+        if(v>nd[c+c2]){ nd[c+c2]=v; np[c+c2]={g:g.key, node:TP[c2], prev:cpicks[c]}; }
+      }
+    }
+    for(let c=1;c<=B;c++) if(nd[c-1]>nd[c]){nd[c]=nd[c-1];np[c]=np[c-1];}
+    comb=nd; cpicks=np;
+  }
+  return {comb, cpicks};
+}
+
+// unwind a combined chain into [{g, i}] pairs
+function materialize(cnode){
+  const out=[];
+  while(cnode){
+    let n=cnode.node;
+    while(n){ out.push({g:cnode.g, i:n.i}); n=n.prev; }
+    cnode=cnode.prev;
+  }
+  return out;
+}
+
+function flexVariants(remaining, flexOpen){
+  if(flexOpen===0) return [ {...remaining} ];
+  const variants = [];
+  const add = (base, left, startIdx)=>{
+    if(left===0){ variants.push(base); return; }
+    for(let k=startIdx;k<FLEX_POS.length;k++){
+      const nb = {...base}; nb[FLEX_POS[k]]++; add(nb,left-1,k);
+    }
+  };
+  add({...remaining}, flexOpen, 0);
+  return variants;
+}
+
+function candidatesByPos(excludeId){
+  const by = {};
+  for(const pos of POSITIONS){
+    by[pos] = M.rows
+      .filter(r=>r.p.pos===pos && !r.p.out && !r.p.drafted
+                 && playerId(r.p)!==excludeId)
+      .sort((a,b)=>b.rpts-a.rpts).slice(0,90)
+      .map(r=>({cost:r.adj, val:r.rpts, row:r}));
+  }
+  return by;
+}
+
+// solve the completion problem; returns {total, chosen:[row], variant, B}
+// opt.cache (Map) reuses posTables keyed pos|need across variants and callers
+// that share the same candidate pool and budget.
+function solveCompletion(opt){
+  const o = opt||{};
+  const assign = o.assign || myRosterAssignment();
+  const B = o.budget!=null ? o.budget : budgetForOptimizer(assign).optBudget;
+  const cands = o.cands || candidatesByPos(o.excludeId);
+  const cache = o.cache || new Map();
+  const variants = flexVariants(assign.remaining, assign.flexOpen);
+  let best=null;
+  for(const v of variants){
+    // positions absent from the pool entirely (e.g. a sheet with no DST rows)
+    // are skipped rather than making every roster infeasible
+    const groups = POSITIONS.filter(pos=>v[pos]>0 && cands[pos].length>0).map(pos=>{
+      const key = pos+"|"+v[pos];
+      let table = cache.get(key);
+      if(!table){ table = posTable(cands[pos], v[pos], B); cache.set(key, table); }
+      return {key:pos, need:v[pos], cands:cands[pos], table};
+    });
+    // infeasible if any group can't fill its need
+    let feasible = true;
+    for(const g of groups)
+      if(g.table.dp[g.need][B] < -1e8){ feasible=false; break; }
+    if(!feasible) continue;
+    const {comb, cpicks} = combine(groups, B);
+    if(comb[B] > -1e8 && (!best || comb[B] > best.total)){
+      const chosen = materialize(cpicks[B]).map(({g,i}) =>
+        groups.find(x=>x.key===g).cands[i].row);
+      best = {total:comb[B], chosen, variant:v, B};
+    }
+  }
+  return best; // null → cannot fill starters (tiny pool / no budget)
+}
+
+// max bids for every undrafted player (exact; see MODELING.md)
+function computeMaxBids(base){
+  if(!base){ return {bids:new Map(), withoutCache:new Map()}; }
+  const bids = new Map();
+  const assign = myRosterAssignment();
+  const {optBudget} = budgetForOptimizer(assign);
+  const inOpt = new Set(base.chosen.map(r=>playerId(r.p)));
+  // best total without each optimal-roster member (also powers alternates)
+  const withoutCache = new Map();
+  for(const r of base.chosen){
+    const id = playerId(r.p);
+    const sol = solveCompletion({excludeId:id});
+    withoutCache.set(id, sol? sol.total : -Infinity);
+  }
+  // completion tables with one fewer slot at each position (shared pool + cache)
+  const cands = candidatesByPos();
+  const cache = new Map();
+  const minus = {};
+  for(const pos of POSITIONS){
+    let rem = {...assign.remaining}, flexOpen = assign.flexOpen;
+    if(rem[pos]>0) rem[pos]--;
+    else if(FLEX_POS.includes(pos)&&flexOpen>0) flexOpen--;
+    else { minus[pos]=null; continue; }
+    let arr=null, refs=null;
+    for(const v of flexVariants(rem, flexOpen)){
+      const groups = POSITIONS.filter(q=>v[q]>0 && cands[q].length>0).map(q=>{
+        const key=q+"|"+v[q];
+        let table=cache.get(key);
+        if(!table){ table=posTable(cands[q], v[q], optBudget); cache.set(key,table); }
+        return {key:q, need:v[q], cands:cands[q], table};
+      });
+      if(groups.some(g=>g.table.dp[g.need][optBudget]<-1e8)) continue;
+      const {comb,cpicks} = combine(groups, optBudget);
+      if(!arr){ arr=comb.slice(); refs=new Array(optBudget+1).fill(null);
+        for(let c=0;c<=optBudget;c++) refs[c]={groups, node:cpicks[c]}; }
+      else for(let c=0;c<=optBudget;c++)
+        if(comb[c]>arr[c]){ arr[c]=comb[c]; refs[c]={groups, node:cpicks[c]}; }
+    }
+    minus[pos] = arr? {arr, refs} : null;
+  }
+  const completionHas = (m, c, id) => {   // does minus-completion at budget c use `id`?
+    const ref = m.refs[c]; if(!ref||!ref.node) return false;
+    return materialize(ref.node).some(({g,i})=>{
+      const grp = ref.groups.find(x=>x.key===g);
+      return grp && playerId(grp.cands[i].row.p)===id;
+    });
+  };
+  for(const r of M.rows){
+    if(r.p.drafted || r.p.out) continue;
+    const id = playerId(r.p), pos=r.p.pos;
+    const m = minus[pos];
+    if(!m){ bids.set(id, 0); continue; }
+    const bestWithout = inOpt.has(id) ? withoutCache.get(id) : base.total;
+    // value of winning at price c (non-increasing in c); collisions resolved exactly
+    const valueAt = c => {
+      const left = base.B - c;
+      if(left<0 || m.arr[left]<-1e8) return -Infinity;
+      let compl = m.arr[left];
+      if(completionHas(m, left, id)){
+        const a = myRosterAssignment();
+        if(a.remaining[pos]>0) a.remaining[pos]--; else a.flexOpen--;
+        const ex = solveCompletion({excludeId:id, budget:left, assign:a});
+        compl = ex? ex.total : -Infinity;
+      }
+      return r.rpts + compl;
+    };
+    const ok = c => valueAt(c) >= bestWithout - 1e-9;
+    if(!ok(1)){ bids.set(id, 0); continue; }
+    let lo=1, hi=base.B;                 // binary search: largest c with ok(c)
+    while(lo<hi){
+      const mid = (lo+hi+1)>>1;
+      if(ok(mid)) lo=mid; else hi=mid-1;
+    }
+    bids.set(id, lo);
+  }
+  return {bids, withoutCache};
+}
+
+/* =====================================================================
+   SNAKE MODE — serpentine pick math, availability model, projected plan
+   ===================================================================== */
+function rosterSizeTotal(){
+  return Object.values(S.settings.slots).reduce((a,b)=>a+b,0)+S.settings.bench;
+}
+function myPickNumbers(){
+  const T=S.settings.teams, slot=Math.min(Math.max(1,S.settings.snakeSlot||1),T);
+  const out=[];
+  for(let r=1;r<=rosterSizeTotal();r++)
+    out.push((r-1)*T + (r%2===1 ? slot : T+1-slot));
+  return out;
+}
+function currentOverallPick(){ return S.log.length+1; }
+function snakeBuffer(){ return Math.max(3, Math.round(S.settings.teams/2)); }
+function nextMyPickAfter(n){
+  for(const x of myPickNumbers()) if(x>n) return x;
+  return n + 2*S.settings.teams;
+}
+function roundDotPick(n){
+  const T=S.settings.teams, r=Math.ceil(n/T);
+  return `R${r}.${String(n-(r-1)*T).padStart(2,"0")}`;
+}
+// undrafted players plausibly still on the board at overall pick n
+function availableAt(n, used){
+  const buf=snakeBuffer();
+  return M.rows.filter(r=>!r.p.drafted && !r.p.out
+    && !(used&&used.has(playerId(r.p))) && r.mrank > n-buf);
+}
+// projected plan for my remaining picks. At each pick, take the player whose
+// position loses the most by waiting for my NEXT pick (marginal-value greedy).
+// This naturally spends early picks on cliff positions (RB/WR) and defers
+// flat-dropoff slots (K/DST, streamable QB tiers) to the end.
+function solveSnakePlan(){
+  const assign=myRosterAssignment();
+  const need={...assign.remaining};
+  let flexOpen=assign.flexOpen;
+  let benchOpen=Math.max(0,S.settings.bench-assign.bench.length);
+  const cur=currentOverallPick();
+  const slotsLeft=POSITIONS.reduce((a,p)=>a+need[p],0)+flexOpen+benchOpen;
+  const picks=myPickNumbers().filter(n=>n>=cur).slice(0, slotsLeft);
+  const used=new Set(); const plan=[];
+  for(let i=0;i<picks.length;i++){
+    const n=picks[i];
+    const nxt = i+1<picks.length ? picks[i+1] : n+2*S.settings.teams;
+    // at the CURRENT pick everyone undrafted is truly on the board (fallers
+    // included); the rank model only gates FUTURE picks
+    const avail = (n<=cur
+      ? M.rows.filter(r=>!r.p.drafted && !r.p.out && !used.has(playerId(r.p)))
+      : availableAt(n, used));
+    // best two per position at my next pick (to price "waiting")
+    const top2={};
+    for(const r of availableAt(nxt, used)){
+      const t=top2[r.p.pos]||(top2[r.p.pos]=[]);
+      if(t.length<2){ t.push(r); t.sort((a,b)=>b.rpts-a.rpts); }
+      else if(r.rpts>t[1].rpts){ t[1]=r; t.sort((a,b)=>b.rpts-a.rpts); }
+    }
+    const benchQB=plan.filter(s=>s.role==="BN"&&s.r.p.pos==="QB").length;
+    let take=null, role=null, bestScore=-1e9;
+    for(const r of avail){
+      let fit=null;
+      if(need[r.p.pos]>0) fit=r.p.pos;
+      else if(flexOpen>0 && FLEX_POS.includes(r.p.pos)) fit="FLEX";
+      else if(benchOpen>0){
+        // bench = skill depth: no K/DST stashing, at most one backup QB
+        if(r.p.pos==="K"||r.p.pos==="DST") continue;
+        if(r.p.pos==="QB"&&benchQB>=1) continue;
+        fit="BN";
+      }
+      else continue;
+      const t=top2[r.p.pos]||[];
+      const later=t[0]===r ? t[1] : t[0];
+      const score=r.rpts-(later? later.rpts:0)   // dropoff if I wait
+        + r.rpts*1e-4;                            // tiny tiebreak toward talent
+      if(score>bestScore){ bestScore=score; take=r; role=fit; }
+    }
+    if(!take) continue;
+    used.add(playerId(take.p)); plan.push({r:take, n, role});
+    if(role==="FLEX") flexOpen--;
+    else if(role==="BN") benchOpen--;
+    else need[role]--;
+  }
+  const starters=plan.filter(p=>p.role!=="BN");
+  return {plan, chosen:starters.map(p=>p.r),
+    total:starters.reduce((a,p)=>a+p.r.rpts,0), B:0, snake:true};
+}
+// urgency: how much value at this player's position evaporates if I wait
+// for my next pick instead of taking him now
+function snakeUrgency(r, nextN){
+  const later=availableAt(nextN, new Set([playerId(r.p)]))
+    .filter(x=>x.p.pos===r.p.pos).sort((a,b)=>b.rpts-a.rpts)[0];
+  return {dropoff:+(r.rpts-(later? later.rpts:0)).toFixed(1), later};
+}
+
+/* ============================ recompute-all ============================ */
+let R = {sol:null, bids:new Map(), without:new Map()};
+function recompute(){
+  rebuildModel();
+  if(isSnake()){
+    R.sol = solveSnakePlan();
+    R.bids = new Map(); R.without = new Map();
+  }else{
+    R.sol = solveCompletion();
+    const mb = computeMaxBids(R.sol);
+    R.bids = mb.bids||new Map(); R.without = mb.withoutCache||new Map();
+  }
+  renderAll();
+  saveState();
+}
+
+/* ============================ draft actions ============================ */
+function applyPick(p, price, mine){  // shared by manual drafting and league sync
+  p.drafted = {price:Math.max(1,Math.round(price)), mine};
+  rebuildModel();   // cheap; snapshots post-pick positional value remaining
+  S.log.push({id:playerId(p), name:p.name, pos:p.pos, price:p.drafted.price,
+    mine, n:S.log.length+1, left:M.posValue[p.pos].pct});
+}
+function draftPlayer(p, price, mine){
+  applyPick(p, price, mine);
+  S.sel=null; recompute();
+}
+function undo(idx){
+  const e = S.log[idx]; if(!e) return;
+  const p = S.players.find(x=>playerId(x)===e.id);
+  if(p) p.drafted=null;
+  S.log.splice(idx,1); recompute();
+}
+
+/* ============================ CSV import ============================ */
+function parseCSV(text){
+  const rows=[]; let row=[], cur="", q=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(q){ if(ch==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; }
+    else if(ch==='"') q=true;
+    else if(ch===','){ row.push(cur); cur=""; }
+    else if(ch==='\n'||ch==='\r'){ if(cur!==""||row.length){row.push(cur);rows.push(row);row=[];cur="";}
+      if(ch==='\r'&&text[i+1]==='\n')i++; }
+    else cur+=ch;
+  }
+  if(cur!==""||row.length){row.push(cur);rows.push(row);}
+  return rows.filter(r=>r.length>1 || (r[0]&&r[0].trim()));
+}
+const HEADER_MAP = [
+  ["name", /^(player\s*)?name$|^player$/i],
+  ["team", /^(nfl\s*)?te?a?m$/i],
+  ["pos",  /^pos(ition)?$/i],
+  ["aav",  /aav|auction|avg.*(salary|cost|price)|^value$|^salary$|^price$|^\$$/i],
+  ["pts",  /^(proj(ected)?\s*)?(fantasy\s*)?(pts|points|fpts)$|^proj$|^projection$/i],
+  ["floor",/floor/i], ["ceil",/ceil/i],
+  ["adp",/^adp$|av(era)?ge?\.?\s*(draft\s*)?(pos(ition)?|pick)/i],
+  ["pass_yd",/^p(ass)?[\s_]*yds?$/i], ["pass_td",/^p(ass)?[\s_]*tds?$|^td$/i],
+  ["int",/^ints?$/i],
+  ["rush_yd",/^r(ush)?[\s_]*yds?$|^r_yd$/i], ["rush_td",/^r(ush)?[\s_]*tds?$|^r_td$/i],
+  ["rec",/^rec(eptions)?$/i], ["rec_yd",/^rec[\s_]*yds?$|^rec_yd$/i],
+  ["rec_td",/^rec[\s_]*tds?$|^rec_tds?$/i],
+];
+function mapHeaders(hdr){
+  const m={};
+  hdr.forEach((h,i)=>{
+    const t=String(h).trim();
+    for(const [key,re] of HEADER_MAP) if(re.test(t) && m[key]==null){ m[key]=i; break; }
+  });
+  return m;
+}
+function importRows(rows, mode, w){
+  if(rows.length<2) return "No data rows found.";
+  const m = mapHeaders(rows[0]);
+  if(m.name==null || m.pos==null)
+    return "Could not find Name and Position columns — check the header row.";
+  let added=0, merged=0, skipped=0;
+  const statKeys=["pass_yd","pass_td","int","rush_yd","rush_td","rec","rec_yd","rec_td"];
+  const incoming=[];
+  const seen=new Set();
+  for(const r of rows.slice(1)){
+    const pos = normPos(r[m.pos]); const name=(r[m.name]||"").trim().replace(/\s+/g," ");
+    if(!pos||!name){skipped++;continue;}
+    const id=(name+"|"+pos).toLowerCase();
+    if(seen.has(id)){skipped++;continue;}
+    seen.add(id);
+    const num = i => i==null?null:parseFloat(String(r[i]).replace(/[$,]/g,""))||0;
+    const stats={}; let hasStats=false;
+    for(const k of statKeys){ if(m[k]!=null){ stats[k]=num(m[k]); hasStats=true; } }
+    incoming.push({name, team:(m.team!=null?String(r[m.team]||"").trim().toUpperCase():""),
+      pos, aav:num(m.aav)??1, pts:num(m.pts)??0,
+      floor:m.floor!=null?num(m.floor):null, ceil:m.ceil!=null?num(m.ceil):null,
+      adp:m.adp!=null?num(m.adp):null, stats:hasStats?stats:null});
+  }
+  if(mode==="replace"){
+    S.players = incoming.map(freshPlayer); S.log=[];
+    added=incoming.length;
+  }else{
+    const idx = new Map(S.players.map(p=>[playerId(p),p]));
+    for(const n of incoming){
+      const id=(n.name+"|"+n.pos).toLowerCase();
+      const ex = idx.get(id);
+      if(ex){
+        if(n.pts) ex.pts = +( (1-w)*ex.pts + w*n.pts ).toFixed(1);
+        if(n.aav>1 || !ex.aav) ex.aav = Math.max(1,Math.round(n.aav));
+        if(n.team) ex.team=n.team;
+        if(n.stats) ex.stats=n.stats;
+        if(n.floor!=null) ex.floor=n.floor;
+        if(n.ceil!=null) ex.ceil=n.ceil;
+        if(n.adp!=null) ex.adp=n.adp;
+        merged++;
+      }else{ const np=freshPlayer(n); S.players.push(np); idx.set(id,np); added++; }
+    }
+  }
+  recompute();
+  return `Imported: ${added} added, ${merged} blended (weight ${w}), ${skipped} skipped.`;
+}
+function importCSV(text, mode, w){ return importRows(parseCSV(text), mode, w); }
+
+/* ---------- minimal .xlsx reader (zip + sheet XML, no libraries) ---------- */
+async function parseXLSX(buf){
+  const dv = new DataView(buf);
+  let eocd=-1;
+  for(let i=buf.byteLength-22;i>=Math.max(0,buf.byteLength-22-65558);i--)
+    if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;}
+  if(eocd<0) throw new Error("not a valid .xlsx (zip) file");
+  const count=dv.getUint16(eocd+10,true);
+  let off=dv.getUint32(eocd+16,true);
+  const files={}, td=new TextDecoder();
+  for(let n=0;n<count;n++){
+    if(dv.getUint32(off,true)!==0x02014b50) break;
+    const method=dv.getUint16(off+10,true), csize=dv.getUint32(off+20,true);
+    const nameLen=dv.getUint16(off+28,true), extraLen=dv.getUint16(off+30,true),
+      cmtLen=dv.getUint16(off+32,true), lho=dv.getUint32(off+42,true);
+    files[td.decode(new Uint8Array(buf,off+46,nameLen))]={method,csize,lho};
+    off+=46+nameLen+extraLen+cmtLen;
+  }
+  async function read(name){
+    const f=files[name]; if(!f) return null;
+    const nl=dv.getUint16(f.lho+26,true), el=dv.getUint16(f.lho+28,true);
+    const data=buf.slice(f.lho+30+nl+el, f.lho+30+nl+el+f.csize);
+    if(f.method===0) return td.decode(data);
+    const ds=new DecompressionStream("deflate-raw");
+    return await new Response(new Blob([data]).stream().pipeThrough(ds)).text();
+  }
+  const unent=s=>s.replace(/&#(\d+);/g,(_,d)=>String.fromCharCode(+d))
+    .replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">")
+    .replace(/&quot;/g,'"').replace(/&apos;/g,"'");
+  // shared strings
+  const shared=[];
+  const ss=await read("xl/sharedStrings.xml");
+  if(ss) for(const si of ss.matchAll(/<si>([\s\S]*?)<\/si>/g))
+    shared.push(unent([...si[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(m=>m[1]).join("")));
+  // first worksheet
+  const sheetName=Object.keys(files).filter(n=>/^xl\/worksheets\/sheet\d+\.xml$/.test(n))
+    .sort((a,b)=>parseInt(a.match(/\d+/))-parseInt(b.match(/\d+/)))[0];
+  const xml=await read(sheetName);
+  if(!xml) throw new Error("no worksheet found in the file");
+  const colIdx=ref=>{let c=0;for(const ch of ref)if(ch>="A"&&ch<="Z")c=c*26+ch.charCodeAt(0)-64;return c-1;};
+  const rows=[];
+  for(const rm of xml.matchAll(/<row[^>]*>([\s\S]*?)<\/row>/g)){
+    const row=[];
+    for(const cm of rm[1].matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)){
+      const attrs=cm[1], inner=cm[2]||"";
+      const ref=(attrs.match(/r="([A-Z]+)\d+"/)||[])[1];
+      const t=(attrs.match(/t="(\w+)"/)||[])[1];
+      let v="";
+      if(t==="inlineStr") v=unent([...inner.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(m=>m[1]).join(""));
+      else{
+        const vm=inner.match(/<v>([\s\S]*?)<\/v>/);
+        v=vm?unent(vm[1]):"";
+        if(t==="s") v=shared[+v]??"";
+      }
+      if(ref!=null) row[colIdx(ref)]=v; else row.push(v);
+    }
+    if(row.some(x=>x!=null&&String(x).trim()!=="")) rows.push([...row].map(x=>x==null?"":x));
+  }
+  return rows;
+}
+async function importXLSX(buf, mode, w){
+  if(typeof DecompressionStream==="undefined")
+    return "This browser can't unzip .xlsx files — save the sheet as CSV and import that.";
+  try{ return importRows(await parseXLSX(buf), mode, w); }
+  catch(e){ return "Could not read that .xlsx ("+e.message+") — save it as CSV and import that."; }
+}
+function exportCSV(){
+  const sc=S.settings.scoring;
+  const lines=[["Name","Team","Pos","AAV","Proj","PosLeftAfter%","Fair$","Adj$","MaxBid","Boost%","Out","Drafted","Price","Mine"].join(",")];
+  for(const r of M.rows){
+    const id=playerId(r.p);
+    lines.push([`"${r.p.name}"`,r.p.team,r.p.pos,r.p.aav,r.pts0.toFixed(1),
+      (r.leftAfter??""),Math.round(r.fair),r.adj,(R.bids.get(id)??""),r.p.boost||0,
+      r.p.out?1:"",r.p.drafted?1:"",r.p.drafted?r.p.drafted.price:"",
+      r.p.drafted&&r.p.drafted.mine?1:""].join(","));
+  }
+  const blob=new Blob([lines.join("\n")],{type:"text/csv"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download="draft-pool.csv"; a.click();
+}
+
+/* ============================ rendering ============================ */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let poolSort={k:"adj",dir:-1}, posFilter="ALL";
+
+function fmt$(n){ return "$"+Math.round(n); }
+const tileLbl=(id,txt)=>{ $(id).parentElement.querySelector(".lbl").textContent=txt; };
+const tileSub=(id,txt)=>{ const s=$(id).parentElement.querySelector(".sub"); if(s) s.textContent=txt; };
+function renderTiles(){
+  const assign = myRosterAssignment();
+  const spotsOpen = POSITIONS.reduce((a,p)=>a+assign.remaining[p],0)+assign.flexOpen;
+  $("#tSpots").textContent = spotsOpen;
+  $("#tSpotsSub").textContent = POSITIONS.filter(p=>assign.remaining[p]>0)
+    .map(p=>`${p}×${assign.remaining[p]}`).join(" ")+(assign.flexOpen?` FLEX×${assign.flexOpen}`:"");
+  const myPts = S.players.filter(p=>p.drafted&&p.drafted.mine)
+    .reduce((a,p)=>{const r=M.rows.find(r=>r.p===p);return a+(r?r.rpts:0);},0);
+  $("#tProj").textContent = R.sol? Math.round(myPts + R.sol.total) : "—";
+  if(isSnake()){
+    const cur=currentOverallPick(), T=S.settings.teams;
+    const next=myPickNumbers().find(n=>n>=cur);
+    const total=T*rosterSizeTotal();
+    tileLbl("#tBudget","My next pick");
+    $("#tBudget").textContent = next? "#"+next : "done";
+    tileSub("#tBudget", next? `${roundDotPick(next)} · ${next-cur===0?"you're on the clock!":next-cur+" picks away"}`:"draft complete");
+    tileLbl("#tMaxBid","Now drafting");
+    $("#tMaxBid").textContent = cur<=total? "#"+cur : "—";
+    tileSub("#tMaxBid", cur<=total? roundDotPick(cur)+` of ${Math.ceil(total/T)} rounds` : "draft complete");
+    tileLbl("#tInfl","Picks made");
+    $("#tInfl").textContent = S.log.length;
+    $("#tInfl").className="val";
+    tileSub("#tInfl", `of ${total} — log every pick to keep the order true`);
+    tileSub("#tProj","projected pts, my picks + projected plan");
+  }else{
+    const {myBudget, optBudget, benchOpen} = budgetForOptimizer(assign);
+    tileLbl("#tBudget","My budget left");
+    $("#tBudget").textContent = fmt$(myBudget);
+    tileSub("#tBudget", `${fmt$(optBudget)} for starters after bench reserve (${benchOpen} bench open)`);
+    tileLbl("#tMaxBid","Max single bid");
+    $("#tMaxBid").textContent = fmt$(Math.max(0, myBudget-(spotsOpen+benchOpen-1)));
+    tileSub("#tMaxBid","keep $1 for every other open spot");
+    tileLbl("#tInfl","Room inflation");
+    const pct = Math.round((M.infl-1)*100);
+    $("#tInfl").textContent = (pct>0?"+":"")+pct+"%";
+    $("#tInfl").className = "val "+(pct>2?"down":pct<-2?"up":"");
+    tileSub("#tInfl","prices vs expected values");
+    tileSub("#tProj","projected pts, my picks + optimal completion");
+  }
+}
+
+function renderPool(){
+  const q = $("#search").value.trim().toLowerCase();
+  const hide = $("#hideDrafted").checked;
+  const inOpt = new Set(R.sol? R.sol.chosen.map(r=>playerId(r.p)):[]);
+  let rows = M.rows.filter(r=>{
+    if(posFilter==="FLEX"){ if(!FLEX_POS.includes(r.p.pos)) return false; }
+    else if(posFilter!=="ALL" && r.p.pos!==posFilter) return false;
+    if(hide && r.p.drafted) return false;
+    if(q && !(r.p.name.toLowerCase().includes(q)||r.p.team.toLowerCase().includes(q))) return false;
+    return true;
+  });
+  const snake=isSnake();
+  const nextN = snake? (myPickNumbers().find(n=>n>=currentOverallPick())
+    ?? currentOverallPick()) : 0;
+  const buf=snakeBuffer();
+  const availClass=r=> r.mrank>nextN+buf? ["up","likely"]
+    : r.mrank>nextN-buf? ["","risky"] : ["down","gone by then"];
+  const val = r => {
+    const id=playerId(r.p);
+    switch(poolSort.k){
+      case "name": return r.p.name; case "team": return r.p.team;
+      case "pos": return r.p.pos;
+      case "aav": return snake? -r.mrank : r.p.aav;
+      case "adj": return snake? -r.mrank : r.adj;
+      case "rpts": return r.rpts;
+      case "left": return r.leftAfter??101;
+      case "maxbid": return snake? r.mrank-nextN : (R.bids.get(id)??-1);
+    }};
+  rows.sort((a,b)=>{const va=val(a),vb=val(b);
+    return (typeof va==="string"? va.localeCompare(vb): va-vb)*poolSort.dir;});
+  rows = rows.slice(0,250);
+  const tb = $("#pool tbody"); tb.innerHTML="";
+  for(const r of rows){
+    const id = playerId(r.p);
+    const bid = R.bids.get(id);
+    const tr = document.createElement("tr");
+    tr.className = [r.p.drafted? (r.p.drafted.mine?"mine":"gone"):"",
+      inOpt.has(id)?"inopt":"", S.sel===id?"sel":""].join(" ").trim();
+    const availCell = ()=>{ if(r.p.drafted) return "—";
+      const [cls,txt]=availClass(r); return `<span class="${cls}">${txt}</span>`; };
+    tr.innerHTML = `<td class="l">${esc(r.p.name)}${r.p.out?' <span class="pill">OUT</span>':""}${r.p.note?` <span class="pill" title="${esc(r.p.note)}">ⓘ</span>`:""}</td>
+      <td>${esc(r.p.team)}</td><td><span class="pos ${r.p.pos}">${r.p.pos}</span></td>
+      <td>${snake? "#"+r.mrank : fmt$(r.p.aav)}</td>
+      <td>${snake? roundDotPick(Math.min(r.mrank, S.settings.teams*rosterSizeTotal())).split(".")[0] : "<b>"+fmt$(r.adj)+"</b>"}</td>
+      <td>${r.rpts.toFixed(0)}</td><td>${r.leftAfter!=null?r.leftAfter+"%":"—"}</td>
+      <td>${snake? availCell() : (r.p.drafted?"—": bid===0?'<span class="down">pass</span>':bid!=null?"<b>"+fmt$(bid)+"</b>":"…")}</td>
+      <td>${r.p.drafted?
+        `<button class="small" data-act="undo" data-id="${id}">undo</button>`:
+        `<button class="small" data-act="sel" data-id="${id}">block ▸</button>`}</td>`;
+    tr.addEventListener("click",e=>{
+      if(e.target.dataset.act==="undo"){ undo(S.log.findIndex(x=>x.id===id)); return;}
+      selectPlayer(id);
+    });
+    tb.appendChild(tr);
+  }
+  const H={aav: snake?"Mkt#":"AAV", adj: snake?"Rd":"Adj$",
+    maxbid: snake?`@ my #${nextN}`:"Max bid"};
+  document.querySelectorAll("#pool th[data-k]").forEach(th=>{
+    if(H[th.dataset.k]) th.textContent=H[th.dataset.k];
+    th.classList.toggle("sorted", th.dataset.k===poolSort.k);});
+  $("#poolNote").textContent = snake
+    ? `${rows.length} shown · Mkt# = market/ADP rank, Rd = expected round · `+
+      `"@ my #${nextN}" = odds they last to your next pick (±${buf} buffer) · `+
+      `"Pos left" = % of position value remaining after that player`
+    : `${rows.length} shown · "Pos left" = % of the position's market value remaining if that player is drafted · ` +
+      `Adj$ includes ${Math.round((M.infl-1)*100)}% inflation`;
+}
+
+function renderScarcity(){
+  const el=$("#scarcity"); el.innerHTML="";
+  const lab=document.createElement("span");
+  lab.className="slabel"; lab.textContent="Position value remaining:";
+  el.appendChild(lab);
+  const posColor={QB:"var(--qb)",RB:"var(--rb)",WR:"var(--wr)",TE:"var(--te)",
+    K:"var(--muted)",DST:"var(--muted)"};
+  for(const pos of POSITIONS){
+    const pct=M.posValue[pos]?.pct??0;
+    const d=document.createElement("span"); d.className="sitem";
+    d.innerHTML=`<b>${pos}</b><span class="track"><span class="fill"
+      style="width:${pct}%;background:${posColor[pos]}"></span></span>${pct}%`;
+    el.appendChild(d);
+  }
+}
+
+function renderRoster(){
+  const a = myRosterAssignment();
+  const el = $("#roster"); el.innerHTML="";
+  const snake=isSnake();
+  const pickLabel=p=>{
+    if(!snake) return fmt$(p.drafted.price);
+    const e=S.log.find(x=>x.id===playerId(p));
+    return e? roundDotPick(e.n) : "—";
+  };
+  const slotRow=(label,p)=>{
+    const d=document.createElement("div"); d.className="roster-slot";
+    d.innerHTML = p? `<span class="nm"><span class="pos ${p.pos}">${p.pos}</span> ${esc(p.name)}</span><span>${pickLabel(p)}</span>`
+      : `<span class="nm empty">${label}</span><span class="empty">—</span>`;
+    el.appendChild(d);
+  };
+  for(const pos of POSITIONS){
+    const n=S.settings.slots[pos]||0;
+    for(let i=0;i<n;i++) slotRow(pos, a.starters[pos][i]);
+  }
+  for(let i=0;i<(S.settings.slots.FLEX||0);i++) slotRow("FLEX", a.flex[i]);
+  const bn=S.settings.bench;
+  for(let i=0;i<bn;i++) slotRow("Bench", a.bench[i]);
+}
+
+function renderOptimal(){
+  const el=$("#optimal");
+  const head=el.closest(".card").querySelector("h2");
+  const note=el.closest(".card").querySelector(".note");
+  if(isSnake()){
+    head.textContent="Projected plan";
+    note.textContent="A round-by-round path for your remaining picks, assuming players "+
+      "near their market rank come off the board. Recomputed after every pick.";
+    if(!R.sol || !R.sol.plan.length){
+      el.innerHTML='<p class="note">No plan — roster already full or pool empty.</p>'; return; }
+    el.innerHTML="";
+    for(const step of R.sol.plan){
+      const d=document.createElement("div"); d.className="roster-slot";
+      d.innerHTML=`<span class="nm">${roundDotPick(step.n)} <span class="pos ${step.r.p.pos}">${step.r.p.pos}</span>
+        ${esc(step.r.p.name)}${step.role==="BN"?' <span class="pill">bench</span>':step.role==="FLEX"?' <span class="pill">flex</span>':""}</span>
+        <span>${step.r.rpts.toFixed(0)} pts</span>`;
+      d.style.cursor="pointer";
+      d.addEventListener("click",()=>selectPlayer(playerId(step.r.p)));
+      el.appendChild(d);
+    }
+    const d=document.createElement("div"); d.className="lognote"; d.style.marginTop="6px";
+    d.textContent=`Starters from plan: ${Math.round(R.sol.total)} pts`;
+    el.appendChild(d);
+    return;
+  }
+  head.textContent="Optimal completion";
+  note.textContent="Best way to finish your starters with the money you have left — "+
+    "recomputed after every pick. Adj$ is the price it assumes.";
+  if(!R.sol){ el.innerHTML='<p class="note">No feasible completion — pool too thin or budget too low. Import more players or lower bench reserve.</p>'; return; }
+  el.innerHTML="";
+  for(const r of R.sol.chosen.slice().sort((a,b)=>b.adj-a.adj)){
+    const d=document.createElement("div"); d.className="roster-slot";
+    d.innerHTML=`<span class="nm"><span class="pos ${r.p.pos}">${r.p.pos}</span> ${esc(r.p.name)}</span>
+      <span>${r.rpts.toFixed(0)} pts · <b>${fmt$(r.adj)}</b></span>`;
+    d.style.cursor="pointer";
+    d.addEventListener("click",()=>selectPlayer(playerId(r.p)));
+    el.appendChild(d);
+  }
+  const cost=R.sol.chosen.reduce((a,r)=>a+r.adj,0);
+  const d=document.createElement("div"); d.className="lognote";
+  d.style.marginTop="6px";
+  d.textContent=`Completion: ${Math.round(R.sol.total)} pts for ${fmt$(cost)} of ${fmt$(R.sol.B)}`;
+  el.appendChild(d);
+}
+
+function renderNominate(){
+  const el=$("#nominate"); el.innerHTML="";
+  const card=el.closest(".card");
+  const head=card.querySelector("h2"), note=card.querySelector(".note");
+  if(isSnake()){
+    head.textContent="Take-now urgency";
+    note.textContent="Players whose position value craters before your next pick — "+
+      "the dropoff vs the best same-position player likely left for you.";
+    const assign=myRosterAssignment();
+    const cur=currentOverallPick(), nxt=nextMyPickAfter(cur);
+    const fits=r=> assign.remaining[r.p.pos]>0
+      || (assign.flexOpen>0 && FLEX_POS.includes(r.p.pos))
+      || (S.settings.bench-assign.bench.length)>0;
+    const ideas=M.rows.filter(r=>!r.p.drafted && !r.p.out && fits(r))
+      .sort((a,b)=>b.rpts-a.rpts).slice(0,40)
+      .map(r=>({r, u:snakeUrgency(r, nxt)}))
+      .sort((a,b)=>b.u.dropoff-a.u.dropoff).slice(0,6);
+    if(!ideas.length){ el.innerHTML='<p class="note">Nothing urgent.</p>'; return; }
+    for(const {r,u} of ideas){
+      const d=document.createElement("div"); d.className="roster-slot";
+      d.style.cursor="pointer";
+      d.innerHTML=`<span class="nm"><span class="pos ${r.p.pos}">${r.p.pos}</span> ${esc(r.p.name)}</span>
+        <span>−${u.dropoff} pts if you wait</span>`;
+      d.addEventListener("click",()=>selectPlayer(playerId(r.p)));
+      el.appendChild(d);
+    }
+    return;
+  }
+  head.textContent="Nomination ideas";
+  note.textContent="Big names you should not buy — nominate them to drain other budgets.";
+  const inOpt=new Set(R.sol? R.sol.chosen.map(r=>playerId(r.p)):[]);
+  const ideas = M.rows
+    .filter(r=>!r.p.drafted && !r.p.out && !inOpt.has(playerId(r.p)))
+    .filter(r=>{const b=R.bids.get(playerId(r.p)); return b!=null && b < r.p.aav*0.6;})
+    .sort((a,b)=>b.p.aav-a.p.aav).slice(0,6);
+  if(!ideas.length){ el.innerHTML='<p class="note">Nothing juicy right now.</p>'; return;}
+  for(const r of ideas){
+    const d=document.createElement("div"); d.className="roster-slot";
+    d.innerHTML=`<span class="nm"><span class="pos ${r.p.pos}">${r.p.pos}</span> ${esc(r.p.name)}</span>
+      <span>room pays ~${fmt$(r.adj)} · you'd pay ${R.bids.get(playerId(r.p))===0?"nothing":fmt$(R.bids.get(playerId(r.p)))}</span>`;
+    el.appendChild(d);
+  }
+}
+
+function renderLog(){
+  const el=$("#log"); el.innerHTML="";
+  if(!S.log.length){ el.innerHTML='<p class="note">No picks yet. Record every sale — the model feeds on prices.</p>'; return;}
+  const list=S.log.slice().reverse();
+  for(const e of list){
+    const idx=S.log.indexOf(e);
+    const d=document.createElement("div"); d.className="roster-slot";
+    d.innerHTML=`<span class="nm">#${e.n} <span class="pos ${e.pos}">${e.pos}</span>
+      ${esc(e.name)} ${e.mine?'<span class="pill up">me</span>':""}
+      ${e.left!=null?`<span class="pill" title="Share of ${e.pos} market value still on the board after this pick">${e.pos} ${e.left}% left</span>`:""}</span>
+      <span>${isSnake()? roundDotPick(e.n) : fmt$(e.price)} <button class="small" data-i="${idx}">undo</button></span>`;
+    d.querySelector("button").addEventListener("click",()=>undo(idx));
+    el.appendChild(d);
+  }
+}
+
+/* ---------- scatter (SVG, QB/RB/WR/TE only — see chart note) ---------- */
+function renderScatter(){
+  const host=$("#scatter"); host.innerHTML="";
+  const Wd=host.clientWidth||760, H=340, m={t:14,r:16,b:36,l:44};
+  const rows=M.rows.filter(r=>SCATTER_COLORS[r.p.pos] && !r.p.out && r.adj>0 && r.rpts>0);
+  if(!rows.length) return;
+  const niceStep=(max,n)=>{const raw=max/n, mag=10**Math.floor(Math.log10(raw)),
+    k=raw/mag; return (k<1.5?1:k<3?2:k<7?5:10)*mag;};
+  const xstep=niceStep(Math.max(...rows.map(r=>r.p.drafted?0:r.adj),10),5);
+  const ystep=niceStep(Math.max(...rows.map(r=>r.rpts)),5);
+  const xmax=Math.ceil(Math.max(...rows.map(r=>r.p.drafted?0:r.adj),10)*1.04/xstep)*xstep;
+  const ymax=Math.ceil(Math.max(...rows.map(r=>r.rpts))*1.04/ystep)*ystep;
+  const X=v=>m.l+(Wd-m.l-m.r)*v/xmax, Y=v=>H-m.b-(H-m.t-m.b)*v/ymax;
+  const NS="http://www.w3.org/2000/svg";
+  const svg=document.createElementNS(NS,"svg");
+  svg.setAttribute("viewBox",`0 0 ${Wd} ${H}`); svg.style.width="100%";
+  const add=(tag,attrs,parent)=>{const n=document.createElementNS(NS,tag);
+    for(const k in attrs)n.setAttribute(k,attrs[k]);(parent||svg).appendChild(n);return n;};
+  // gridlines + axes (recessive)
+  for(let v=0;v<=ymax;v+=ystep){
+    add("line",{x1:m.l,x2:Wd-m.r,y1:Y(v),y2:Y(v),stroke:"var(--grid)","stroke-width":1});
+    const t=add("text",{x:m.l-6,y:Y(v)+4,"text-anchor":"end","font-size":11,fill:"var(--muted)"});
+    t.textContent=Math.round(v);}
+  for(let v=0;v<=xmax;v+=xstep){
+    const t=add("text",{x:X(v),y:H-m.b+16,"text-anchor":"middle","font-size":11,fill:"var(--muted)"});
+    t.textContent="$"+Math.round(v);}
+  add("line",{x1:m.l,x2:Wd-m.r,y1:Y(0),y2:Y(0),stroke:"var(--axis)","stroke-width":1});
+  const xl=add("text",{x:(m.l+Wd-m.r)/2,y:H-4,"text-anchor":"middle","font-size":11,fill:"var(--ink-2)"});
+  xl.textContent="Adjusted price ($)";
+  const yl=add("text",{x:12,y:(m.t+H-m.b)/2,"font-size":11,fill:"var(--ink-2)",
+    transform:`rotate(-90 12 ${(m.t+H-m.b)/2})`, "text-anchor":"middle"});
+  yl.textContent="Risk-adjusted projection (pts)";
+  const tip=$("#tooltip");
+  // undrafted on top of drafted
+  const ordered=rows.slice().sort((a,b)=>(a.p.drafted?0:1)-(b.p.drafted?0:1));
+  for(const r of ordered){
+    const cx=X(r.p.drafted? r.p.drafted.price : r.adj), cy=Y(r.rpts);
+    const drafted=!!r.p.drafted;
+    add("circle",{cx,cy,r:4.5,fill:drafted?"var(--muted)":SCATTER_COLORS[r.p.pos],
+      "fill-opacity":drafted?.25:.85, stroke:"var(--surface)","stroke-width":1.5});
+    const hit=add("circle",{cx,cy,r:10,fill:"transparent",style:"cursor:pointer"});
+    hit.addEventListener("mousemove",e=>{
+      tip.style.display="block"; tip.style.left=(e.clientX+14)+"px"; tip.style.top=(e.clientY+8)+"px";
+      tip.innerHTML=`<b>${esc(r.p.name)}</b> ${esc(r.p.team)} · ${r.p.pos}<br>
+        AAV ${fmt$(r.p.aav)} → Adj ${fmt$(r.adj)}<br>${r.rpts.toFixed(0)} pts · ${r.leftAfter!=null?r.p.pos+" "+r.leftAfter+"% left after him":""}
+        ${drafted? "<br>drafted "+fmt$(r.p.drafted.price):("<br>max bid "+(R.bids.get(playerId(r.p))===0?"pass":fmt$(R.bids.get(playerId(r.p))??0)))}`;});
+    hit.addEventListener("mouseleave",()=>tip.style.display="none");
+    hit.addEventListener("click",()=>selectPlayer(playerId(r.p)));
+  }
+  // selective direct labels: best undrafted VORP-per-dollar, skipping collisions
+  const labeled=rows.filter(r=>!r.p.drafted && r.vorp>0)
+    .sort((a,b)=>b.vorp/b.adj-a.vorp/a.adj).slice(0,6);
+  const placed=[];
+  for(const r of labeled){
+    if(placed.length>=3) break;
+    const lx=X(r.adj)+8, ly=Y(r.rpts)-6;
+    if(placed.some(p=>Math.abs(p.x-lx)<110 && Math.abs(p.y-ly)<16)) continue;
+    const t=add("text",{x:lx,y:ly,"font-size":11,fill:"var(--ink)"});
+    t.textContent=r.p.name;
+    placed.push({x:lx,y:ly});
+  }
+  host.appendChild(svg);
+  const lg=$("#scatterLegend"); lg.innerHTML="";
+  for(const pos of ["QB","RB","WR","TE"]){
+    const s=document.createElement("span");
+    s.innerHTML=`<span class="sw" style="background:${SCATTER_COLORS[pos]}"></span>${pos}`;
+    lg.appendChild(s);
+  }
+}
+
+/* ---------- data tab ---------- */
+function renderData(){
+  $("#dataMeta").textContent =
+    `${S.players.length} players in pool · bundled snapshot: ${BUNDLED.meta.format}, as of ${BUNDLED.meta.asOf}. `+
+    `Values marked from consensus sources where available, estimated otherwise — import a fresh CSV the week of your draft.`;
+  const tb=$("#editTable tbody"); tb.innerHTML="";
+  const rows=M.rows.slice().sort((a,b)=>b.blended-a.blended).slice(0,400);
+  for(const r of rows){
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td class="l">${esc(r.p.name)} <span class="note">${esc(r.p.team)}</span>${r.p.note?`<br><span class="note">${esc(r.p.note)}</span>`:""}</td>
+      <td><span class="pos ${r.p.pos}">${r.p.pos}</span></td>
+      <td>${fmt$(r.p.aav)}</td><td>${r.pts0.toFixed(0)}</td>
+      <td><input type="number" step="5" min="-90" max="90" value="${r.p.boost||0}" style="width:64px"></td>
+      <td><input type="checkbox" ${r.p.out?"checked":""}></td>`;
+    tr.querySelector("input[type=number]").addEventListener("change",e=>{
+      r.p.boost=+e.target.value||0; recompute();});
+    tr.querySelector("input[type=checkbox]").addEventListener("change",e=>{
+      r.p.out=e.target.checked; recompute();});
+    tb.appendChild(tr);
+  }
+  $("#newsAsOf").textContent = `Consensus & news snapshot as of ${BUNDLED.meta.asOf} — verify against current reporting before draft day.`;
+  const nl=$("#news"); nl.innerHTML="";
+  for(const n of BUNDLED.news){
+    const d=document.createElement("div"); d.className="newsitem"; d.textContent=n;
+    nl.appendChild(d);
+  }
+  if(!BUNDLED.news.length) nl.innerHTML='<p class="note">No bundled news items.</p>';
+}
+
+/* ---------- block bar ---------- */
+function selectPlayer(id){
+  S.sel = id;
+  const r = M.rows.find(r=>playerId(r.p)===id);
+  if(!r || r.p.drafted){ S.sel=null; $("#block").classList.add("hidden"); renderPool(); return; }
+  $("#block").classList.remove("hidden");
+  $("#blockWho").textContent = `${r.p.name} (${r.p.team} ${r.p.pos})`;
+  const v=$("#blockVerdict");
+  if(isSnake()){
+    const cur=currentOverallPick(), nxt=nextMyPickAfter(cur), buf=snakeBuffer();
+    $("#blockAav").textContent = `Mkt #${r.mrank} · ${r.rpts.toFixed(0)} pts · ${r.p.pos} ${M.posValue[r.p.pos]?.pct??0}% left`;
+    const u=snakeUrgency(r, nxt);
+    if(r.mrank<=nxt-buf){ v.textContent=`Won't last to your #${nxt} — take now (−${u.dropoff} pts if you wait)`; v.className="verdict down"; }
+    else if(r.mrank<=nxt+buf){ v.textContent=`Coin flip to reach your #${nxt} (−${u.dropoff} pts if gone)`; v.className="verdict"; }
+    else { v.textContent=`Should last past your #${nxt} — you can wait`; v.className="verdict up"; }
+    $("#blockPriceWrap").classList.add("hidden");
+    $("#blockMine").textContent="My pick";
+    $("#blockGone").textContent="Taken";
+  }else{
+    $("#blockAav").textContent = `AAV ${fmt$(r.p.aav)} · Adj ${fmt$(r.adj)} · ${r.rpts.toFixed(0)} pts · ${r.p.pos} ${M.posValue[r.p.pos]?.pct??0}% left (${r.leftAfter??0}% after him)`;
+    const bid = R.bids.get(id);
+    if(bid===0){ v.textContent="PASS — doesn't make your roster even at $1"; v.className="verdict down"; }
+    else if(bid!=null){ v.textContent=`Bid up to ${fmt$(bid)}`; v.className="verdict up"; }
+    else { v.textContent=""; }
+    $("#blockPriceWrap").classList.remove("hidden");
+    $("#blockMine").textContent="I won it";
+    $("#blockGone").textContent="Someone else";
+    $("#blockPrice").value = Math.max(1, Math.min(bid||1, 999));
+  }
+  renderPool();
+}
+function blockAction(mine){
+  const r = M.rows.find(r=>playerId(r.p)===S.sel);
+  if(!r) return;
+  draftPlayer(r.p, isSnake()? 1 : (+$("#blockPrice").value||1), mine);
+  $("#block").classList.add("hidden");
+  $("#search").value=""; renderPool(); $("#search").focus();
+}
+
+/* =====================================================================
+   LEAGUE SYNC — Sleeper (live polling) + ESPN (paste)
+   ===================================================================== */
+const SYNC = {sl:{userId:null, leagues:[], league:null, users:[], draftId:null,
+                  applied:new Set(), timer:null},
+              es:{data:null, playersById:null}};
+
+function normName(s){ return String(s).toLowerCase()
+  .replace(/\b(jr|sr|ii|iii|iv|v)\b\.?/g,"").replace(/[^a-z]/g,""); }
+function buildNameIndex(){
+  const idx=new Map();
+  for(const p of S.players){
+    const n=normName(p.name);
+    idx.set(n+"|"+p.pos, p);
+    if(!idx.has(n)) idx.set(n, p);
+  }
+  return idx;
+}
+function matchPlayer(idx, name, pos, team){
+  if(pos==="DST"){
+    const t=String(team||"").toUpperCase();
+    return S.players.find(p=>p.pos==="DST" &&
+      (p.team===t || normName(p.name).startsWith(normName(name).slice(0,6)))) || null;
+  }
+  return idx.get(normName(name)+"|"+pos) || idx.get(normName(name)) || null;
+}
+// list: [{name,pos,team,price,mine}] — applies new picks, skips already-drafted
+function applyExternalPicks(list){
+  const idx=buildNameIndex();
+  let applied=0, skipped=0; const unmatched=[];
+  for(const pk of list){
+    if(!pk.name || !pk.pos){ skipped++; continue; }
+    const p=matchPlayer(idx, pk.name, pk.pos, pk.team);
+    if(!p){ unmatched.push(pk.name); continue; }
+    if(p.drafted){ skipped++; continue; }
+    applyPick(p, pk.price||1, !!pk.mine); applied++;
+  }
+  if(applied) recompute();
+  return {applied, skipped, unmatched};
+}
+
+/* ---------- Sleeper ---------- */
+async function slFetch(path){
+  const r = await fetch("https://api.sleeper.app/v1/"+path);
+  if(!r.ok) throw new Error("Sleeper API "+r.status);
+  return r.json();
+}
+const slStatus = t => { $("#slStatus").textContent = t; };
+async function sleeperFind(){
+  try{
+    const u=$("#slUser").value.trim(), season=$("#slSeason").value||"2026";
+    if(!u){ slStatus("Enter your Sleeper username first."); return; }
+    slStatus("Looking up "+u+"…");
+    const user=await slFetch("user/"+encodeURIComponent(u));
+    if(!user || !user.user_id){ slStatus("User not found."); return; }
+    SYNC.sl.userId=user.user_id;
+    const leagues=await slFetch(`user/${user.user_id}/leagues/nfl/${season}`);
+    SYNC.sl.leagues=leagues||[];
+    const sel=$("#slLeague"); sel.innerHTML="";
+    for(const lg of SYNC.sl.leagues){
+      const o=document.createElement("option"); o.value=lg.league_id;
+      o.textContent=lg.name; sel.appendChild(o);
+    }
+    slStatus(SYNC.sl.leagues.length
+      ? `Found ${SYNC.sl.leagues.length} league(s) — pick one and Load league.`
+      : "No leagues for that season.");
+  }catch(e){ slStatus("Couldn't reach Sleeper ("+e.message+"). If you're on the "+
+    "claude.ai artifact, its sandbox blocks outside requests — run index.html locally."); }
+}
+async function sleeperLoad(){
+  try{
+    const lid=$("#slLeague").value;
+    if(!lid){ slStatus("Find and choose a league first."); return; }
+    slStatus("Loading league…");
+    const [league, users, drafts] = await Promise.all([
+      slFetch("league/"+lid), slFetch(`league/${lid}/users`),
+      slFetch(`league/${lid}/drafts`)]);
+    SYNC.sl.league=league; SYNC.sl.users=users||[];
+    const draft=(drafts||[])[0]||null;
+    SYNC.sl.draftId=draft? draft.draft_id : null;
+    SYNC.sl.applied=new Set();
+    const sel=$("#slMyTeam"); sel.innerHTML="";
+    for(const us of SYNC.sl.users){
+      const o=document.createElement("option"); o.value=us.user_id;
+      o.textContent=us.display_name||us.user_id;
+      if(us.user_id===SYNC.sl.userId) o.selected=true;
+      sel.appendChild(o);
+    }
+    if($("#slApplySettings").checked){
+      const s=S.settings;
+      s.teams=league.total_rosters||s.teams;
+      if(draft&&draft.type) s.mode = draft.type==="auction" ? "auction" : "snake";
+      if(draft&&draft.draft_order&&draft.draft_order[SYNC.sl.userId])
+        s.snakeSlot = draft.draft_order[SYNC.sl.userId];
+      if(draft&&draft.settings&&draft.settings.budget) s.cap=draft.settings.budget;
+      const rp=league.roster_positions||[];
+      const cnt=k=>rp.filter(x=>x===k).length;
+      s.slots={QB:cnt("QB"),RB:cnt("RB"),WR:cnt("WR"),TE:cnt("TE"),
+        FLEX:cnt("FLEX")+cnt("SUPER_FLEX"),K:cnt("K"),DST:cnt("DEF")};
+      s.bench=cnt("BN");
+      const sc=league.scoring_settings||{};
+      if(sc.rec!=null) s.scoring.rec=sc.rec;
+      if(sc.pass_td!=null) s.scoring.passTd=sc.pass_td;
+      if(sc.pass_int!=null) s.scoring.int=sc.pass_int;
+      if(sc.pass_yd) s.scoring.passYd=Math.round(1/sc.pass_yd);
+      if(sc.rush_yd) s.scoring.rushYd=Math.round(1/sc.rush_yd);
+      if(sc.rush_td!=null) s.scoring.td=sc.rush_td;
+      s.scoring.preset="custom";
+      settingsToForm(); recompute();
+    }
+    slStatus(`Loaded "${league.name}" (${league.total_rosters} teams`+
+      (draft? `, draft ${draft.status}${draft.type==="auction"?", auction":""}` : ", no draft found")+
+      `). Pick your team, then Sync.`);
+  }catch(e){ slStatus("Load failed: "+e.message); }
+}
+async function sleeperSync(){
+  try{
+    if(!SYNC.sl.draftId){ slStatus("Load a league (with a draft) first."); return; }
+    const picks=await slFetch(`draft/${SYNC.sl.draftId}/picks`);
+    const me=$("#slMyTeam").value;
+    const fresh=[];
+    for(const pk of (picks||[])){
+      const key=pk.player_id||String(pk.pick_no);
+      if(SYNC.sl.applied.has(key)) continue;
+      SYNC.sl.applied.add(key);
+      const md=pk.metadata||{};
+      fresh.push({
+        name:(md.first_name||"")+" "+(md.last_name||""),
+        pos:normPos(md.position), team:md.team,
+        price:+(md.amount||0)||1,
+        mine: pk.picked_by===me});
+    }
+    const res=applyExternalPicks(fresh);
+    slStatus(`Synced ${picks?picks.length:0} picks — ${res.applied} new applied, `+
+      `${res.skipped} already in`+(res.unmatched.length?
+      `, unmatched: ${res.unmatched.slice(0,4).join(", ")}${res.unmatched.length>4?"…":""}`:"")+
+      ` · ${new Date().toLocaleTimeString()}`);
+  }catch(e){ slStatus("Sync failed: "+e.message); }
+}
+function sleeperAutoToggle(){
+  if(SYNC.sl.timer){
+    clearInterval(SYNC.sl.timer); SYNC.sl.timer=null;
+    $("#slAuto").textContent="▶ Auto-sync every 5s";
+  }else{
+    SYNC.sl.timer=setInterval(sleeperSync, 5000);
+    $("#slAuto").textContent="⏸ Stop auto-sync";
+    sleeperSync();
+  }
+}
+
+/* ---------- ESPN ---------- */
+const ES_POS={1:"QB",2:"RB",3:"WR",4:"TE",5:"K",16:"DST"};
+const esStatus=t=>{ $("#esStatus").textContent=t; };
+function espnUrl(){
+  const id=$("#esLeague").value.trim(), season=$("#esSeason").value||"2026";
+  return `https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${season}`+
+    `/segments/0/leagues/${id}?view=mDraftDetail&view=mTeam&view=mRoster&view=mSettings`;
+}
+function espnRead(){
+  try{
+    const data=JSON.parse($("#esPaste").value);
+    SYNC.es.data=data;
+    const byId=new Map();
+    for(const t of (data.teams||[]))
+      for(const e of ((t.roster&&t.roster.entries)||[])){
+        const pl=e.playerPoolEntry&&e.playerPoolEntry.player;
+        if(pl) byId.set(pl.id,{name:pl.fullName,pos:ES_POS[pl.defaultPositionId]||null});
+      }
+    SYNC.es.playersById=byId;
+    const sel=$("#esMyTeam"); sel.innerHTML="";
+    for(const t of (data.teams||[])){
+      const o=document.createElement("option"); o.value=t.id;
+      o.textContent=t.name||((t.location||"")+" "+(t.nickname||"")).trim()||("Team "+t.id);
+      sel.appendChild(o);
+    }
+    const picks=(data.draftDetail&&data.draftDetail.picks)||[];
+    esStatus(`Read OK: ${data.teams?data.teams.length:0} teams, ${byId.size} rostered `+
+      `players, ${picks.length} draft picks. Pick your team and Apply.`);
+  }catch(e){ esStatus("Couldn't parse that JSON: "+e.message); }
+}
+function espnApply(){
+  const data=SYNC.es.data;
+  if(!data){ esStatus("Read JSON first."); return; }
+  if($("#esApplySettings").checked && data.settings){
+    const st=data.settings, s=S.settings;
+    if(st.draftSettings&&st.draftSettings.type)
+      s.mode = String(st.draftSettings.type).toUpperCase()==="AUCTION" ? "auction" : "snake";
+    if(st.draftSettings&&st.draftSettings.auctionBudget)
+      s.cap=st.draftSettings.auctionBudget;
+    const ls=(st.rosterSettings&&st.rosterSettings.lineupSlotCounts)||null;
+    if(ls){ const g=i=>+ls[i]||0;
+      s.slots={QB:g(0),RB:g(2),WR:g(4),TE:g(6),FLEX:g(23),K:g(17),DST:g(16)};
+      s.bench=g(20);
+    }
+    if(data.teams) s.teams=data.teams.length||s.teams;
+    settingsToForm();
+  }
+  const me=+$("#esMyTeam").value;
+  const picks=((data.draftDetail&&data.draftDetail.picks)||[]).map(pk=>{
+    const pl=SYNC.es.playersById.get(pk.playerId)||{};
+    return {name:pl.name, pos:pl.pos, team:"",
+      price:+(pk.bidAmount||0)||1, mine:pk.teamId===me};
+  });
+  const res=applyExternalPicks(picks);
+  if(!res.applied) recompute();  // settings may still have changed
+  esStatus(`Applied ${res.applied} new picks, ${res.skipped} already in`+
+    (res.unmatched.length? `, unmatched: ${res.unmatched.slice(0,4).join(", ")}`+
+      (res.unmatched.length>4?"…":"") : "")+".");
+}
+
+/* ---------- Yahoo (free-text paste) ---------- */
+const yhStatus=t=>{ $("#yhStatus").textContent=t; };
+// Parse copied Yahoo draft-results text: find the longest known player name in
+// each line, take the first $price on the line, flag "mine" by team-name match.
+function yahooParse(text, myTeam){
+  const entries=S.players
+    .map(p=>({p, n:normName(p.name)}))
+    .filter(e=>e.p.pos!=="DST" && e.n.length>=5)
+    .sort((a,b)=>b.n.length-a.n.length);
+  const dsts=S.players.filter(p=>p.pos==="DST")
+    .map(p=>({p, nick:normName(p.name).replace(/dst$/,""), abbr:p.team.toLowerCase()}));
+  const my=(myTeam||"").trim().toLowerCase();
+  const picks=[];
+  for(const raw of text.split(/\r?\n/)){
+    const line=raw.trim();
+    if(line.length<6) continue;
+    const ln=normName(line);
+    let hit=null;
+    if(/\b(def|dst|d\/st)\b/i.test(line)){
+      hit=(dsts.find(d=>d.nick && ln.includes(d.nick))
+        || dsts.find(d=>d.abbr.length>=2 && ln.includes(d.abbr)))?.p || null;
+    }
+    if(!hit){
+      const e=entries.find(e=>ln.includes(e.n));  // longest name wins (sorted)
+      hit=e? e.p : null;
+    }
+    if(!hit) continue;
+    const price=(line.match(/\$\s?(\d+)/)||[])[1];
+    picks.push({name:hit.name, pos:hit.pos, team:hit.team,
+      price:+price||1, mine: my? line.toLowerCase().includes(my) : false});
+  }
+  return picks;
+}
+function yahooApply(){
+  const text=$("#yhPaste").value;
+  if(!text.trim()){ yhStatus("Paste the draft results text first."); return; }
+  const my=$("#yhTeam").value;
+  const picks=yahooParse(text, my);
+  if(!picks.length){ yhStatus("No recognizable picks found — make sure the paste "+
+    "includes player names (and check spelling against the pool)."); return; }
+  const res=applyExternalPicks(picks);
+  yhStatus(`Recognized ${picks.length} picks — ${res.applied} new applied, `+
+    `${res.skipped} already in`+
+    (my.trim()? "" : " · tip: fill in your team name so your picks land on your roster")+
+    (res.unmatched.length? `, unmatched: ${res.unmatched.slice(0,4).join(", ")}` : "")+".");
+}
+
+/* ---------- settings ---------- */
+function settingsToForm(){
+  const s=S.settings;
+  $("#s_mode").value=s.mode||"auction"; $("#s_slot").value=s.snakeSlot||1;
+  $("#s_teams").value=s.teams; $("#s_cap").value=s.cap;
+  $("#s_bench").value=s.bench; $("#s_benchRes").value=s.benchRes;
+  for(const pos of POSITIONS) $("#s_"+pos).value=s.slots[pos]||0;
+  $("#s_FLEX").value=s.slots.FLEX||0;
+  $("#s_preset").value=s.scoring.preset;
+  $("#s_rec").value=s.scoring.rec; $("#s_passYd").value=s.scoring.passYd;
+  $("#s_passTd").value=s.scoring.passTd; $("#s_int").value=s.scoring.int;
+  $("#s_rushYd").value=s.scoring.rushYd; $("#s_td").value=s.scoring.td;
+  $("#s_risk").value=s.risk; $("#s_blend").value=s.blend;
+  $("#s_riskVal").textContent="λ = "+(+s.risk).toFixed(1);
+  $("#s_blendVal").textContent=Math.round(s.blend*100)+"% model";
+}
+function formToSettings(){
+  const s=S.settings;
+  s.mode=$("#s_mode").value; s.snakeSlot=+$("#s_slot").value||1;
+  s.teams=+$("#s_teams").value||12; s.cap=+$("#s_cap").value||200;
+  s.bench=+$("#s_bench").value||0; s.benchRes=+$("#s_benchRes").value||1;
+  for(const pos of POSITIONS) s.slots[pos]=+$("#s_"+pos).value||0;
+  s.slots.FLEX=+$("#s_FLEX").value||0;
+  s.scoring.preset=$("#s_preset").value;
+  s.scoring.rec=+$("#s_rec").value; s.scoring.passYd=+$("#s_passYd").value||25;
+  s.scoring.passTd=+$("#s_passTd").value; s.scoring.int=+$("#s_int").value;
+  s.scoring.rushYd=+$("#s_rushYd").value||10; s.scoring.td=+$("#s_td").value;
+  s.risk=+$("#s_risk").value; s.blend=+$("#s_blend").value;
+}
+const PRESET_REC={ppr:1,half:.5,std:0};
+
+/* ---------- glue ---------- */
+function renderAll(){
+  renderTiles(); renderScarcity(); renderPool(); renderRoster(); renderOptimal();
+  renderNominate(); renderLog(); renderScatter(); renderData();
+  $("#asof").textContent = `data as of ${BUNDLED.meta.asOf}`;
+  if(S.sel) selectPlayer(S.sel);           // keep block bar fresh after recompute
+  else $("#block").classList.add("hidden");
+}
+function bind(){
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll("nav.tabs button").forEach(x=>x.classList.toggle("active",x===b));
+    for(const t of ["draft","data","settings","guide"])
+      document.getElementById("tab-"+t).classList.toggle("hidden", t!==b.dataset.tab);
+    if(b.dataset.tab==="draft") renderScatter();
+  }));
+  const chips=$("#posChips");
+  for(const p of ["ALL","QB","RB","WR","TE","FLEX","K","DST"]){
+    const c=document.createElement("button");
+    c.className="chip"+(p==="ALL"?" active":""); c.textContent=p;
+    c.addEventListener("click",()=>{ posFilter=p;
+      chips.querySelectorAll(".chip").forEach(x=>x.classList.toggle("active",x===c));
+      renderPool(); });
+    chips.appendChild(c);
+  }
+  $("#search").addEventListener("input",renderPool);
+  $("#hideDrafted").addEventListener("change",renderPool);
+  document.querySelectorAll("#pool th[data-k]").forEach(th=>th.addEventListener("click",()=>{
+    const k=th.dataset.k;
+    if(poolSort.k===k) poolSort.dir*=-1; else poolSort={k,dir:k==="name"||k==="team"||k==="pos"?1:-1};
+    renderPool();
+  }));
+  $("#blockMine").addEventListener("click",()=>blockAction(true));
+  $("#blockGone").addEventListener("click",()=>blockAction(false));
+  $("#blockClose").addEventListener("click",()=>{S.sel=null;$("#block").classList.add("hidden");renderPool();});
+  $("#applySettings").addEventListener("click",()=>{
+    const wasSnake=isSnake();
+    formToSettings();
+    if(wasSnake!==isSnake())   // sensible default sort per mode
+      poolSort = isSnake()? {k:"aav",dir:-1} : {k:"adj",dir:-1};
+    recompute(); settingsToForm();
+    $("#settingsNote").textContent="Applied ✓"; setTimeout(()=>$("#settingsNote").textContent="",2000);
+  });
+  $("#s_preset").addEventListener("change",e=>{
+    if(e.target.value!=="custom"){ $("#s_rec").value=PRESET_REC[e.target.value]; }});
+  $("#s_risk").addEventListener("input",e=>$("#s_riskVal").textContent="λ = "+(+e.target.value).toFixed(1));
+  $("#s_blend").addEventListener("input",e=>$("#s_blendVal").textContent=Math.round(e.target.value*100)+"% model");
+  $("#csvImportBtn").addEventListener("click",async()=>{
+    const f=$("#csvFile").files[0];
+    const mode=$("#importMode").value, w=+$("#blendW").value||.6;
+    if(f && /\.xlsx$/i.test(f.name)){
+      $("#importReport").textContent = await importXLSX(await f.arrayBuffer(), mode, w);
+      return;
+    }
+    const text = f? await f.text() : $("#csvPaste").value;
+    if(!text.trim()){ $("#importReport").textContent="Nothing to import."; return; }
+    $("#importReport").textContent = importCSV(text, mode, w);
+  });
+  $("#csvExportBtn").addEventListener("click",exportCSV);
+  $("#exportBtn").addEventListener("click",()=>{
+    const blob=new Blob([JSON.stringify({settings:S.settings,players:S.players,log:S.log},null,1)],
+      {type:"application/json"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob); a.download="draft-state.json"; a.click();
+  });
+  $("#importBtn").addEventListener("click",()=>$("#importFile").click());
+  $("#importFile").addEventListener("change",async e=>{
+    const f=e.target.files[0]; if(!f) return;
+    try{ const s=JSON.parse(await f.text());
+      if(s.players){ S={...S,...s,sel:null}; recompute(); } }
+    catch(err){ alert("Could not read that file: "+err.message); }
+  });
+  $("#resetBtn").addEventListener("click",()=>{
+    if(!confirm("Clear the draft log and un-draft everyone? (Pool and settings stay.)")) return;
+    for(const p of S.players) p.drafted=null;
+    S.log=[]; S.sel=null;
+    SYNC.sl.applied=new Set();
+    if(SYNC.sl.timer) sleeperAutoToggle();
+    recompute();
+  });
+  $("#slFind").addEventListener("click",sleeperFind);
+  $("#slLoad").addEventListener("click",sleeperLoad);
+  $("#slSyncNow").addEventListener("click",sleeperSync);
+  $("#slAuto").addEventListener("click",sleeperAutoToggle);
+  const esLinkSync=()=>{ $("#esLink").href=espnUrl(); };
+  $("#esLeague").addEventListener("input",esLinkSync);
+  $("#esSeason").addEventListener("input",esLinkSync); esLinkSync();
+  $("#esRead").addEventListener("click",espnRead);
+  $("#esApply").addEventListener("click",espnApply);
+  $("#yhApply").addEventListener("click",yahooApply);
+  $("#themeBtn").addEventListener("click",()=>{
+    const cur=document.documentElement.dataset.theme;
+    const next=cur==="dark"?"light":cur==="light"?"dark":
+      (matchMedia("(prefers-color-scheme: dark)").matches?"light":"dark");
+    document.documentElement.dataset.theme=next;
+    renderScatter();
+  });
+  window.addEventListener("resize",()=>renderScatter());
+  document.addEventListener("keydown",e=>{
+    if(e.key==="/" && document.activeElement!==$("#search")){e.preventDefault();$("#search").focus();}
+    if(e.key==="Escape"){S.sel=null;$("#block").classList.add("hidden");renderPool();}
+  });
+}
+
+loadState();
+bind();
+settingsToForm();
+recompute();
+
+// expose for headless tests
+window.APP={get S(){return S},get M(){return M},get R(){return R},
+  recompute,draftPlayer,undo,importCSV,importRows,importXLSX,parseXLSX,
+  solveCompletion,posTable,combine,playerId,normPos,parseCSV,mapHeaders,
+  SYNC,applyExternalPicks,sleeperFind,sleeperLoad,sleeperSync,espnRead,espnApply,
+  yahooParse,yahooApply,normName,matchPlayer,buildNameIndex};
+</script>
+</body>
+</html>
