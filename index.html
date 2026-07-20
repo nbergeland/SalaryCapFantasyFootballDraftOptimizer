@@ -108,6 +108,14 @@ tr.sel td{outline:2px solid var(--accent);outline-offset:-2px}
 .field label{color:var(--ink-2)}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);
   margin:4px 0 2px}
+.scarcity{display:flex;gap:12px;flex-wrap:wrap;align-items:center;
+  font-size:11px;color:var(--ink-2);margin:0 0 8px;
+  font-variant-numeric:tabular-nums}
+.scarcity .slabel{color:var(--muted)}
+.scarcity .sitem{display:inline-flex;align-items:center;gap:5px}
+.scarcity .track{width:44px;height:5px;border-radius:3px;background:var(--grid);
+  overflow:hidden}
+.scarcity .fill{height:100%;border-radius:3px}
 .legend .sw{display:inline-block;width:10px;height:10px;border-radius:3px;
   margin-right:5px;vertical-align:-1px}
 #tooltip{position:fixed;pointer-events:none;background:var(--surface);
@@ -165,6 +173,7 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
           <span class="chips" id="posChips"></span>
           <label class="note"><input type="checkbox" id="hideDrafted" checked> hide drafted</label>
         </div>
+        <div class="scarcity" id="scarcity" title="Share of each position's draftable value (positive-VORP players) already off the board"></div>
         <div class="tblwrap"><table id="pool">
           <thead><tr>
             <th class="l" data-k="name">Player</th><th data-k="team">Team</th>
@@ -342,7 +351,10 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         sticky bar shows the one number that matters — <b>Max bid</b>. Bid to it, never past it.</li>
       <li><b>Every sale:</b> record it — <i>I won it</i> or <i>Someone else</i>, with the
         real price. Everything (budget, inflation, values, optimal completion, max bids)
-        recomputes instantly.</li>
+        recomputes instantly, and the draft log stamps each pick with the position's
+        scarcity — the % of that position's draftable value now off the board. The
+        scarcity strip above the pool shows all positions live: when RB crosses ~70%,
+        the tier cliff is close.</li>
       <li><b>Nominating:</b> use <i>Nomination ideas</i> — expensive players you don't
         want. Money they burn elsewhere is discount on your targets.</li>
       <li><b>Trust the completion card:</b> if it says your best roster needs a $34 WR
@@ -487,6 +499,17 @@ function rebuildModel(){
     r.adj = r.p.drafted ? r.p.drafted.price
           : Math.max(1, Math.round(1 + (r.blended-1)*M.infl));
   M.moneyLeft = moneyLeft; M.spent = spent;
+  // positional scarcity: share of each position's draftable VORP already drafted
+  M.scarcity = {};
+  for(const pos of POSITIONS){
+    let total=0, gone=0;
+    for(const r of rows){
+      if(r.p.pos!==pos || r.p.out || r.vorp<=0) continue;
+      total += r.vorp;
+      if(r.p.drafted) gone += r.vorp;
+    }
+    M.scarcity[pos] = total>0 ? Math.round(100*gone/total) : 0;
+  }
 }
 
 /* =====================================================================
@@ -727,8 +750,9 @@ function recompute(){
 /* ============================ draft actions ============================ */
 function draftPlayer(p, price, mine){
   p.drafted = {price:Math.max(1,Math.round(price)), mine};
+  rebuildModel();   // cheap; snapshots post-pick positional scarcity for the log
   S.log.push({id:playerId(p), name:p.name, pos:p.pos, price:p.drafted.price,
-    mine, n:S.log.length+1});
+    mine, n:S.log.length+1, scar:M.scarcity[p.pos]});
   S.sel=null; recompute();
 }
 function undo(idx){
@@ -904,6 +928,22 @@ function renderPool(){
     th.classList.toggle("sorted", th.dataset.k===poolSort.k);});
 }
 
+function renderScarcity(){
+  const el=$("#scarcity"); el.innerHTML="";
+  const lab=document.createElement("span");
+  lab.className="slabel"; lab.textContent="Position value gone:";
+  el.appendChild(lab);
+  const posColor={QB:"var(--qb)",RB:"var(--rb)",WR:"var(--wr)",TE:"var(--te)",
+    K:"var(--muted)",DST:"var(--muted)"};
+  for(const pos of POSITIONS){
+    const pct=M.scarcity[pos]??0;
+    const d=document.createElement("span"); d.className="sitem";
+    d.innerHTML=`<b>${pos}</b><span class="track"><span class="fill"
+      style="width:${pct}%;background:${posColor[pos]}"></span></span>${pct}%`;
+    el.appendChild(d);
+  }
+}
+
 function renderRoster(){
   const a = myRosterAssignment();
   const el = $("#roster"); el.innerHTML="";
@@ -965,7 +1005,8 @@ function renderLog(){
     const idx=S.log.indexOf(e);
     const d=document.createElement("div"); d.className="roster-slot";
     d.innerHTML=`<span class="nm">#${e.n} <span class="pos ${e.pos}">${e.pos}</span>
-      ${esc(e.name)} ${e.mine?'<span class="pill up">me</span>':""}</span>
+      ${esc(e.name)} ${e.mine?'<span class="pill up">me</span>':""}
+      ${e.scar!=null?`<span class="pill" title="Share of ${e.pos} draftable value gone after this pick">${e.pos} ${e.scar}% gone</span>`:""}</span>
       <span>${fmt$(e.price)} <button class="small" data-i="${idx}">undo</button></span>`;
     d.querySelector("button").addEventListener("click",()=>undo(idx));
     el.appendChild(d);
@@ -1078,7 +1119,7 @@ function selectPlayer(id){
   if(!r || r.p.drafted){ S.sel=null; $("#block").classList.add("hidden"); renderPool(); return; }
   $("#block").classList.remove("hidden");
   $("#blockWho").textContent = `${r.p.name} (${r.p.team} ${r.p.pos})`;
-  $("#blockAav").textContent = `AAV ${fmt$(r.p.aav)} · Adj ${fmt$(r.adj)} · ${r.rpts.toFixed(0)} pts`;
+  $("#blockAav").textContent = `AAV ${fmt$(r.p.aav)} · Adj ${fmt$(r.adj)} · ${r.rpts.toFixed(0)} pts · ${r.p.pos} ${M.scarcity[r.p.pos]??0}% gone`;
   const bid = R.bids.get(id);
   const v=$("#blockVerdict");
   if(bid===0){ v.textContent="PASS — doesn't make your roster even at $1"; v.className="verdict down"; }
@@ -1126,9 +1167,11 @@ const PRESET_REC={ppr:1,half:.5,std:0};
 
 /* ---------- glue ---------- */
 function renderAll(){
-  renderTiles(); renderPool(); renderRoster(); renderOptimal();
+  renderTiles(); renderScarcity(); renderPool(); renderRoster(); renderOptimal();
   renderNominate(); renderLog(); renderScatter(); renderData();
   $("#asof").textContent = `data as of ${BUNDLED.meta.asOf}`;
+  if(S.sel) selectPlayer(S.sel);           // keep block bar fresh after recompute
+  else $("#block").classList.add("hidden");
 }
 function bind(){
   document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>{
