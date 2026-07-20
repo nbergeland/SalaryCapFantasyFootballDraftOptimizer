@@ -214,6 +214,14 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         <div id="optimal"></div>
       </div>
       <div class="card">
+        <h2>Roster outlook — 1,200 seasons</h2>
+        <div class="note" style="margin-bottom:6px">Monte Carlo of your picks + the
+          optimizer's plan: weekly sims, best lineup each week, injury and boom/bust
+          variance by position. Ranges lean on those variance assumptions — read them
+          as shape, not gospel.</div>
+        <div id="outlook"></div>
+      </div>
+      <div class="card">
         <h2>Nomination ideas</h2>
         <div class="note" style="margin-bottom:6px">Big names you should <em>not</em> buy —
           nominate them to drain other budgets.</div>
@@ -223,6 +231,10 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         <h2>Draft log</h2>
         <div id="log"></div>
       </div>
+      <div class="card">
+        <h2>Draft recap <button class="small" id="recapCopy" style="float:right">copy</button></h2>
+        <div id="recap"></div>
+      </div>
     </div>
   </div>
 
@@ -230,6 +242,7 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
     <span>On the block:</span><span class="who" id="blockWho"></span>
     <span class="pill" id="blockAav"></span>
     <span class="verdict" id="blockVerdict"></span>
+    <span class="pill" id="blockSim" title="Monte Carlo what-if vs your current outlook (same random seed)"></span>
     <span class="spacer"></span>
     <label id="blockPriceWrap">$ <input type="number" id="blockPrice" min="1" value="1" style="width:64px"></label>
     <button class="primary" id="blockMine">I won it</button>
@@ -279,6 +292,26 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
       </div>
     </div>
     <div>
+      <div class="card">
+        <h2>Keepers</h2>
+        <p class="note">Enter every kept player <b>before</b> the draft — yours and your
+          rivals'. Keepers fill rosters and consume budgets like real picks, but don't
+          advance the pick counter. In keeper auctions this is where the inflation edge
+          comes from: cheap keepers leave more money chasing less talent, and the Adj$
+          column prices that in. In snake mode, your keepers reduce how many picks your
+          plan uses (your latest rounds, as an approximation of forfeited picks).</p>
+        <p>
+          <input type="text" id="kpName" list="playerNames" placeholder="Player name" style="width:190px">
+          <label id="kpPriceWrap">$ <input type="number" id="kpPrice" min="1" value="1" style="width:64px"></label>
+        </p>
+        <p>
+          <button class="primary" id="kpMine">My keeper</button>
+          <button id="kpRival">Rival's keeper</button>
+        </p>
+        <div id="kpList"></div>
+        <p class="note" id="kpStatus"></p>
+      </div>
+      <datalist id="playerNames"></datalist>
       <div class="card">
         <h2>League sync — pair with your real draft</h2>
         <p class="note">Live sync needs direct network access: open <code>index.html</code>
@@ -419,6 +452,11 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         <i>Settings</i>. Import a fresh projections/values CSV in <i>Data &amp; News</i>
         (the bundled 2026 set is a July consensus snapshot — refresh it the week of your
         draft). Apply boosts/fades for late news.</li>
+      <li><b>Keeper leagues:</b> enter every keeper (yours and rivals') in
+        <i>Data &amp; News → Keepers</i> before the draft. Keepers fill rosters and
+        consume budgets without advancing the pick counter — and because kept players
+        are usually below-market, the remaining pool inflates: watch Adj$ rise above
+        AAV. That gap is your league's real price list.</li>
       <li><b>Pairing with your real draft:</b> in <i>Data &amp; News → League sync</i>,
         connect Sleeper (live auto-sync of every pick and price), ESPN (paste the league
         JSON), or Yahoo (paste the Draft Results text). Synced picks flow into the log
@@ -443,6 +481,12 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         is on you.</li>
       <li><b>Nominating:</b> use <i>Nomination ideas</i> — expensive players you don't
         want. Money they burn elsewhere is discount on your targets.</li>
+      <li><b>Roster outlook (Monte Carlo):</b> the floor/median/ceiling card simulates
+        1,200 seasons of your picks + the optimizer's plan, week by week, starting your
+        best lineup each week — so boom/bust bench depth gets credit the averages miss.
+        The block bar's "sim if won" line shows how a purchase moves your median and
+        floor. Use it to steer roster <i>shape</i> (stars-and-scrubs vs balanced), not
+        to sweat ±20-point differences — the ranges depend on variance assumptions.</li>
       <li><b>Trust the completion card:</b> if it says your best roster needs a $34 WR
         tier-2, don't panic-spend $50 on tier-1. The plan updates as the room overpays
         (inflation &gt; 0) or underpays.</li>
@@ -492,7 +536,8 @@ function normPos(raw){
 function freshPlayer(o){
   return {name:o.name, team:o.team||"", pos:o.pos, aav:Math.max(1,Math.round(o.aav||1)),
     pts:+o.pts||0, stats:o.stats||null, floor:o.floor??null, ceil:o.ceil??null,
-    adp:o.adp??null, note:o.note||"", src:o.src||"", boost:0, out:false, drafted:null};
+    adp:o.adp??null, bye:o.bye??null, note:o.note||"", src:o.src||"",
+    boost:0, out:false, drafted:null};
 }
 function loadState(){
   try{
@@ -572,10 +617,15 @@ function rebuildModel(){
   // blended value (market ↔ model)
   const w = S.settings.blend;
   for(const r of rows) r.blended = +(w*r.fair + (1-w)*r.p.aav).toFixed(1);
-  // live inflation
+  // live inflation — keepers count as money and spots already gone, which is
+  // what produces the big keeper-league inflation (cheap keepers leave more
+  // money chasing less talent)
   const totalMoney = teams*cap, totalSpots = teams*rosterSize;
-  const spent = S.log.reduce((a,e)=>a+e.price,0);
-  const spotsFilled = S.log.length;
+  let keeperSpend=0, keeperCount=0;
+  for(const p of S.players) if(p.drafted&&p.drafted.keeper){
+    keeperSpend+=p.drafted.price; keeperCount++; }
+  const spent = S.log.reduce((a,e)=>a+e.price,0) + keeperSpend;
+  const spotsFilled = S.log.length + keeperCount;
   const moneyLeft = totalMoney - spent, spotsLeft = totalSpots - spotsFilled;
   const discLeft = moneyLeft - spotsLeft;
   const undrafted = rows.filter(r=>!r.p.drafted && !r.p.out)
@@ -637,7 +687,9 @@ function myRosterAssignment(){
 
 function budgetForOptimizer(assign){
   const {cap, bench, benchRes} = S.settings;
-  const spentByMe = S.log.filter(e=>e.mine).reduce((a,e)=>a+e.price,0);
+  const spentByMe = S.log.filter(e=>e.mine).reduce((a,e)=>a+e.price,0)
+    + S.players.filter(p=>p.drafted&&p.drafted.mine&&p.drafted.keeper)
+        .reduce((a,p)=>a+p.drafted.price,0);
   const myBudget = cap - spentByMe;
   const benchOpen = Math.max(0, bench - assign.bench.length);
   return {myBudget, benchOpen,
@@ -936,6 +988,147 @@ function snakeUrgency(r, nextN){
   return {dropoff:+(r.rpts-(later? later.rpts:0)).toFixed(1), later};
 }
 
+/* =====================================================================
+   MONTE CARLO ROSTER OUTLOOK — evaluation layer only; the exact
+   optimizer is untouched and the sim never runs inside the bidding loop.
+   Weekly resolution with best-lineup-each-week, so bench option value
+   and boom/bust depth are priced in. See MODELING.md.
+   ===================================================================== */
+const SIM = {
+  n: 1200, weeks: 17,
+  // per-week miss probability; weekly mean is scaled up so the season
+  // EXPECTATION still equals the sheet's projection (which already bakes
+  // in typical availability) — misses add variance, not double-counted drag
+  missProb: {QB:.035, RB:.075, WR:.06, TE:.06, K:.02, DST:.005},
+  weeklyCV: {QB:.35, RB:.45, WR:.5, TE:.6, K:.45, DST:.55},
+};
+function mulberry32(seed){
+  return function(){
+    seed|=0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed>>>15, 1|seed);
+    t = t + Math.imul(t ^ t>>>7, 61|t) ^ t;
+    return ((t ^ t>>>14)>>>0) / 4294967296;
+  };
+}
+// simulate season totals for a roster: [{pos, pts}] using season-mean pts.
+// Fixed seed => common random numbers, so with/without comparisons are stable.
+function simulateRoster(players, slots, nSims){
+  const n = nSims || SIM.n;
+  const rng = mulberry32(20260720);
+  const ps = players.map(p=>{
+    const miss = SIM.missProb[p.pos] ?? .05;
+    const wm = p.pts / (SIM.weeks * (1-miss));
+    return {pos:p.pos, wm, sd: wm*(SIM.weeklyCV[p.pos] ?? .5), miss};
+  });
+  const flexSlots = slots.FLEX||0;
+  const totals = new Float64Array(n);
+  const scores = new Float64Array(ps.length);
+  for(let s=0; s<n; s++){
+    let season = 0;
+    for(let w=0; w<SIM.weeks; w++){
+      for(let i=0;i<ps.length;i++){
+        const p=ps[i];
+        if(rng() < p.miss){ scores[i]=0; continue; }
+        // Box-Muller normal, truncated at 0
+        const u1=Math.max(rng(),1e-12), u2=rng();
+        const z=Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2);
+        scores[i]=Math.max(0, p.wm + p.sd*z);
+      }
+      // best lineup this week: top-k per position, then best leftovers to FLEX
+      const flexPool=[];
+      for(const pos of POSITIONS){
+        const k=slots[pos]||0;
+        const own=[];
+        for(let i=0;i<ps.length;i++) if(ps[i].pos===pos) own.push(scores[i]);
+        own.sort((a,b)=>b-a);
+        for(let j=0;j<Math.min(k,own.length);j++) season+=own[j];
+        if(FLEX_POS.includes(pos))
+          for(let j=k;j<own.length;j++) flexPool.push(own[j]);
+      }
+      if(flexSlots && flexPool.length){
+        flexPool.sort((a,b)=>b-a);
+        for(let j=0;j<Math.min(flexSlots,flexPool.length);j++) season+=flexPool[j];
+      }
+    }
+    totals[s]=season;
+  }
+  totals.sort();
+  const q=p=>Math.round(totals[Math.min(n-1, Math.floor(p*n))]);
+  return {p10:q(.10), p50:q(.50), p90:q(.90)};
+}
+// current best-case roster: my players (incl. bench) + the optimizer's plan
+function outlookRoster(){
+  const list=[];
+  for(const p of S.players)
+    if(p.drafted && p.drafted.mine){
+      const r=M.rows.find(r=>r.p===p);
+      list.push({pos:p.pos, pts:r? r.pts0 : p.pts});
+    }
+  if(R.sol){
+    const planned = R.sol.snake ? R.sol.plan.map(s=>s.r) : R.sol.chosen;
+    for(const r of planned) list.push({pos:r.p.pos, pts:r.pts0});
+  }
+  return list;
+}
+let simTimer=null;
+function scheduleOutlookSim(){
+  clearTimeout(simTimer);
+  const el=$("#outlook");
+  if(el) el.innerHTML='<p class="note">simulating…</p>';
+  simTimer=setTimeout(()=>{
+    const roster=outlookRoster();
+    if(roster.length<3){
+      R.sim=null;
+      if(el) el.innerHTML='<p class="note">Outlook appears once a roster takes shape.</p>';
+      return;
+    }
+    R.sim=simulateRoster(roster, S.settings.slots);
+    renderOutlook();
+  }, 30);
+}
+function renderOutlook(){
+  const el=$("#outlook"); if(!el||!R.sim) return;
+  const {p10,p50,p90}=R.sim;
+  const lo=p10*0.96, hi=p90*1.04, X=v=>100*(v-lo)/(hi-lo);
+  el.innerHTML=`
+    <div style="display:flex;gap:14px;font-variant-numeric:tabular-nums">
+      <div><div class="note">Floor (10th)</div><div style="font-size:20px;font-weight:650">${p10}</div></div>
+      <div><div class="note">Median</div><div style="font-size:20px;font-weight:650">${p50}</div></div>
+      <div><div class="note">Ceiling (90th)</div><div style="font-size:20px;font-weight:650">${p90}</div></div>
+    </div>
+    <div style="position:relative;height:8px;margin:10px 2px 2px;background:var(--grid);border-radius:4px">
+      <div style="position:absolute;left:${X(p10)}%;width:${X(p90)-X(p10)}%;height:100%;background:var(--accent);opacity:.35;border-radius:4px"></div>
+      <div style="position:absolute;left:${X(p50)}%;top:-3px;width:2px;height:14px;background:var(--accent)"></div>
+    </div>`;
+}
+// block-bar what-if: median/floor if I actually win this player at this price
+function simIfWon(id, price){
+  const p=S.players.find(x=>playerId(x)===id);
+  if(!p || p.drafted || !R.sim) return null;
+  const saved={sol:R.sol};
+  const paid=Math.max(1,Math.round(price));
+  try{
+    p.drafted={price:paid, mine:true};
+    // temp log entry so the price actually leaves the budget (and snake
+    // pick math advances) during the what-if solve
+    S.log.push({id, name:p.name, pos:p.pos, price:paid, mine:true, n:S.log.length+1});
+    rebuildModel();
+    const sol=isSnake()? solveSnakePlan() : solveCompletion();
+    if(!sol) return null;
+    const roster=[];
+    for(const q of S.players)
+      if(q.drafted && q.drafted.mine){
+        const r=M.rows.find(r=>r.p===q);
+        roster.push({pos:q.pos, pts:r? r.pts0 : q.pts});
+      }
+    const planned = sol.snake ? sol.plan.map(s=>s.r) : sol.chosen;
+    for(const r of planned) roster.push({pos:r.p.pos, pts:r.pts0});
+    return simulateRoster(roster, S.settings.slots);
+  } finally {
+    S.log.pop(); p.drafted=null; rebuildModel(); R.sol=saved.sol;
+  }
+}
+
 /* ============================ recompute-all ============================ */
 let R = {sol:null, bids:new Map(), without:new Map()};
 function recompute(){
@@ -949,6 +1142,7 @@ function recompute(){
     R.bids = mb.bids||new Map(); R.without = mb.withoutCache||new Map();
   }
   renderAll();
+  scheduleOutlookSim();   // async — never blocks the bidding loop
   saveState();
 }
 
@@ -993,6 +1187,7 @@ const HEADER_MAP = [
   ["pts",  /^(proj(ected)?\s*)?(fantasy\s*)?(pts|points|fpts)$|^proj$|^projection$/i],
   ["floor",/floor/i], ["ceil",/ceil/i],
   ["adp",/^adp$|av(era)?ge?\.?\s*(draft\s*)?(pos(ition)?|pick)/i],
+  ["bye",/^bye(\s*week)?$/i],
   ["pass_yd",/^p(ass)?[\s_]*yds?$/i], ["pass_td",/^p(ass)?[\s_]*tds?$|^td$/i],
   ["int",/^ints?$/i],
   ["rush_yd",/^r(ush)?[\s_]*yds?$|^r_yd$/i], ["rush_td",/^r(ush)?[\s_]*tds?$|^r_td$/i],
@@ -1028,7 +1223,9 @@ function importRows(rows, mode, w){
     incoming.push({name, team:(m.team!=null?String(r[m.team]||"").trim().toUpperCase():""),
       pos, aav:num(m.aav)??1, pts:num(m.pts)??0,
       floor:m.floor!=null?num(m.floor):null, ceil:m.ceil!=null?num(m.ceil):null,
-      adp:m.adp!=null?num(m.adp):null, stats:hasStats?stats:null});
+      adp:m.adp!=null?num(m.adp):null,
+      bye:m.bye!=null?Math.round(num(m.bye))||null:null,
+      stats:hasStats?stats:null});
   }
   if(mode==="replace"){
     S.players = incoming.map(freshPlayer); S.log=[];
@@ -1046,6 +1243,7 @@ function importRows(rows, mode, w){
         if(n.floor!=null) ex.floor=n.floor;
         if(n.ceil!=null) ex.ceil=n.ceil;
         if(n.adp!=null) ex.adp=n.adp;
+        if(n.bye!=null) ex.bye=n.bye;
         merged++;
       }else{ const np=freshPlayer(n); S.players.push(np); idx.set(id,np); added++; }
     }
@@ -1238,7 +1436,11 @@ function renderPool(){
         `<button class="small" data-act="undo" data-id="${id}">undo</button>`:
         `<button class="small" data-act="sel" data-id="${id}">block ▸</button>`}</td>`;
     tr.addEventListener("click",e=>{
-      if(e.target.dataset.act==="undo"){ undo(S.log.findIndex(x=>x.id===id)); return;}
+      if(e.target.dataset.act==="undo"){
+        if(r.p.drafted&&r.p.drafted.keeper) removeKeeper(r.p);
+        else undo(S.log.findIndex(x=>x.id===id));
+        return;
+      }
       selectPlayer(id);
     });
     tb.appendChild(tr);
@@ -1286,6 +1488,7 @@ function renderRoster(){
         : "";
       return fmt$(p.drafted.price)+chip;
     }
+    if(p.drafted.keeper) return '<span class="pill">keeper</span>';
     const e=S.log.find(x=>x.id===playerId(p));
     return e? roundDotPick(e.n) : "—";
   };
@@ -1302,6 +1505,18 @@ function renderRoster(){
   for(let i=0;i<(S.settings.slots.FLEX||0);i++) slotRow("FLEX", a.flex[i]);
   const bn=S.settings.bench;
   for(let i=0;i<bn;i++) slotRow("Bench", a.bench[i]);
+  // bye-week overlaps among my starters+flex (needs bye data in the pool)
+  const startersAll=[...Object.values(a.starters).flat(), ...a.flex];
+  const byeCount={};
+  for(const p of startersAll) if(p.bye) byeCount[p.bye]=(byeCount[p.bye]||0)+1;
+  const overlaps=Object.entries(byeCount).filter(([,n])=>n>=2)
+    .sort((x,y)=>y[1]-x[1]);
+  if(overlaps.length){
+    const d=document.createElement("div"); d.className="lognote"; d.style.marginTop="6px";
+    d.innerHTML="Bye overlaps: "+overlaps.map(([w,n])=>
+      `<span class="${n>=3?"down":""}">Wk ${w} ×${n}</span>`).join(" · ");
+    el.appendChild(d);
+  }
   if(!snake){
     const lg=budgetLedger();
     if(lg){
@@ -1552,7 +1767,7 @@ function selectPlayer(id){
   const v=$("#blockVerdict");
   if(isSnake()){
     const cur=currentOverallPick(), nxt=nextMyPickAfter(cur), buf=snakeBuffer();
-    $("#blockAav").textContent = `Mkt #${r.mrank} · ${r.rpts.toFixed(0)} pts · ${r.p.pos} ${M.posValue[r.p.pos]?.pct??0}% left`;
+    $("#blockAav").textContent = `Mkt #${r.mrank} · ${r.rpts.toFixed(0)} pts · ${r.p.pos} ${M.posValue[r.p.pos]?.pct??0}% left${r.p.bye?` · bye ${r.p.bye}`:""}`;
     const u=snakeUrgency(r, nxt);
     if(r.mrank<=nxt-buf){ v.textContent=`Won't last to your #${nxt} — take now (−${u.dropoff} pts if you wait)`; v.className="verdict down"; }
     else if(r.mrank<=nxt+buf){ v.textContent=`Coin flip to reach your #${nxt} (−${u.dropoff} pts if gone)`; v.className="verdict"; }
@@ -1561,7 +1776,7 @@ function selectPlayer(id){
     $("#blockMine").textContent="My pick";
     $("#blockGone").textContent="Taken";
   }else{
-    $("#blockAav").textContent = `AAV ${fmt$(r.p.aav)} · Adj ${fmt$(r.adj)} · ${r.rpts.toFixed(0)} pts · ${r.p.pos} ${M.posValue[r.p.pos]?.pct??0}% left (${r.leftAfter??0}% after him)`;
+    $("#blockAav").textContent = `AAV ${fmt$(r.p.aav)} · Adj ${fmt$(r.adj)} · ${r.rpts.toFixed(0)} pts · ${r.p.pos} ${M.posValue[r.p.pos]?.pct??0}% left (${r.leftAfter??0}% after him)${r.p.bye?` · bye ${r.p.bye}`:""}`;
     const bid = R.bids.get(id);
     if(bid===0){ v.textContent="PASS — doesn't make your roster even at $1"; v.className="verdict down"; }
     else if(bid!=null){ v.textContent=`Bid up to ${fmt$(bid)}`; v.className="verdict up"; }
@@ -1572,6 +1787,26 @@ function selectPlayer(id){
     $("#blockPrice").value = Math.max(1, Math.min(bid||1, 999));
   }
   renderPool();
+  updateBlockSim(id, r);
+}
+let blockSimTimer=null;
+function updateBlockSim(id, r){
+  const el=$("#blockSim"); el.textContent="";
+  if(r.p.drafted || !R.sim) return;
+  el.textContent="sim…";
+  clearTimeout(blockSimTimer);
+  blockSimTimer=setTimeout(()=>{
+    if(S.sel!==id){ el.textContent=""; return; }
+    const price=isSnake()? 1 : (+$("#blockPrice").value||1);
+    const w=simIfWon(id, price);
+    if(!w){ el.textContent="sim: n/a (can't fit at that price)"; return; }
+    const dm=w.p50-R.sim.p50, df=w.p10-R.sim.p10;
+    const inPlan=R.sol && (R.sol.snake? R.sol.plan.some(s=>playerId(s.r.p)===id)
+                                      : R.sol.chosen.some(x=>playerId(x.p)===id));
+    el.textContent = (inPlan && Math.abs(dm)<6)
+      ? "sim: already in your optimal plan"
+      : `sim if won: median ${dm>=0?"+":""}${dm} · floor ${df>=0?"+":""}${df}`;
+  }, 60);
 }
 function blockAction(mine){
   const r = M.rows.find(r=>playerId(r.p)===S.sel);
@@ -1791,6 +2026,110 @@ function espnApply(){
       (res.unmatched.length>4?"…":"") : "")+".");
 }
 
+/* ---------- keepers ---------- */
+function findPoolPlayer(name){
+  const n=normName(name);
+  if(!n) return null;
+  return S.players.find(p=>normName(p.name)===n)
+      || S.players.find(p=>normName(p.name).startsWith(n) && n.length>=5)
+      || null;
+}
+function addKeeper(mine){
+  const name=$("#kpName").value;
+  const p=findPoolPlayer(name);
+  if(!p){ $("#kpStatus").textContent="Player not found in the pool — check spelling."; return; }
+  if(p.drafted){ $("#kpStatus").textContent=p.name+" is already off the board."; return; }
+  p.drafted={price:isSnake()?1:Math.max(1,Math.round(+$("#kpPrice").value||1)),
+    mine, keeper:true};
+  $("#kpName").value=""; $("#kpPrice").value=1;
+  $("#kpStatus").textContent=p.name+(mine?" kept on your roster.":" marked kept by a rival.");
+  recompute();
+}
+function removeKeeper(p){ p.drafted=null; recompute(); }
+function renderKeepers(){
+  const el=$("#kpList"); if(!el) return;
+  el.innerHTML="";
+  const kept=S.players.filter(p=>p.drafted&&p.drafted.keeper);
+  for(const p of kept){
+    const d=document.createElement("div"); d.className="roster-slot";
+    d.innerHTML=`<span class="nm"><span class="pos ${p.pos}">${p.pos}</span> ${esc(p.name)}
+      ${p.drafted.mine?'<span class="pill up">me</span>':'<span class="pill">rival</span>'}</span>
+      <span>${isSnake()?"":fmt$(p.drafted.price)+" "}<button class="small">✕</button></span>`;
+    d.querySelector("button").addEventListener("click",()=>removeKeeper(p));
+    el.appendChild(d);
+  }
+  const dl=$("#playerNames");
+  if(dl && dl.children.length!==S.players.length){
+    dl.innerHTML="";
+    for(const p of S.players){
+      const o=document.createElement("option"); o.value=p.name; dl.appendChild(o);
+    }
+  }
+  $("#kpPriceWrap").classList.toggle("hidden", isSnake());
+}
+
+/* ---------- draft recap ---------- */
+function recapData(){
+  const mine=S.players.filter(p=>p.drafted&&p.drafted.mine);
+  if(!mine.length) return null;
+  const order=p=>{
+    if(p.drafted.keeper) return -1;
+    const e=S.log.find(x=>x.id===playerId(p));
+    return e? e.n : 999;
+  };
+  const rows=mine.map(p=>{
+    const r=M.rows.find(r=>r.p===p);
+    return {p, n:order(p), price:p.drafted.price, keeper:!!p.drafted.keeper,
+      value:r? Math.round(r.blended):p.drafted.price,
+      delta:r? Math.round(p.drafted.price - r.blended):0};
+  }).sort((a,b)=>a.n-b.n);
+  const spent=rows.reduce((a,r)=>a+r.price,0);
+  const value=rows.reduce((a,r)=>a+r.value,0);
+  const spots=Object.values(S.settings.slots).reduce((a,b)=>a+b,0)+S.settings.bench;
+  const buys=rows.filter(r=>!isSnake());
+  const best=buys.length? buys.reduce((a,r)=>r.delta<a.delta?r:a):null;
+  const reach=buys.length? buys.reduce((a,r)=>r.delta>a.delta?r:a):null;
+  return {rows, spent, value, spots, best, reach};
+}
+function renderRecap(){
+  const el=$("#recap"); if(!el) return;
+  const d=recapData();
+  if(!d){ el.innerHTML='<p class="note">Your keepers and picks collect here as the draft runs.</p>'; return; }
+  const snake=isSnake();
+  let html='<div style="font-variant-numeric:tabular-nums">';
+  for(const r of d.rows){
+    const e=S.log.find(x=>x.id===playerId(r.p));
+    const tag=r.keeper?'<span class="pill">keeper</span>'
+      : snake&&e? roundDotPick(e.n) : "";
+    html+=`<div class="roster-slot"><span class="nm"><span class="pos ${r.p.pos}">${r.p.pos}</span> ${esc(r.p.name)} ${tag}</span>
+      <span>${snake?"":fmt$(r.price)+(Math.abs(r.delta)>=1?` <span class="${r.delta>0?"down":"up"}">${r.delta>0?"+":"−"}$${Math.abs(r.delta)}</span>`:"")}</span></div>`;
+  }
+  html+="</div>";
+  html+=`<div class="lognote" style="margin-top:6px">${d.rows.length}/${d.spots} spots`;
+  if(!snake){
+    html+=` · spent ${fmt$(d.spent)} for ${fmt$(d.value)} of value`+
+      (Math.abs(d.spent-d.value)>1? ` (<span class="${d.spent>d.value?"down":"up"}">${fmt$(Math.abs(d.spent-d.value))} ${d.spent>d.value?"over":"under"}</span>)`:"");
+    if(d.best&&d.best.delta<-1) html+=`<br>Best buy: ${esc(d.best.p.name)} (${fmt$(-d.best.delta)} under value)`;
+    if(d.reach&&d.reach.delta>1) html+=` · Biggest reach: ${esc(d.reach.p.name)} (+${fmt$(d.reach.delta).slice(1)})`;
+  }
+  if(R.sim) html+=`<br>Outlook: median ${R.sim.p50} (floor ${R.sim.p10}, ceiling ${R.sim.p90})`;
+  html+="</div>";
+  el.innerHTML=html;
+}
+function recapText(){
+  const d=recapData(); if(!d) return "No picks yet.";
+  const snake=isSnake();
+  const lines=[`BERG SHEETS draft recap — ${d.rows.length}/${d.spots} spots`];
+  if(!snake) lines.push(`Spent ${fmt$(d.spent)} for ${fmt$(d.value)} of value`);
+  if(R.sim) lines.push(`Outlook: median ${R.sim.p50} (${R.sim.p10}–${R.sim.p90})`);
+  for(const r of d.rows){
+    const e=S.log.find(x=>x.id===playerId(r.p));
+    lines.push(`${r.keeper?"K ":snake&&e? roundDotPick(e.n)+" ":""}${r.p.pos} ${r.p.name}`+
+      (snake?"":` ${fmt$(r.price)}${r.delta? ` (${r.delta>0?"+":""}${r.delta})`:""}`));
+  }
+  return lines.join("\n");
+}
+
 /* ---------- Yahoo (free-text paste) ---------- */
 const yhStatus=t=>{ $("#yhStatus").textContent=t; };
 // Parse copied Yahoo draft-results text: find the longest known player name in
@@ -1872,8 +2211,10 @@ const PRESET_REC={ppr:1,half:.5,std:0};
 /* ---------- glue ---------- */
 function renderAll(){
   renderTiles(); renderScarcity(); renderPool(); renderRoster(); renderOptimal();
-  renderNominate(); renderLog(); renderScatter(); renderData();
-  $("#asof").textContent = `data as of ${BUNDLED.meta.asOf}`;
+  renderNominate(); renderLog(); renderRecap(); renderKeepers(); renderScatter(); renderData();
+  const ageDays=Math.floor((Date.now()-new Date(BUNDLED.meta.asOf))/86400000);
+  $("#asof").innerHTML = `data as of ${BUNDLED.meta.asOf}`+
+    (ageDays>21? ` <span class="down" title="Projections and prices move all summer — import a fresh CSV/xlsx in Data & News">⚠ ${ageDays} days old — import fresh data</span>`:"");
   if(S.sel) selectPlayer(S.sel);           // keep block bar fresh after recompute
   else $("#block").classList.add("hidden");
 }
@@ -1910,6 +2251,9 @@ function bind(){
     if(poolSort.k===k) poolSort.dir*=-1; else poolSort={k,dir:k==="name"||k==="team"||k==="pos"?1:-1};
     renderPool();
   }));
+  $("#blockPrice").addEventListener("input",()=>{   // live what-if as the bid moves
+    if(S.sel){ const r=M.rows.find(r=>playerId(r.p)===S.sel); if(r) updateBlockSim(S.sel, r); }
+  });
   $("#blockMine").addEventListener("click",()=>blockAction(true));
   $("#blockGone").addEventListener("click",()=>blockAction(false));
   $("#blockClose").addEventListener("click",()=>{S.sel=null;$("#block").classList.add("hidden");renderPool();});
@@ -1951,8 +2295,8 @@ function bind(){
     catch(err){ alert("Could not read that file: "+err.message); }
   });
   $("#resetBtn").addEventListener("click",()=>{
-    if(!confirm("Clear the draft log and un-draft everyone? (Pool and settings stay.)")) return;
-    for(const p of S.players) p.drafted=null;
+    if(!confirm("Clear the draft log and un-draft everyone? (Pool, settings, and keepers stay.)")) return;
+    for(const p of S.players) if(!(p.drafted&&p.drafted.keeper)) p.drafted=null;
     S.log=[]; S.sel=null;
     SYNC.sl.applied=new Set();
     if(SYNC.sl.timer) sleeperAutoToggle();
@@ -1968,6 +2312,14 @@ function bind(){
   $("#esRead").addEventListener("click",espnRead);
   $("#esApply").addEventListener("click",espnApply);
   $("#yhApply").addEventListener("click",yahooApply);
+  $("#kpMine").addEventListener("click",()=>addKeeper(true));
+  $("#kpRival").addEventListener("click",()=>addKeeper(false));
+  $("#recapCopy").addEventListener("click",async()=>{
+    try{ await navigator.clipboard.writeText(recapText());
+      $("#recapCopy").textContent="copied ✓";
+      setTimeout(()=>$("#recapCopy").textContent="copy",1500);
+    }catch(e){ prompt("Copy your recap:", recapText()); }
+  });
   $("#themeBtn").addEventListener("click",()=>{
     const cur=document.documentElement.dataset.theme;
     const next=cur==="dark"?"light":cur==="light"?"dark":
@@ -1992,7 +2344,9 @@ window.APP={get S(){return S},get M(){return M},get R(){return R},
   recompute,draftPlayer,undo,importCSV,importRows,importXLSX,parseXLSX,
   solveCompletion,posTable,combine,playerId,normPos,parseCSV,mapHeaders,
   SYNC,applyExternalPicks,sleeperFind,sleeperLoad,sleeperSync,espnRead,espnApply,
-  yahooParse,yahooApply,normName,matchPlayer,buildNameIndex};
+  yahooParse,yahooApply,normName,matchPlayer,buildNameIndex,
+  simulateRoster,simIfWon,outlookRoster,addKeeper,removeKeeper,findPoolPlayer,
+  recapData,recapText};
 </script>
 </body>
 </html>
