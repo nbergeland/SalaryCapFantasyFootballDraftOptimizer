@@ -214,6 +214,14 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         <div id="optimal"></div>
       </div>
       <div class="card">
+        <h2>Roster outlook — 1,200 seasons</h2>
+        <div class="note" style="margin-bottom:6px">Monte Carlo of your picks + the
+          optimizer's plan: weekly sims, best lineup each week, injury and boom/bust
+          variance by position. Ranges lean on those variance assumptions — read them
+          as shape, not gospel.</div>
+        <div id="outlook"></div>
+      </div>
+      <div class="card">
         <h2>Nomination ideas</h2>
         <div class="note" style="margin-bottom:6px">Big names you should <em>not</em> buy —
           nominate them to drain other budgets.</div>
@@ -230,6 +238,7 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
     <span>On the block:</span><span class="who" id="blockWho"></span>
     <span class="pill" id="blockAav"></span>
     <span class="verdict" id="blockVerdict"></span>
+    <span class="pill" id="blockSim" title="Monte Carlo what-if vs your current outlook (same random seed)"></span>
     <span class="spacer"></span>
     <label id="blockPriceWrap">$ <input type="number" id="blockPrice" min="1" value="1" style="width:64px"></label>
     <button class="primary" id="blockMine">I won it</button>
@@ -443,6 +452,12 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         is on you.</li>
       <li><b>Nominating:</b> use <i>Nomination ideas</i> — expensive players you don't
         want. Money they burn elsewhere is discount on your targets.</li>
+      <li><b>Roster outlook (Monte Carlo):</b> the floor/median/ceiling card simulates
+        1,200 seasons of your picks + the optimizer's plan, week by week, starting your
+        best lineup each week — so boom/bust bench depth gets credit the averages miss.
+        The block bar's "sim if won" line shows how a purchase moves your median and
+        floor. Use it to steer roster <i>shape</i> (stars-and-scrubs vs balanced), not
+        to sweat ±20-point differences — the ranges depend on variance assumptions.</li>
       <li><b>Trust the completion card:</b> if it says your best roster needs a $34 WR
         tier-2, don't panic-spend $50 on tier-1. The plan updates as the room overpays
         (inflation &gt; 0) or underpays.</li>
@@ -936,6 +951,147 @@ function snakeUrgency(r, nextN){
   return {dropoff:+(r.rpts-(later? later.rpts:0)).toFixed(1), later};
 }
 
+/* =====================================================================
+   MONTE CARLO ROSTER OUTLOOK — evaluation layer only; the exact
+   optimizer is untouched and the sim never runs inside the bidding loop.
+   Weekly resolution with best-lineup-each-week, so bench option value
+   and boom/bust depth are priced in. See MODELING.md.
+   ===================================================================== */
+const SIM = {
+  n: 1200, weeks: 17,
+  // per-week miss probability; weekly mean is scaled up so the season
+  // EXPECTATION still equals the sheet's projection (which already bakes
+  // in typical availability) — misses add variance, not double-counted drag
+  missProb: {QB:.035, RB:.075, WR:.06, TE:.06, K:.02, DST:.005},
+  weeklyCV: {QB:.35, RB:.45, WR:.5, TE:.6, K:.45, DST:.55},
+};
+function mulberry32(seed){
+  return function(){
+    seed|=0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed>>>15, 1|seed);
+    t = t + Math.imul(t ^ t>>>7, 61|t) ^ t;
+    return ((t ^ t>>>14)>>>0) / 4294967296;
+  };
+}
+// simulate season totals for a roster: [{pos, pts}] using season-mean pts.
+// Fixed seed => common random numbers, so with/without comparisons are stable.
+function simulateRoster(players, slots, nSims){
+  const n = nSims || SIM.n;
+  const rng = mulberry32(20260720);
+  const ps = players.map(p=>{
+    const miss = SIM.missProb[p.pos] ?? .05;
+    const wm = p.pts / (SIM.weeks * (1-miss));
+    return {pos:p.pos, wm, sd: wm*(SIM.weeklyCV[p.pos] ?? .5), miss};
+  });
+  const flexSlots = slots.FLEX||0;
+  const totals = new Float64Array(n);
+  const scores = new Float64Array(ps.length);
+  for(let s=0; s<n; s++){
+    let season = 0;
+    for(let w=0; w<SIM.weeks; w++){
+      for(let i=0;i<ps.length;i++){
+        const p=ps[i];
+        if(rng() < p.miss){ scores[i]=0; continue; }
+        // Box-Muller normal, truncated at 0
+        const u1=Math.max(rng(),1e-12), u2=rng();
+        const z=Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2);
+        scores[i]=Math.max(0, p.wm + p.sd*z);
+      }
+      // best lineup this week: top-k per position, then best leftovers to FLEX
+      const flexPool=[];
+      for(const pos of POSITIONS){
+        const k=slots[pos]||0;
+        const own=[];
+        for(let i=0;i<ps.length;i++) if(ps[i].pos===pos) own.push(scores[i]);
+        own.sort((a,b)=>b-a);
+        for(let j=0;j<Math.min(k,own.length);j++) season+=own[j];
+        if(FLEX_POS.includes(pos))
+          for(let j=k;j<own.length;j++) flexPool.push(own[j]);
+      }
+      if(flexSlots && flexPool.length){
+        flexPool.sort((a,b)=>b-a);
+        for(let j=0;j<Math.min(flexSlots,flexPool.length);j++) season+=flexPool[j];
+      }
+    }
+    totals[s]=season;
+  }
+  totals.sort();
+  const q=p=>Math.round(totals[Math.min(n-1, Math.floor(p*n))]);
+  return {p10:q(.10), p50:q(.50), p90:q(.90)};
+}
+// current best-case roster: my players (incl. bench) + the optimizer's plan
+function outlookRoster(){
+  const list=[];
+  for(const p of S.players)
+    if(p.drafted && p.drafted.mine){
+      const r=M.rows.find(r=>r.p===p);
+      list.push({pos:p.pos, pts:r? r.pts0 : p.pts});
+    }
+  if(R.sol){
+    const planned = R.sol.snake ? R.sol.plan.map(s=>s.r) : R.sol.chosen;
+    for(const r of planned) list.push({pos:r.p.pos, pts:r.pts0});
+  }
+  return list;
+}
+let simTimer=null;
+function scheduleOutlookSim(){
+  clearTimeout(simTimer);
+  const el=$("#outlook");
+  if(el) el.innerHTML='<p class="note">simulating…</p>';
+  simTimer=setTimeout(()=>{
+    const roster=outlookRoster();
+    if(roster.length<3){
+      R.sim=null;
+      if(el) el.innerHTML='<p class="note">Outlook appears once a roster takes shape.</p>';
+      return;
+    }
+    R.sim=simulateRoster(roster, S.settings.slots);
+    renderOutlook();
+  }, 30);
+}
+function renderOutlook(){
+  const el=$("#outlook"); if(!el||!R.sim) return;
+  const {p10,p50,p90}=R.sim;
+  const lo=p10*0.96, hi=p90*1.04, X=v=>100*(v-lo)/(hi-lo);
+  el.innerHTML=`
+    <div style="display:flex;gap:14px;font-variant-numeric:tabular-nums">
+      <div><div class="note">Floor (10th)</div><div style="font-size:20px;font-weight:650">${p10}</div></div>
+      <div><div class="note">Median</div><div style="font-size:20px;font-weight:650">${p50}</div></div>
+      <div><div class="note">Ceiling (90th)</div><div style="font-size:20px;font-weight:650">${p90}</div></div>
+    </div>
+    <div style="position:relative;height:8px;margin:10px 2px 2px;background:var(--grid);border-radius:4px">
+      <div style="position:absolute;left:${X(p10)}%;width:${X(p90)-X(p10)}%;height:100%;background:var(--accent);opacity:.35;border-radius:4px"></div>
+      <div style="position:absolute;left:${X(p50)}%;top:-3px;width:2px;height:14px;background:var(--accent)"></div>
+    </div>`;
+}
+// block-bar what-if: median/floor if I actually win this player at this price
+function simIfWon(id, price){
+  const p=S.players.find(x=>playerId(x)===id);
+  if(!p || p.drafted || !R.sim) return null;
+  const saved={sol:R.sol};
+  const paid=Math.max(1,Math.round(price));
+  try{
+    p.drafted={price:paid, mine:true};
+    // temp log entry so the price actually leaves the budget (and snake
+    // pick math advances) during the what-if solve
+    S.log.push({id, name:p.name, pos:p.pos, price:paid, mine:true, n:S.log.length+1});
+    rebuildModel();
+    const sol=isSnake()? solveSnakePlan() : solveCompletion();
+    if(!sol) return null;
+    const roster=[];
+    for(const q of S.players)
+      if(q.drafted && q.drafted.mine){
+        const r=M.rows.find(r=>r.p===q);
+        roster.push({pos:q.pos, pts:r? r.pts0 : q.pts});
+      }
+    const planned = sol.snake ? sol.plan.map(s=>s.r) : sol.chosen;
+    for(const r of planned) roster.push({pos:r.p.pos, pts:r.pts0});
+    return simulateRoster(roster, S.settings.slots);
+  } finally {
+    S.log.pop(); p.drafted=null; rebuildModel(); R.sol=saved.sol;
+  }
+}
+
 /* ============================ recompute-all ============================ */
 let R = {sol:null, bids:new Map(), without:new Map()};
 function recompute(){
@@ -949,6 +1105,7 @@ function recompute(){
     R.bids = mb.bids||new Map(); R.without = mb.withoutCache||new Map();
   }
   renderAll();
+  scheduleOutlookSim();   // async — never blocks the bidding loop
   saveState();
 }
 
@@ -1572,6 +1729,26 @@ function selectPlayer(id){
     $("#blockPrice").value = Math.max(1, Math.min(bid||1, 999));
   }
   renderPool();
+  updateBlockSim(id, r);
+}
+let blockSimTimer=null;
+function updateBlockSim(id, r){
+  const el=$("#blockSim"); el.textContent="";
+  if(r.p.drafted || !R.sim) return;
+  el.textContent="sim…";
+  clearTimeout(blockSimTimer);
+  blockSimTimer=setTimeout(()=>{
+    if(S.sel!==id){ el.textContent=""; return; }
+    const price=isSnake()? 1 : (+$("#blockPrice").value||1);
+    const w=simIfWon(id, price);
+    if(!w){ el.textContent="sim: n/a (can't fit at that price)"; return; }
+    const dm=w.p50-R.sim.p50, df=w.p10-R.sim.p10;
+    const inPlan=R.sol && (R.sol.snake? R.sol.plan.some(s=>playerId(s.r.p)===id)
+                                      : R.sol.chosen.some(x=>playerId(x.p)===id));
+    el.textContent = (inPlan && Math.abs(dm)<6)
+      ? "sim: already in your optimal plan"
+      : `sim if won: median ${dm>=0?"+":""}${dm} · floor ${df>=0?"+":""}${df}`;
+  }, 60);
 }
 function blockAction(mine){
   const r = M.rows.find(r=>playerId(r.p)===S.sel);
@@ -1873,7 +2050,9 @@ const PRESET_REC={ppr:1,half:.5,std:0};
 function renderAll(){
   renderTiles(); renderScarcity(); renderPool(); renderRoster(); renderOptimal();
   renderNominate(); renderLog(); renderScatter(); renderData();
-  $("#asof").textContent = `data as of ${BUNDLED.meta.asOf}`;
+  const ageDays=Math.floor((Date.now()-new Date(BUNDLED.meta.asOf))/86400000);
+  $("#asof").innerHTML = `data as of ${BUNDLED.meta.asOf}`+
+    (ageDays>21? ` <span class="down" title="Projections and prices move all summer — import a fresh CSV/xlsx in Data & News">⚠ ${ageDays} days old — import fresh data</span>`:"");
   if(S.sel) selectPlayer(S.sel);           // keep block bar fresh after recompute
   else $("#block").classList.add("hidden");
 }
@@ -1910,6 +2089,9 @@ function bind(){
     if(poolSort.k===k) poolSort.dir*=-1; else poolSort={k,dir:k==="name"||k==="team"||k==="pos"?1:-1};
     renderPool();
   }));
+  $("#blockPrice").addEventListener("input",()=>{   // live what-if as the bid moves
+    if(S.sel){ const r=M.rows.find(r=>playerId(r.p)===S.sel); if(r) updateBlockSim(S.sel, r); }
+  });
   $("#blockMine").addEventListener("click",()=>blockAction(true));
   $("#blockGone").addEventListener("click",()=>blockAction(false));
   $("#blockClose").addEventListener("click",()=>{S.sel=null;$("#block").classList.add("hidden");renderPool();});
@@ -1992,7 +2174,8 @@ window.APP={get S(){return S},get M(){return M},get R(){return R},
   recompute,draftPlayer,undo,importCSV,importRows,importXLSX,parseXLSX,
   solveCompletion,posTable,combine,playerId,normPos,parseCSV,mapHeaders,
   SYNC,applyExternalPicks,sleeperFind,sleeperLoad,sleeperSync,espnRead,espnApply,
-  yahooParse,yahooApply,normName,matchPlayer,buildNameIndex};
+  yahooParse,yahooApply,normName,matchPlayer,buildNameIndex,
+  simulateRoster,simIfWon,outlookRoster};
 </script>
 </body>
 </html>
