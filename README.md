@@ -1,6 +1,6 @@
-# Salary Cap Fantasy Football Draft Optimizer
+# BERG SHEETS — Fantasy Football Draft Optimizer
 
-A live draft companion for salary-cap (auction) fantasy football leagues. It combines
+A live draft companion for fantasy football drafts — **salary-cap (auction) and snake**. It combines
 exact roster optimization with value-over-replacement pricing, expert-consensus data,
 live auction-inflation tracking, and a max-bid advisor — and re-optimizes your best
 possible roster **after every pick** of your draft.
@@ -26,8 +26,12 @@ Run it next to your draft room:
 
 Feature highlights:
 
-- **Exact optimizer** — a dynamic program equivalent to integer linear programming,
-  provably optimal for your remaining slots/budget, re-solved live.
+- **Exact optimizer (auction)** — a dynamic program equivalent to integer linear
+  programming, provably optimal for your remaining slots/budget, re-solved live.
+- **Snake mode** — set your draft slot and the board flips to pick-order thinking:
+  market/ADP rank, expected round, an availability call against your next pick,
+  take-now urgency (points lost by waiting), and a round-by-round projected plan.
+  Import a CSV with an ADP column for sharper availability.
 - **Max-bid advisor** — the largest price at which winning a player still beats the
   best roster you could build without them. Bid to it, never past it.
 - **Positional scarcity** — how much of each position's market value ($) is still on
