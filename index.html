@@ -136,6 +136,7 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
   <h1>BERG SHEETS</h1><span class="season">2026</span>
   <span class="asof" id="asof"></span>
   <span class="spacer"></span>
+  <button id="syncBtn" title="Connect your Sleeper / ESPN / Yahoo league">⚡ League sync</button>
   <button id="themeBtn" title="Toggle light/dark">◐</button>
   <button id="exportBtn">Export draft</button>
   <button id="importBtn">Import</button>
@@ -1383,7 +1384,11 @@ function renderNominate(){
 
 function renderLog(){
   const el=$("#log"); el.innerHTML="";
-  if(!S.log.length){ el.innerHTML='<p class="note">No picks yet. Record every sale — the model feeds on prices.</p>'; return;}
+  if(!S.log.length){ el.innerHTML='<p class="note">No picks yet. Record every sale — '+
+    'the model feeds on prices. Or <a href="#" id="logSyncLink">connect your league</a> '+
+    '(Sleeper live-sync, ESPN/Yahoo paste) and picks flow in on their own.</p>';
+    el.querySelector("#logSyncLink").addEventListener("click",e=>{e.preventDefault();gotoSync();});
+    return;}
   const list=S.log.slice().reverse();
   for(const e of list){
     const idx=S.log.indexOf(e);
@@ -1831,13 +1836,23 @@ function renderAll(){
   if(S.sel) selectPlayer(S.sel);           // keep block bar fresh after recompute
   else $("#block").classList.add("hidden");
 }
+function showTab(tab){
+  document.querySelectorAll("nav.tabs button").forEach(x=>
+    x.classList.toggle("active", x.dataset.tab===tab));
+  for(const t of ["draft","data","settings","guide"])
+    document.getElementById("tab-"+t).classList.toggle("hidden", t!==tab);
+  if(tab==="draft") renderScatter();
+}
+function gotoSync(){
+  showTab("data");
+  const el=$("#slUser");
+  el.closest(".card").scrollIntoView({behavior:"smooth", block:"start"});
+  el.focus();
+}
 function bind(){
-  document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>{
-    document.querySelectorAll("nav.tabs button").forEach(x=>x.classList.toggle("active",x===b));
-    for(const t of ["draft","data","settings","guide"])
-      document.getElementById("tab-"+t).classList.toggle("hidden", t!==b.dataset.tab);
-    if(b.dataset.tab==="draft") renderScatter();
-  }));
+  document.querySelectorAll("nav.tabs button").forEach(b=>
+    b.addEventListener("click",()=>showTab(b.dataset.tab)));
+  $("#syncBtn").addEventListener("click",gotoSync);
   const chips=$("#posChips");
   for(const p of ["ALL","QB","RB","WR","TE","FLEX","K","DST"]){
     const c=document.createElement("button");
