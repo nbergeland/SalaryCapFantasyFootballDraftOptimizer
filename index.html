@@ -252,14 +252,16 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         </table></div>
       </div>
       <div class="card">
-        <h2>Import projections / auction values (CSV)</h2>
+        <h2>Import projections / auction values (CSV or Excel)</h2>
         <p class="note">Export a cheat sheet from FantasyPros, ESPN, RotoWire, Draft Sharks,
-          etc. right before your draft and drop it here. Columns are auto-detected
-          (player, team, position, auction value, projected points, and optional stat-level
-          columns like pass/rush/rec yards &amp; TDs — stat columns enable exact rescoring
-          under your league's settings). </p>
+          etc. right before your draft and drop it here — <b>.csv or .xlsx</b>. Columns are
+          auto-detected (player, team, position, auction value, projected points, and
+          optional stat-level columns like pass/rush/rec yards &amp; TDs — stat columns
+          enable exact rescoring under your league's settings). The legacy
+          <code>auc_values_ALL.xlsx</code> sheet format imports directly, stat columns
+          and all — keep building your sheet the way that's worked for you.</p>
         <p>
-          <input type="file" id="csvFile" accept=".csv,.txt">
+          <input type="file" id="csvFile" accept=".csv,.txt,.xlsx">
           <select id="importMode">
             <option value="merge">Merge into current pool (blend projections)</option>
             <option value="replace">Replace entire pool</option>
@@ -637,7 +639,9 @@ function solveCompletion(opt){
   const variants = flexVariants(assign.remaining, assign.flexOpen);
   let best=null;
   for(const v of variants){
-    const groups = POSITIONS.filter(pos=>v[pos]>0).map(pos=>{
+    // positions absent from the pool entirely (e.g. a sheet with no DST rows)
+    // are skipped rather than making every roster infeasible
+    const groups = POSITIONS.filter(pos=>v[pos]>0 && cands[pos].length>0).map(pos=>{
       const key = pos+"|"+v[pos];
       let table = cache.get(key);
       if(!table){ table = posTable(cands[pos], v[pos], B); cache.set(key, table); }
@@ -683,7 +687,7 @@ function computeMaxBids(base){
     else { minus[pos]=null; continue; }
     let arr=null, refs=null;
     for(const v of flexVariants(rem, flexOpen)){
-      const groups = POSITIONS.filter(q=>v[q]>0).map(q=>{
+      const groups = POSITIONS.filter(q=>v[q]>0 && cands[q].length>0).map(q=>{
         const key=q+"|"+v[q];
         let table=cache.get(key);
         if(!table){ table=posTable(cands[q], v[q], optBudget); cache.set(key,table); }
@@ -798,8 +802,7 @@ function mapHeaders(hdr){
   });
   return m;
 }
-function importCSV(text, mode, w){
-  const rows = parseCSV(text);
+function importRows(rows, mode, w){
   if(rows.length<2) return "No data rows found.";
   const m = mapHeaders(rows[0]);
   if(m.name==null || m.pos==null)
@@ -807,13 +810,17 @@ function importCSV(text, mode, w){
   let added=0, merged=0, skipped=0;
   const statKeys=["pass_yd","pass_td","int","rush_yd","rush_td","rec","rec_yd","rec_td"];
   const incoming=[];
+  const seen=new Set();
   for(const r of rows.slice(1)){
     const pos = normPos(r[m.pos]); const name=(r[m.name]||"").trim().replace(/\s+/g," ");
     if(!pos||!name){skipped++;continue;}
+    const id=(name+"|"+pos).toLowerCase();
+    if(seen.has(id)){skipped++;continue;}
+    seen.add(id);
     const num = i => i==null?null:parseFloat(String(r[i]).replace(/[$,]/g,""))||0;
     const stats={}; let hasStats=false;
     for(const k of statKeys){ if(m[k]!=null){ stats[k]=num(m[k]); hasStats=true; } }
-    incoming.push({name, team:(m.team!=null?String(r[m.team]).trim().toUpperCase():""),
+    incoming.push({name, team:(m.team!=null?String(r[m.team]||"").trim().toUpperCase():""),
       pos, aav:num(m.aav)??1, pts:num(m.pts)??0,
       floor:m.floor!=null?num(m.floor):null, ceil:m.ceil!=null?num(m.ceil):null,
       stats:hasStats?stats:null});
@@ -824,7 +831,8 @@ function importCSV(text, mode, w){
   }else{
     const idx = new Map(S.players.map(p=>[playerId(p),p]));
     for(const n of incoming){
-      const ex = idx.get((n.name+"|"+n.pos).toLowerCase());
+      const id=(n.name+"|"+n.pos).toLowerCase();
+      const ex = idx.get(id);
       if(ex){
         if(n.pts) ex.pts = +( (1-w)*ex.pts + w*n.pts ).toFixed(1);
         if(n.aav>1 || !ex.aav) ex.aav = Math.max(1,Math.round(n.aav));
@@ -833,11 +841,79 @@ function importCSV(text, mode, w){
         if(n.floor!=null) ex.floor=n.floor;
         if(n.ceil!=null) ex.ceil=n.ceil;
         merged++;
-      }else{ S.players.push(freshPlayer(n)); added++; }
+      }else{ const np=freshPlayer(n); S.players.push(np); idx.set(id,np); added++; }
     }
   }
   recompute();
   return `Imported: ${added} added, ${merged} blended (weight ${w}), ${skipped} skipped.`;
+}
+function importCSV(text, mode, w){ return importRows(parseCSV(text), mode, w); }
+
+/* ---------- minimal .xlsx reader (zip + sheet XML, no libraries) ---------- */
+async function parseXLSX(buf){
+  const dv = new DataView(buf);
+  let eocd=-1;
+  for(let i=buf.byteLength-22;i>=Math.max(0,buf.byteLength-22-65558);i--)
+    if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;}
+  if(eocd<0) throw new Error("not a valid .xlsx (zip) file");
+  const count=dv.getUint16(eocd+10,true);
+  let off=dv.getUint32(eocd+16,true);
+  const files={}, td=new TextDecoder();
+  for(let n=0;n<count;n++){
+    if(dv.getUint32(off,true)!==0x02014b50) break;
+    const method=dv.getUint16(off+10,true), csize=dv.getUint32(off+20,true);
+    const nameLen=dv.getUint16(off+28,true), extraLen=dv.getUint16(off+30,true),
+      cmtLen=dv.getUint16(off+32,true), lho=dv.getUint32(off+42,true);
+    files[td.decode(new Uint8Array(buf,off+46,nameLen))]={method,csize,lho};
+    off+=46+nameLen+extraLen+cmtLen;
+  }
+  async function read(name){
+    const f=files[name]; if(!f) return null;
+    const nl=dv.getUint16(f.lho+26,true), el=dv.getUint16(f.lho+28,true);
+    const data=buf.slice(f.lho+30+nl+el, f.lho+30+nl+el+f.csize);
+    if(f.method===0) return td.decode(data);
+    const ds=new DecompressionStream("deflate-raw");
+    return await new Response(new Blob([data]).stream().pipeThrough(ds)).text();
+  }
+  const unent=s=>s.replace(/&#(\d+);/g,(_,d)=>String.fromCharCode(+d))
+    .replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">")
+    .replace(/&quot;/g,'"').replace(/&apos;/g,"'");
+  // shared strings
+  const shared=[];
+  const ss=await read("xl/sharedStrings.xml");
+  if(ss) for(const si of ss.matchAll(/<si>([\s\S]*?)<\/si>/g))
+    shared.push(unent([...si[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(m=>m[1]).join("")));
+  // first worksheet
+  const sheetName=Object.keys(files).filter(n=>/^xl\/worksheets\/sheet\d+\.xml$/.test(n))
+    .sort((a,b)=>parseInt(a.match(/\d+/))-parseInt(b.match(/\d+/)))[0];
+  const xml=await read(sheetName);
+  if(!xml) throw new Error("no worksheet found in the file");
+  const colIdx=ref=>{let c=0;for(const ch of ref)if(ch>="A"&&ch<="Z")c=c*26+ch.charCodeAt(0)-64;return c-1;};
+  const rows=[];
+  for(const rm of xml.matchAll(/<row[^>]*>([\s\S]*?)<\/row>/g)){
+    const row=[];
+    for(const cm of rm[1].matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)){
+      const attrs=cm[1], inner=cm[2]||"";
+      const ref=(attrs.match(/r="([A-Z]+)\d+"/)||[])[1];
+      const t=(attrs.match(/t="(\w+)"/)||[])[1];
+      let v="";
+      if(t==="inlineStr") v=unent([...inner.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(m=>m[1]).join(""));
+      else{
+        const vm=inner.match(/<v>([\s\S]*?)<\/v>/);
+        v=vm?unent(vm[1]):"";
+        if(t==="s") v=shared[+v]??"";
+      }
+      if(ref!=null) row[colIdx(ref)]=v; else row.push(v);
+    }
+    if(row.some(x=>x!=null&&String(x).trim()!=="")) rows.push([...row].map(x=>x==null?"":x));
+  }
+  return rows;
+}
+async function importXLSX(buf, mode, w){
+  if(typeof DecompressionStream==="undefined")
+    return "This browser can't unzip .xlsx files — save the sheet as CSV and import that.";
+  try{ return importRows(await parseXLSX(buf), mode, w); }
+  catch(e){ return "Could not read that .xlsx ("+e.message+") — save it as CSV and import that."; }
 }
 function exportCSV(){
   const sc=S.settings.scoring;
@@ -1209,9 +1285,14 @@ function bind(){
   $("#s_blend").addEventListener("input",e=>$("#s_blendVal").textContent=Math.round(e.target.value*100)+"% model");
   $("#csvImportBtn").addEventListener("click",async()=>{
     const f=$("#csvFile").files[0];
+    const mode=$("#importMode").value, w=+$("#blendW").value||.6;
+    if(f && /\.xlsx$/i.test(f.name)){
+      $("#importReport").textContent = await importXLSX(await f.arrayBuffer(), mode, w);
+      return;
+    }
     const text = f? await f.text() : $("#csvPaste").value;
     if(!text.trim()){ $("#importReport").textContent="Nothing to import."; return; }
-    $("#importReport").textContent = importCSV(text, $("#importMode").value, +$("#blendW").value||.6);
+    $("#importReport").textContent = importCSV(text, mode, w);
   });
   $("#csvExportBtn").addEventListener("click",exportCSV);
   $("#exportBtn").addEventListener("click",()=>{
@@ -1253,8 +1334,8 @@ recompute();
 
 // expose for headless tests
 window.APP={get S(){return S},get M(){return M},get R(){return R},
-  recompute,draftPlayer,undo,importCSV,solveCompletion,posTable,combine,
-  playerId,normPos,parseCSV,mapHeaders};
+  recompute,draftPlayer,undo,importCSV,importRows,importXLSX,parseXLSX,
+  solveCompletion,posTable,combine,playerId,normPos,parseCSV,mapHeaders};
 </script>
 </body>
 </html>
