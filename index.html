@@ -48,6 +48,13 @@ button{background:var(--surface);border:1px solid var(--border);border-radius:8p
 button:hover{border-color:var(--accent)}
 button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 button.small{padding:2px 8px;font-size:12px;border-radius:6px}
+button.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(8px);
+  background:var(--surface);color:var(--ink);border:1px solid var(--border);
+  border-radius:10px;padding:9px 16px;font-size:13px;z-index:80;opacity:0;
+  pointer-events:none;transition:opacity .2s,transform .2s;
+  box-shadow:0 4px 18px rgba(0,0,0,.2);max-width:90vw}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 input[type=text],input[type=number],select,textarea{background:var(--surface);
   border:1px solid var(--border);border-radius:8px;padding:5px 9px}
 input[type=number]{width:74px}
@@ -1336,6 +1343,23 @@ function exportCSV(){
 
 /* ============================ rendering ============================ */
 const $=s=>document.querySelector(s);
+function toast(msg){
+  let t=document.getElementById("toast");
+  if(!t){ t=document.createElement("div"); t.id="toast"; document.body.appendChild(t); }
+  t.textContent=msg; t.classList.add("show");
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"), 4000);
+}
+async function copyText(txt){
+  try{ await navigator.clipboard.writeText(txt); return true; }
+  catch(e){
+    const ta=document.createElement("textarea");
+    ta.value=txt; ta.style.cssText="position:fixed;opacity:0";
+    document.body.appendChild(ta); ta.select();
+    try{ return document.execCommand("copy"); }
+    catch(e2){ return false; }
+    finally{ ta.remove(); }
+  }
+}
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let poolSort={k:"adj",dir:-1}, posFilter="ALL";
 
@@ -2292,15 +2316,28 @@ function bind(){
     const f=e.target.files[0]; if(!f) return;
     try{ const s=JSON.parse(await f.text());
       if(s.players){ S={...S,...s,sel:null}; recompute(); } }
-    catch(err){ alert("Could not read that file: "+err.message); }
+    catch(err){ toast("Could not read that file: "+err.message); }
   });
+  // two-click confirm: window.confirm() is silently blocked in sandboxed
+  // embeds (e.g. the claude.ai artifact), so never gate on modal dialogs
+  let resetArmed=null;
+  const disarmReset=()=>{ clearTimeout(resetArmed); resetArmed=null;
+    $("#resetBtn").textContent="Reset draft"; $("#resetBtn").classList.remove("danger"); };
   $("#resetBtn").addEventListener("click",()=>{
-    if(!confirm("Clear the draft log and un-draft everyone? (Pool, settings, and keepers stay.)")) return;
+    if(!resetArmed){
+      $("#resetBtn").textContent="Sure? Click again";
+      $("#resetBtn").classList.add("danger");
+      resetArmed=setTimeout(disarmReset, 4000);
+      return;
+    }
+    disarmReset();
+    const keepers=S.players.filter(p=>p.drafted&&p.drafted.keeper).length;
     for(const p of S.players) if(!(p.drafted&&p.drafted.keeper)) p.drafted=null;
     S.log=[]; S.sel=null;
     SYNC.sl.applied=new Set();
     if(SYNC.sl.timer) sleeperAutoToggle();
     recompute();
+    toast(`Draft cleared${keepers?` — ${keepers} keeper${keepers===1?"":"s"} kept (remove them in Data & News)`:""}.`);
   });
   $("#slFind").addEventListener("click",sleeperFind);
   $("#slLoad").addEventListener("click",sleeperLoad);
@@ -2315,10 +2352,10 @@ function bind(){
   $("#kpMine").addEventListener("click",()=>addKeeper(true));
   $("#kpRival").addEventListener("click",()=>addKeeper(false));
   $("#recapCopy").addEventListener("click",async()=>{
-    try{ await navigator.clipboard.writeText(recapText());
+    if(await copyText(recapText())){
       $("#recapCopy").textContent="copied ✓";
       setTimeout(()=>$("#recapCopy").textContent="copy",1500);
-    }catch(e){ prompt("Copy your recap:", recapText()); }
+    }else toast("Couldn't access the clipboard — select the recap text and copy manually.");
   });
   $("#themeBtn").addEventListener("click",()=>{
     const cur=document.documentElement.dataset.theme;
