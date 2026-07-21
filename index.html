@@ -211,7 +211,8 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
 
     <div>
       <div class="card">
-        <h2>My roster</h2>
+        <h2>My roster <button class="small" id="kpJump" style="float:right"
+          title="Keeper league? Enter kept players (yours and rivals') before the draft">keepers</button></h2>
         <div id="roster"></div>
       </div>
       <div class="card">
@@ -251,6 +252,7 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
     <span class="verdict" id="blockVerdict"></span>
     <span class="pill" id="blockSim" title="Monte Carlo what-if vs your current outlook (same random seed)"></span>
     <span class="spacer"></span>
+    <label class="note" title="Record as a pre-draft keeper: fills a roster and consumes budget without advancing the pick counter"><input type="checkbox" id="blockKeeper"> keeper</label>
     <label id="blockPriceWrap">$ <input type="number" id="blockPrice" min="1" value="1" style="width:64px"></label>
     <button class="primary" id="blockMine">I won it</button>
     <button id="blockGone">Someone else</button>
@@ -1835,9 +1837,23 @@ function updateBlockSim(id, r){
 function blockAction(mine){
   const r = M.rows.find(r=>playerId(r.p)===S.sel);
   if(!r) return;
-  draftPlayer(r.p, isSnake()? 1 : (+$("#blockPrice").value||1), mine);
+  const price = isSnake()? 1 : (+$("#blockPrice").value||1);
+  if($("#blockKeeper").checked){
+    r.p.drafted={price:Math.max(1,Math.round(price)), mine, keeper:true};
+    $("#blockKeeper").checked=false;
+    toast(`${r.p.name} recorded as ${mine?"your":"a rival's"} keeper.`);
+    S.sel=null; recompute();
+  }else{
+    draftPlayer(r.p, price, mine);
+  }
   $("#block").classList.add("hidden");
   $("#search").value=""; renderPool(); $("#search").focus();
+}
+function gotoKeepers(){
+  showTab("data");
+  const el=$("#kpName");
+  el.closest(".card").scrollIntoView({behavior:"smooth", block:"start"});
+  el.focus();
 }
 
 /* =====================================================================
@@ -2349,6 +2365,7 @@ function bind(){
   $("#esRead").addEventListener("click",espnRead);
   $("#esApply").addEventListener("click",espnApply);
   $("#yhApply").addEventListener("click",yahooApply);
+  $("#kpJump").addEventListener("click",gotoKeepers);
   $("#kpMine").addEventListener("click",()=>addKeeper(true));
   $("#kpRival").addEventListener("click",()=>addKeeper(false));
   $("#recapCopy").addEventListener("click",async()=>{
