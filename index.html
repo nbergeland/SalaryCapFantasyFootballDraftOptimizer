@@ -48,6 +48,13 @@ button{background:var(--surface);border:1px solid var(--border);border-radius:8p
 button:hover{border-color:var(--accent)}
 button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 button.small{padding:2px 8px;font-size:12px;border-radius:6px}
+button.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(8px);
+  background:var(--surface);color:var(--ink);border:1px solid var(--border);
+  border-radius:10px;padding:9px 16px;font-size:13px;z-index:80;opacity:0;
+  pointer-events:none;transition:opacity .2s,transform .2s;
+  box-shadow:0 4px 18px rgba(0,0,0,.2);max-width:90vw}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 input[type=text],input[type=number],select,textarea{background:var(--surface);
   border:1px solid var(--border);border-radius:8px;padding:5px 9px}
 input[type=number]{width:74px}
@@ -204,7 +211,8 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
 
     <div>
       <div class="card">
-        <h2>My roster</h2>
+        <h2>My roster <button class="small" id="kpJump" style="float:right"
+          title="Keeper league? Enter kept players (yours and rivals') before the draft">keepers</button></h2>
         <div id="roster"></div>
       </div>
       <div class="card">
@@ -244,6 +252,7 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
     <span class="verdict" id="blockVerdict"></span>
     <span class="pill" id="blockSim" title="Monte Carlo what-if vs your current outlook (same random seed)"></span>
     <span class="spacer"></span>
+    <label class="note" title="Record as a pre-draft keeper: fills a roster and consumes budget without advancing the pick counter"><input type="checkbox" id="blockKeeper"> keeper</label>
     <label id="blockPriceWrap">$ <input type="number" id="blockPrice" min="1" value="1" style="width:64px"></label>
     <button class="primary" id="blockMine">I won it</button>
     <button id="blockGone">Someone else</button>
@@ -310,6 +319,18 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         </p>
         <div id="kpList"></div>
         <p class="note" id="kpStatus"></p>
+
+        <h3 style="margin-top:14px">Who should I keep?</h3>
+        <p class="note" id="kcModeNote"></p>
+        <p>
+          <input type="text" id="kcName" list="playerNames" placeholder="Candidate player" style="width:170px">
+          <input type="number" id="kcCost" min="1" value="1" style="width:70px">
+          <button id="kcAdd">Add</button>
+          <label class="note">keepers allowed
+            <input type="number" id="kcAllowed" min="1" max="10" style="width:54px"></label>
+        </p>
+        <div id="kcList"></div>
+        <p class="note" id="kcStatus"></p>
       </div>
       <datalist id="playerNames"></datalist>
       <div class="card">
@@ -520,7 +541,7 @@ const defaultSettings = () => ({
   mode:"auction", teams:12, snakeSlot:1, cap:200, bench:6, benchRes:1,
   slots:{QB:1,RB:2,WR:2,TE:1,FLEX:1,K:1,DST:1},
   scoring:{preset:"ppr",rec:1,passYd:25,passTd:4,int:-2,rushYd:10,td:6},
-  risk:0, blend:0.35,
+  risk:0, blend:0.35, kcAllowed:2,
 });
 const isSnake = () => S.settings.mode==="snake";
 let S = {settings:defaultSettings(), players:[], log:[], sel:null};
@@ -543,12 +564,18 @@ function loadState(){
   try{
     const raw = localStorage.getItem(LS_KEY);
     if(raw){ const s = JSON.parse(raw);
-      if(s && s.players && s.players.length){ S = s; S.sel=null; return; } }
+      if(s && s.players && s.players.length){
+        S = s; S.sel=null;
+        S.kpCands = S.kpCands||[];
+        S.settings = Object.assign(defaultSettings(), S.settings);
+        return;
+      } }
   }catch(e){ console.warn("state load failed", e); }
   S.players = BUNDLED.players.map(freshPlayer);
+  S.kpCands = [];
 }
 function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(
-  {settings:S.settings, players:S.players, log:S.log})); }catch(e){} }
+  {settings:S.settings, players:S.players, log:S.log, kpCands:S.kpCands||[]})); }catch(e){} }
 
 /* ============================ scoring ============================ */
 function scorePlayer(p, sc){
@@ -1336,6 +1363,23 @@ function exportCSV(){
 
 /* ============================ rendering ============================ */
 const $=s=>document.querySelector(s);
+function toast(msg){
+  let t=document.getElementById("toast");
+  if(!t){ t=document.createElement("div"); t.id="toast"; document.body.appendChild(t); }
+  t.textContent=msg; t.classList.add("show");
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"), 4000);
+}
+async function copyText(txt){
+  try{ await navigator.clipboard.writeText(txt); return true; }
+  catch(e){
+    const ta=document.createElement("textarea");
+    ta.value=txt; ta.style.cssText="position:fixed;opacity:0";
+    document.body.appendChild(ta); ta.select();
+    try{ return document.execCommand("copy"); }
+    catch(e2){ return false; }
+    finally{ ta.remove(); }
+  }
+}
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let poolSort={k:"adj",dir:-1}, posFilter="ALL";
 
@@ -1811,9 +1855,23 @@ function updateBlockSim(id, r){
 function blockAction(mine){
   const r = M.rows.find(r=>playerId(r.p)===S.sel);
   if(!r) return;
-  draftPlayer(r.p, isSnake()? 1 : (+$("#blockPrice").value||1), mine);
+  const price = isSnake()? 1 : (+$("#blockPrice").value||1);
+  if($("#blockKeeper").checked){
+    r.p.drafted={price:Math.max(1,Math.round(price)), mine, keeper:true};
+    $("#blockKeeper").checked=false;
+    toast(`${r.p.name} recorded as ${mine?"your":"a rival's"} keeper.`);
+    S.sel=null; recompute();
+  }else{
+    draftPlayer(r.p, price, mine);
+  }
   $("#block").classList.add("hidden");
   $("#search").value=""; renderPool(); $("#search").focus();
+}
+function gotoKeepers(){
+  showTab("data");
+  const el=$("#kpName");
+  el.closest(".card").scrollIntoView({behavior:"smooth", block:"start"});
+  el.focus();
 }
 
 /* =====================================================================
@@ -2066,6 +2124,77 @@ function renderKeepers(){
     }
   }
   $("#kpPriceWrap").classList.toggle("hidden", isSnake());
+  renderKeeperAdvice();
+}
+
+/* ---------- keeper advisor: who do I keep? ---------- */
+function keeperAdvice(){
+  const allowed=Math.max(1, S.settings.kcAllowed||2);
+  const snake=isSnake();
+  const rows=(S.kpCands||[]).map(c=>{
+    const p=S.players.find(x=>playerId(x)===c.id);
+    const r=p? M.rows.find(r=>r.p===p):null;
+    if(!p||!r) return null;
+    if(p.drafted) return {c,p,r,gone:true};
+    if(snake){
+      const expRound=Math.ceil(r.mrank/S.settings.teams);
+      const costR=Math.max(1,Math.round(c.cost));
+      return {c,p,r,surplus:costR-expRound, unit:"rd",
+        label:`market says ~R${expRound} · costs your R${costR} pick`};
+    }
+    return {c,p,r,surplus:Math.round(r.adj-c.cost), unit:"$",
+      label:`draft price ~${fmt$(r.adj)} · keeper cost ${fmt$(c.cost)}`};
+  }).filter(Boolean).sort((a,b)=>(b.surplus??-99)-(a.surplus??-99));
+  let kept=0;
+  for(const x of rows){
+    if(!x.gone && x.surplus>0 && kept<allowed){ x.keep=true; kept++; }
+  }
+  return rows;
+}
+function renderKeeperAdvice(){
+  const el=$("#kcList"); if(!el) return;
+  $("#kcModeNote").textContent = isSnake()
+    ? "Add each keeper-eligible player and the ROUND you'd forfeit to keep him. "+
+      "Keep when he'd be drafted earlier than the round he costs."
+    : "Add each keeper-eligible player and his keeper $ cost. Surplus = what he'd "+
+      "go for in this draft (inflation included) minus what keeping him costs.";
+  $("#kcAllowed").value = S.settings.kcAllowed||2;
+  $("#kcCost").title = isSnake()? "Round you forfeit" : "Keeper cost in $";
+  $("#kcCost").placeholder = isSnake()? "round" : "$";
+  el.innerHTML="";
+  const advice=keeperAdvice();
+  for(const a of advice){
+    const d=document.createElement("div"); d.className="roster-slot";
+    const verdict = a.gone? '<span class="pill">off the board</span>'
+      : a.keep? '<span class="pill up" style="font-weight:700">KEEP</span>'
+      : `<span class="pill ${a.surplus<0?"down":""}">${a.surplus<0?"toss back":"bubble"}</span>`;
+    const surplusTxt = a.gone? "" :
+      (a.unit==="$"? `${a.surplus>=0?"+":"−"}$${Math.abs(a.surplus)}`
+                   : `${a.surplus>=0?"+":"−"}${Math.abs(a.surplus)} rd`);
+    d.innerHTML=`<span class="nm"><span class="pos ${a.p.pos}">${a.p.pos}</span>
+      ${esc(a.p.name)} ${verdict}</span>
+      <span title="${esc(a.label||"")}">${surplusTxt}
+      ${a.gone?"":`<button class="small" data-a="lock" title="Lock in as my keeper">✓ keep</button>`}
+      <button class="small" data-a="rm">✕</button></span>`;
+    d.querySelector('[data-a="rm"]').addEventListener("click",()=>{
+      S.kpCands=S.kpCands.filter(x=>x!==a.c); recompute(); });
+    const lock=d.querySelector('[data-a="lock"]');
+    if(lock) lock.addEventListener("click",()=>{
+      a.p.drafted={price:isSnake()?1:Math.max(1,Math.round(a.c.cost)), mine:true, keeper:true};
+      S.kpCands=S.kpCands.filter(x=>x!==a.c);
+      toast(`${a.p.name} locked in as your keeper.`);
+      recompute();
+    });
+    el.appendChild(d);
+  }
+  if(advice.length){
+    const n=advice.filter(a=>a.keep).length;
+    $("#kcStatus").textContent = n
+      ? `Recommendation: keep the ${n} marked KEEP (limit ${S.settings.kcAllowed||2}). `+
+        `Ranked one-by-one vs market — lock keepers in top-down, and re-check: `+
+        `each keeper you lock shifts inflation and can move the next verdict.`
+      : "None of these clear their cost — throwing all back is fine.";
+  } else $("#kcStatus").textContent="";
 }
 
 /* ---------- draft recap ---------- */
@@ -2292,15 +2421,28 @@ function bind(){
     const f=e.target.files[0]; if(!f) return;
     try{ const s=JSON.parse(await f.text());
       if(s.players){ S={...S,...s,sel:null}; recompute(); } }
-    catch(err){ alert("Could not read that file: "+err.message); }
+    catch(err){ toast("Could not read that file: "+err.message); }
   });
+  // two-click confirm: window.confirm() is silently blocked in sandboxed
+  // embeds (e.g. the claude.ai artifact), so never gate on modal dialogs
+  let resetArmed=null;
+  const disarmReset=()=>{ clearTimeout(resetArmed); resetArmed=null;
+    $("#resetBtn").textContent="Reset draft"; $("#resetBtn").classList.remove("danger"); };
   $("#resetBtn").addEventListener("click",()=>{
-    if(!confirm("Clear the draft log and un-draft everyone? (Pool, settings, and keepers stay.)")) return;
+    if(!resetArmed){
+      $("#resetBtn").textContent="Sure? Click again";
+      $("#resetBtn").classList.add("danger");
+      resetArmed=setTimeout(disarmReset, 4000);
+      return;
+    }
+    disarmReset();
+    const keepers=S.players.filter(p=>p.drafted&&p.drafted.keeper).length;
     for(const p of S.players) if(!(p.drafted&&p.drafted.keeper)) p.drafted=null;
     S.log=[]; S.sel=null;
     SYNC.sl.applied=new Set();
     if(SYNC.sl.timer) sleeperAutoToggle();
     recompute();
+    toast(`Draft cleared${keepers?` — ${keepers} keeper${keepers===1?"":"s"} kept (remove them in Data & News)`:""}.`);
   });
   $("#slFind").addEventListener("click",sleeperFind);
   $("#slLoad").addEventListener("click",sleeperLoad);
@@ -2312,13 +2454,26 @@ function bind(){
   $("#esRead").addEventListener("click",espnRead);
   $("#esApply").addEventListener("click",espnApply);
   $("#yhApply").addEventListener("click",yahooApply);
+  $("#kpJump").addEventListener("click",gotoKeepers);
+  $("#kcAdd").addEventListener("click",()=>{
+    const p=findPoolPlayer($("#kcName").value);
+    if(!p){ $("#kcStatus").textContent="Player not found in the pool — check spelling."; return; }
+    const id=playerId(p);
+    if((S.kpCands||[]).some(c=>c.id===id)){ $("#kcStatus").textContent=p.name+" is already a candidate."; return; }
+    S.kpCands=S.kpCands||[];
+    S.kpCands.push({id, cost:Math.max(1,Math.round(+$("#kcCost").value||1))});
+    $("#kcName").value=""; $("#kcCost").value=1;
+    recompute();
+  });
+  $("#kcAllowed").addEventListener("change",e=>{
+    S.settings.kcAllowed=Math.max(1,+e.target.value||2); recompute(); });
   $("#kpMine").addEventListener("click",()=>addKeeper(true));
   $("#kpRival").addEventListener("click",()=>addKeeper(false));
   $("#recapCopy").addEventListener("click",async()=>{
-    try{ await navigator.clipboard.writeText(recapText());
+    if(await copyText(recapText())){
       $("#recapCopy").textContent="copied ✓";
       setTimeout(()=>$("#recapCopy").textContent="copy",1500);
-    }catch(e){ prompt("Copy your recap:", recapText()); }
+    }else toast("Couldn't access the clipboard — select the recap text and copy manually.");
   });
   $("#themeBtn").addEventListener("click",()=>{
     const cur=document.documentElement.dataset.theme;
@@ -2346,7 +2501,7 @@ window.APP={get S(){return S},get M(){return M},get R(){return R},
   SYNC,applyExternalPicks,sleeperFind,sleeperLoad,sleeperSync,espnRead,espnApply,
   yahooParse,yahooApply,normName,matchPlayer,buildNameIndex,
   simulateRoster,simIfWon,outlookRoster,addKeeper,removeKeeper,findPoolPlayer,
-  recapData,recapText};
+  recapData,recapText,keeperAdvice};
 </script>
 </body>
 </html>
