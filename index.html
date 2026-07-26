@@ -1398,20 +1398,48 @@ function scheduleStratLab(){
       }
       const myPts=S.players.filter(p=>p.drafted&&p.drafted.mine)
         .reduce((a,p)=>{const r=M.rows.find(r=>r.p===p);return a+(r?r.rpts:0);},0);
-      const roster=[];
+      // full lineup = my owned players + this build's recommendations,
+      // assigned into the league's actual slot structure
+      const lineup=[];
       for(const p of S.players) if(p.drafted&&p.drafted.mine){
-        const r=M.rows.find(r=>r.p===p); roster.push({pos:p.pos, pts:r?r.pts0:p.pts});
+        const r=M.rows.find(r=>r.p===p);
+        lineup.push({pos:p.pos, name:p.name, pts:r?r.rpts:0, pts0:r?r.pts0:p.pts,
+          cost:isSnake()? "mine" : fmt$(p.drafted.price)+' <span class="pill up">mine</span>',
+          owned:true});
       }
       const listed=isSnake()? sol.plan : sol.chosen.map(r=>({r}));
-      for(const s of listed) roster.push({pos:s.r.p.pos, pts:s.r.pts0});
-      const sim=simulateRoster(roster, S.settings.slots, 600);
-      let rows="";
-      for(const s of listed){
-        const cost=isSnake()? roundDotPick(s.n).split(".")[0] : fmt$(s.r.adj);
-        rows+=`<div class="roster-slot"><span class="nm"><span class="pos ${s.r.p.pos}">${s.r.p.pos}</span> ${esc(s.r.p.name)}${s.role==="BN"?' <span class="pill">bn</span>':""}</span><span>${cost}</span></div>`;
+      for(const s of listed)
+        lineup.push({pos:s.r.p.pos, name:s.r.p.name, pts:s.r.rpts, pts0:s.r.pts0,
+          cost:isSnake()? roundDotPick(s.n).split(".")[0] : fmt$(s.r.adj),
+          bn:s.role==="BN"});
+      const sim=simulateRoster(lineup.map(x=>({pos:x.pos, pts:x.pts0})),
+        S.settings.slots, 600);
+      const slots=S.settings.slots;
+      const starters={}; POSITIONS.forEach(p=>starters[p]=[]);
+      const flexRows=[], benchRows=[];
+      for(const x of lineup.slice().sort((a,b)=>b.pts-a.pts)){
+        if(x.bn){ benchRows.push(x); continue; }
+        if(starters[x.pos].length < (slots[x.pos]||0)) starters[x.pos].push(x);
+        else if(FLEX_POS.includes(x.pos) && flexRows.length<(slots.FLEX||0)) flexRows.push(x);
+        else benchRows.push(x);
       }
+      const rowHtml=(label,x)=> x
+        ? `<div class="roster-slot"><span class="nm"><span class="pos ${x.pos}">${x.pos}</span> ${esc(x.name)}</span><span>${x.cost}</span></div>`
+        : `<div class="roster-slot"><span class="nm empty">${label}</span><span class="empty">—</span></div>`;
+      let rows="";
+      for(const pos of POSITIONS)
+        for(let i=0;i<(slots[pos]||0);i++) rows+=rowHtml(pos, starters[pos][i]);
+      for(let i=0;i<(slots.FLEX||0);i++) rows+=rowHtml("FLEX", flexRows[i]);
+      for(const x of benchRows)
+        rows+=`<div class="roster-slot"><span class="nm"><span class="pos ${x.pos}">${x.pos}</span> ${esc(x.name)} <span class="pill">bench</span></span><span>${x.cost}</span></div>`;
+      const spentByMe=S.log.filter(e=>e.mine).reduce((a,e)=>a+e.price,0)
+        + S.players.filter(p=>p.drafted&&p.drafted.mine&&p.drafted.keeper)
+            .reduce((a,p)=>a+p.drafted.price,0);
+      const reserve=Math.max(0, S.settings.cap - spentByMe - sol.B);
       const spend=isSnake()? "" :
-        ` · spends ${fmt$(sol.chosen.reduce((a,r)=>a+r.adj,0))} of ${fmt$(sol.B)}`;
+        ` · spends ${fmt$(sol.chosen.reduce((a,r)=>a+r.adj,0))} of ${fmt$(sol.B)} starter money`+
+        ` — ${fmt$(S.settings.cap)} budget = ${spentByMe? fmt$(spentByMe)+" already spent + ":""}`+
+        `${fmt$(sol.B)} starters + ${fmt$(reserve)} bench hold`;
       d.innerHTML=`<h4>${meta.name}</h4><div class="sub">${meta.desc}${sol.relaxed?" · (rules relaxed where the pool ran dry)":""}</div>
         ${rows}
         <div class="lognote" style="margin-top:6px">
