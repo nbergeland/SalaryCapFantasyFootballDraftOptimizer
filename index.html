@@ -398,6 +398,11 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
           <button class="primary" id="esApply">Apply picks</button>
         </p>
         <p class="note" id="esStatus"></p>
+        <p class="note">🔗 <b>Live bridge (no more pasting):</b>
+          <a id="esBridge" href="#">📡 BERG ESPN bridge</a> — drag this to your
+          bookmarks bar. On draft day: log into ESPN in a tab, click the bookmark
+          once — it opens your BERG SHEETS tab and streams every pick and price here
+          automatically every 12 seconds. Keep the ESPN tab open.</p>
 
         <h3 style="margin-top:14px">Yahoo — paste sync</h3>
         <p class="note">Yahoo's API needs an OAuth app + server, which a local page can't
@@ -413,6 +418,12 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         <textarea id="yhPaste" placeholder="Round 1&#10;1. Bijan Robinson (RB - ATL) $68 Berg's Best&#10;2. Ja'Marr Chase (WR - Cin) $61 The Rivals&#10;…"></textarea>
         <p><button class="primary" id="yhApply">Apply picks</button></p>
         <p class="note" id="yhStatus"></p>
+        <p class="note">🔗 <b>Live bridge (no more pasting):</b>
+          <a id="yhBridge" href="#">📡 BERG Yahoo bridge</a> — drag this to your
+          bookmarks bar. On draft day: open Yahoo's draft room with the
+          <b>Draft Results</b> panel visible, click the bookmark once — it streams the
+          results here automatically every 8 seconds. Fill in your team name above so
+          your picks land on your roster.</p>
       </div>
       <div class="card">
         <h2>2026 offseason briefing</h2>
@@ -2385,32 +2396,48 @@ function espnUrl(){
   return `https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${season}`+
     `/segments/0/leagues/${id}?view=mDraftDetail&view=mTeam&view=mRoster&view=mSettings`;
 }
-function espnRead(){
-  try{
-    const data=JSON.parse($("#esPaste").value);
-    SYNC.es.data=data;
-    const byId=new Map();
-    for(const t of (data.teams||[]))
-      for(const e of ((t.roster&&t.roster.entries)||[])){
-        const pl=e.playerPoolEntry&&e.playerPoolEntry.player;
-        if(pl) byId.set(pl.id,{name:pl.fullName,pos:ES_POS[pl.defaultPositionId]||null});
-      }
-    SYNC.es.playersById=byId;
-    const sel=$("#esMyTeam"); sel.innerHTML="";
-    for(const t of (data.teams||[])){
-      const o=document.createElement("option"); o.value=t.id;
-      o.textContent=t.name||((t.location||"")+" "+(t.nickname||"")).trim()||("Team "+t.id);
-      sel.appendChild(o);
+function espnIngest(data, live){
+  SYNC.es.data=data;
+  const byId=new Map();
+  for(const t of (data.teams||[]))
+    for(const en of ((t.roster&&t.roster.entries)||[])){
+      const pl=en.playerPoolEntry&&en.playerPoolEntry.player;
+      if(pl) byId.set(pl.id,{name:pl.fullName,pos:ES_POS[pl.defaultPositionId]||null});
     }
-    const picks=(data.draftDetail&&data.draftDetail.picks)||[];
+  SYNC.es.playersById=byId;
+  const sel=$("#esMyTeam");
+  const prev=sel.value;
+  sel.innerHTML='<option value="">— my team —</option>';
+  for(const t of (data.teams||[])){
+    const o=document.createElement("option"); o.value=t.id;
+    o.textContent=t.name||((t.location||"")+" "+(t.nickname||"")).trim()||("Team "+t.id);
+    sel.appendChild(o);
+  }
+  if(prev) sel.value=prev;
+  const picks=(data.draftDetail&&data.draftDetail.picks)||[];
+  if(live){
+    if(!sel.value){
+      SYNC.es.livePending=true;
+      esStatus(`Live bridge connected — ${picks.length} picks seen. Select your team above; `+
+        `picks then apply automatically on every update.`);
+      return;
+    }
+    espnApply({live:true});
+  }else{
     esStatus(`Read OK: ${data.teams?data.teams.length:0} teams, ${byId.size} rostered `+
       `players, ${picks.length} draft picks. Pick your team and Apply.`);
-  }catch(e){ esStatus("Couldn't parse that JSON: "+e.message); }
+  }
 }
-function espnApply(){
+function espnRead(){
+  try{ espnIngest(JSON.parse($("#esPaste").value), false); }
+  catch(e){ esStatus("Couldn't parse that JSON: "+e.message); }
+}
+function espnApply(opts){
+  const live=!!(opts&&opts.live);
   const data=SYNC.es.data;
   if(!data){ esStatus("Read JSON first."); return; }
-  if($("#esApplySettings").checked && data.settings){
+  if($("#esApplySettings").checked && data.settings && !(live&&SYNC.es.settingsApplied)){
+    SYNC.es.settingsApplied=true;
     const st=data.settings, s=S.settings;
     if(st.draftSettings&&st.draftSettings.type)
       s.mode = String(st.draftSettings.type).toUpperCase()==="AUCTION" ? "auction" : "snake";
@@ -2431,10 +2458,47 @@ function espnApply(){
       price:+(pk.bidAmount||0)||1, mine:pk.teamId===me};
   });
   const res=applyExternalPicks(picks);
-  if(!res.applied) recompute();  // settings may still have changed
-  esStatus(`Applied ${res.applied} new picks, ${res.skipped} already in`+
-    (res.unmatched.length? `, unmatched: ${res.unmatched.slice(0,4).join(", ")}`+
-      (res.unmatched.length>4?"…":"") : "")+".");
+  if(!res.applied && !live) recompute();  // settings may still have changed
+  esStatus(live
+    ? `Live bridge ✓ ${new Date().toLocaleTimeString()} — ${res.applied} new, ${res.skipped} already in`+
+      (res.unmatched.length? `, unmatched: ${res.unmatched.slice(0,3).join(", ")}` : "")
+    : `Applied ${res.applied} new picks, ${res.skipped} already in`+
+      (res.unmatched.length? `, unmatched: ${res.unmatched.slice(0,4).join(", ")}`+
+        (res.unmatched.length>4?"…":"") : "")+".");
+}
+/* ---------- live bridge (bookmarklets): ESPN/Yahoo tab -> this app ---------- */
+function bridgeHref(kind){
+  if(!location.protocol.startsWith("http")) return null;  // needs the hosted site
+  const app=location.origin+location.pathname;
+  let js;
+  if(kind==="espn"){
+    const id=$("#esLeague").value.trim(), yr=$("#esSeason").value||"2026";
+    if(!id) return null;
+    js=`(()=>{var w=window.open(${JSON.stringify(app)},"bergsheets");`+
+      `var f=()=>fetch("https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${yr}/segments/0/leagues/${id}?view=mDraftDetail&view=mTeam&view=mRoster",{credentials:"include"})`+
+      `.then(r=>r.json()).then(d=>w.postMessage({bergsheets:"espn",data:d},"*")).catch(()=>{});`+
+      `f();setInterval(f,12000);alert("BERG ESPN bridge running - keep this tab open.");})()`;
+  }else{
+    js=`(()=>{var w=window.open(${JSON.stringify(app)},"bergsheets");`+
+      `var f=()=>{try{w.postMessage({bergsheets:"yahoo",text:document.body.innerText},"*")}catch(e){}};`+
+      `f();setInterval(f,8000);alert("BERG Yahoo bridge running - keep this tab open with Draft Results visible.");})()`;
+  }
+  return "javascript:"+encodeURIComponent(js);
+}
+function refreshBridgeLinks(){
+  const es=$("#esBridge"), yh=$("#yhBridge");
+  const hosted=location.protocol.startsWith("http");
+  if(es){
+    const h=hosted? bridgeHref("espn") : null;
+    es.href=h||"#";
+    es.closest("p").style.display = hosted? "" : "none";
+    es.style.opacity=h?1:.45;
+    es.title=h? "Drag me to your bookmarks bar" : "Enter your League ID first";
+  }
+  if(yh){
+    yh.href=hosted? bridgeHref("yahoo") : "#";
+    yh.closest("p").style.display = hosted? "" : "none";
+  }
 }
 
 /* ---------- keepers ---------- */
@@ -2802,9 +2866,27 @@ function bind(){
   $("#slSyncNow").addEventListener("click",sleeperSync);
   $("#slAuto").addEventListener("click",sleeperAutoToggle);
   $("#slRanks").addEventListener("click",sleeperRefreshRanks);
-  const esLinkSync=()=>{ $("#esLink").href=espnUrl(); };
+  const esLinkSync=()=>{ $("#esLink").href=espnUrl(); refreshBridgeLinks(); };
   $("#esLeague").addEventListener("input",esLinkSync);
   $("#esSeason").addEventListener("input",esLinkSync); esLinkSync();
+  $("#esMyTeam").addEventListener("change",()=>{
+    if(SYNC.es.livePending){ SYNC.es.livePending=false; espnApply({live:true}); }
+  });
+  // live bridge receiver: bookmarklets on ESPN/Yahoo tabs postMessage picks here
+  window.addEventListener("message",e=>{
+    const d=e.data;
+    if(!d || typeof d!=="object") return;
+    if(d.bergsheets==="espn" && d.data && Array.isArray(d.data.teams)){
+      try{ espnIngest(d.data, true); }
+      catch(err){ esStatus("Live bridge data error: "+err.message); }
+    }else if(d.bergsheets==="yahoo" && typeof d.text==="string" && d.text.length<2e6){
+      const picks=yahooParse(d.text, $("#yhTeam").value);
+      const res=applyExternalPicks(picks);
+      yhStatus(`Live bridge ✓ ${new Date().toLocaleTimeString()} — ${res.applied} new, `+
+        `${res.skipped} already in`+
+        (picks.length? "" : " · no picks recognized — keep the Draft Results panel visible"));
+    }
+  });
   $("#esRead").addEventListener("click",espnRead);
   $("#esApply").addEventListener("click",espnApply);
   $("#yhApply").addEventListener("click",yahooApply);
@@ -2853,7 +2935,7 @@ window.APP={get S(){return S},get M(){return M},get R(){return R},
   recompute,draftPlayer,undo,importCSV,importRows,importXLSX,parseXLSX,
   solveCompletion,posTable,combine,playerId,normPos,parseCSV,mapHeaders,
   SYNC,applyExternalPicks,sleeperFind,sleeperLoad,sleeperSync,sleeperRefreshRanks,
-  espnRead,espnApply,
+  espnRead,espnApply,espnIngest,bridgeHref,
   yahooParse,yahooApply,normName,matchPlayer,buildNameIndex,
   simulateRoster,simIfWon,outlookRoster,addKeeper,removeKeeper,findPoolPlayer,
   recapData,recapText,keeperAdvice,STRATEGIES,solveStrategyAuction,solveStrategySnake};
