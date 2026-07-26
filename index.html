@@ -281,9 +281,12 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
           etc. right before your draft and drop it here — <b>.csv or .xlsx</b>. Columns are
           auto-detected (player, team, position, auction value, projected points, and
           optional stat-level columns like pass/rush/rec yards &amp; TDs — stat columns
-          enable exact rescoring under your league's settings). The legacy
-          <code>auc_values_ALL.xlsx</code> sheet format imports directly, stat columns
-          and all — keep building your sheet the way that's worked for you.</p>
+          enable exact rescoring under your league's settings). <b>ADP, ECR /
+          consensus-rank, and Bye columns are detected too</b> — a FantasyPros
+          cheat-sheet export (100+ experts) drops in as-is, and its ECR drives snake
+          availability. The legacy <code>auc_values_ALL.xlsx</code> sheet format imports
+          directly, stat columns and all — keep building your sheet the way that's
+          worked for you.</p>
         <p>
           <input type="file" id="csvFile" accept=".csv,.txt,.xlsx">
           <select id="importMode">
@@ -357,6 +360,7 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         <p>
           <button class="primary" id="slSyncNow">Sync picks now</button>
           <button id="slAuto">▶ Auto-sync every 5s</button>
+          <button id="slRanks" title="Pull Sleeper's live player ranks, team changes, and injury flags into the pool (no login needed)">Refresh ranks/news</button>
         </p>
         <p class="note" id="slStatus">Reads your league, roster slots, auction budget and
           every pick (with prices) from Sleeper's public API — no login needed.</p>
@@ -557,7 +561,7 @@ function normPos(raw){
 function freshPlayer(o){
   return {name:o.name, team:o.team||"", pos:o.pos, aav:Math.max(1,Math.round(o.aav||1)),
     pts:+o.pts||0, stats:o.stats||null, floor:o.floor??null, ceil:o.ceil??null,
-    adp:o.adp??null, bye:o.bye??null, note:o.note||"", src:o.src||"",
+    adp:o.adp??null, ecr:o.ecr??null, bye:o.bye??null, note:o.note||"", src:o.src||"",
     boost:0, out:false, drafted:null};
 }
 function loadState(){
@@ -681,10 +685,12 @@ function rebuildModel(){
     r.leftAfter = (!r.p.drafted && pv.total>0)
       ? Math.max(0, Math.round(100*(pv.left - Math.max(1,r.p.aav))/pv.total)) : null;
   }
-  // market rank for snake availability: explicit ADP when present, else the
-  // market-value ordering (AAV desc, projection as tiebreak)
+  // market rank for snake availability: explicit ADP first, then expert
+  // consensus rank (ECR), else the market-value ordering (AAV desc,
+  // projection as tiebreak)
+  const rankKey = p => p.adp ?? p.ecr ?? null;
   const ranked = rows.slice().sort((a,b)=>{
-    const aa=a.p.adp??null, ba=b.p.adp??null;
+    const aa=rankKey(a.p), ba=rankKey(b.p);
     if(aa!=null && ba!=null) return aa-ba;
     if(aa!=null) return -1;
     if(ba!=null) return 1;
@@ -1214,6 +1220,7 @@ const HEADER_MAP = [
   ["pts",  /^(proj(ected)?\s*)?(fantasy\s*)?(pts|points|fpts)$|^proj$|^projection$/i],
   ["floor",/floor/i], ["ceil",/ceil/i],
   ["adp",/^adp$|av(era)?ge?\.?\s*(draft\s*)?(pos(ition)?|pick)/i],
+  ["ecr",/^ecr$|^(overall\s*|consensus\s*)?rank$|expert\s*consensus/i],
   ["bye",/^bye(\s*week)?$/i],
   ["pass_yd",/^p(ass)?[\s_]*yds?$/i], ["pass_td",/^p(ass)?[\s_]*tds?$|^td$/i],
   ["int",/^ints?$/i],
@@ -1251,6 +1258,7 @@ function importRows(rows, mode, w){
       pos, aav:num(m.aav)??1, pts:num(m.pts)??0,
       floor:m.floor!=null?num(m.floor):null, ceil:m.ceil!=null?num(m.ceil):null,
       adp:m.adp!=null?num(m.adp):null,
+      ecr:m.ecr!=null?num(m.ecr):null,
       bye:m.bye!=null?Math.round(num(m.bye))||null:null,
       stats:hasStats?stats:null});
   }
@@ -1270,6 +1278,7 @@ function importRows(rows, mode, w){
         if(n.floor!=null) ex.floor=n.floor;
         if(n.ceil!=null) ex.ceil=n.ceil;
         if(n.adp!=null) ex.adp=n.adp;
+        if(n.ecr!=null) ex.ecr=n.ecr;
         if(n.bye!=null) ex.bye=n.bye;
         merged++;
       }else{ const np=freshPlayer(n); S.players.push(np); idx.set(id,np); added++; }
@@ -2013,6 +2022,44 @@ async function sleeperSync(){
       ` · ${new Date().toLocaleTimeString()}`);
   }catch(e){ slStatus("Sync failed: "+e.message); }
 }
+// one-click live rank/news refresh from Sleeper's free public API — updates
+// consensus rank (ecr), team changes, and injury flags for players already
+// in the pool; never adds or removes players
+async function sleeperRefreshRanks(){
+  try{
+    slStatus("Pulling Sleeper player data (~5 MB, one request)…");
+    const all=await slFetch("players/nfl");
+    const idx=new Map();
+    for(const k in all){
+      const pl=all[k];
+      if(!pl || !pl.full_name) continue;
+      const pos=normPos(pl.position);
+      if(!pos) continue;
+      idx.set(normName(pl.full_name)+"|"+pos, pl);
+    }
+    let ranked=0, teams=0, injured=0;
+    for(const p of S.players){
+      const pl=idx.get(normName(p.name)+"|"+p.pos);
+      if(!pl) continue;
+      if(pl.search_rank && pl.search_rank>0 && pl.search_rank<3000){
+        p.ecr=pl.search_rank; ranked++;
+      }
+      if(pl.team && pl.team!==p.team){ p.team=pl.team; teams++; }
+      if(pl.injury_status){
+        injured++;
+        const tag=`Sleeper: ${pl.injury_status}`;
+        if(!(p.note||"").includes(tag)) p.note=(p.note? p.note+" · ":"")+tag;
+      }
+    }
+    recompute();
+    slStatus(`Sleeper refresh ✓ — ${ranked} ranks updated, ${teams} team changes, `+
+      `${injured} injury flags noted (ⓘ on the player). Ranks feed snake availability; `+
+      `set OUT manually for anyone ruled out.`);
+  }catch(e){
+    slStatus("Couldn't reach Sleeper ("+e.message+"). If you're on the claude.ai "+
+      "artifact, its sandbox blocks outside requests — use the public site or a local copy.");
+  }
+}
 function sleeperAutoToggle(){
   if(SYNC.sl.timer){
     clearInterval(SYNC.sl.timer); SYNC.sl.timer=null;
@@ -2448,6 +2495,7 @@ function bind(){
   $("#slLoad").addEventListener("click",sleeperLoad);
   $("#slSyncNow").addEventListener("click",sleeperSync);
   $("#slAuto").addEventListener("click",sleeperAutoToggle);
+  $("#slRanks").addEventListener("click",sleeperRefreshRanks);
   const esLinkSync=()=>{ $("#esLink").href=espnUrl(); };
   $("#esLeague").addEventListener("input",esLinkSync);
   $("#esSeason").addEventListener("input",esLinkSync); esLinkSync();
@@ -2498,7 +2546,8 @@ recompute();
 window.APP={get S(){return S},get M(){return M},get R(){return R},
   recompute,draftPlayer,undo,importCSV,importRows,importXLSX,parseXLSX,
   solveCompletion,posTable,combine,playerId,normPos,parseCSV,mapHeaders,
-  SYNC,applyExternalPicks,sleeperFind,sleeperLoad,sleeperSync,espnRead,espnApply,
+  SYNC,applyExternalPicks,sleeperFind,sleeperLoad,sleeperSync,sleeperRefreshRanks,
+  espnRead,espnApply,
   yahooParse,yahooApply,normName,matchPlayer,buildNameIndex,
   simulateRoster,simIfWon,outlookRoster,addKeeper,removeKeeper,findPoolPlayer,
   recapData,recapText,keeperAdvice};
