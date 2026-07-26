@@ -207,7 +207,9 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         <div class="note">Pick a build — or a few — and see how the model would finish
           your roster under each philosophy, recomputed live as the draft runs. The
           Optimal completion card stays unconstrained; these are the constrained
-          alternatives to compare against it.</div>
+          alternatives to compare against it. Definitions follow published strategy
+          guides (FootballAbsurdity's BBQ, FantasyPros, Footballguys, FantasyLife),
+          scaled to your budget.</div>
         <div class="chips" id="stratChips" style="margin:8px 0"></div>
         <div id="stratPanels" style="display:flex;flex-wrap:wrap;gap:12px"></div>
       </div>
@@ -531,12 +533,15 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         is on you.</li>
       <li><b>Nominating:</b> use <i>Nomination ideas</i> — expensive players you don't
         want. Money they burn elsewhere is discount on your targets.</li>
-      <li><b>Strategy lab:</b> toggle build archetypes (Stars &amp; Scrubs, Hero RB,
-        Zero RB, WR Heavy, Wait on QB, Elite TE, Robust RB) to see how the model would
-        finish your roster under each philosophy — with its own projection and Monte
-        Carlo range to compare against the unconstrained optimum. In auction they're
-        price-tier constraints; in snake they're round rules. They update live, so
-        mid-draft you can check "from here, is Zero RB still on the table?"</li>
+      <li><b>Strategy lab:</b> toggle build archetypes — BBQ (two studs ~$115
+        combined, then ride the price crash), Stars &amp; Scrubs, Balanced, Hero RB,
+        Zero RB, Robust RB, WR Heavy, Wait on QB, Elite TE — to see how the model
+        would finish your roster under each philosophy, with its own projection,
+        Monte Carlo range, and when-to-use/risk notes. Definitions follow the
+        published strategy literature. In auction they're price-tier constraints;
+        in snake they're canonical round rules (no RB before R6 for Zero RB, QB
+        after R8 for late-round QB, …). They update live, so mid-draft you can check
+        "from here, is Zero RB still on the table?"</li>
       <li><b>Roster outlook (Monte Carlo):</b> the floor/median/ceiling card simulates
         1,200 seasons of your picks + the optimizer's plan, week by week, starting your
         best lineup each week — so boom/bust bench depth gets credit the averages miss.
@@ -1198,33 +1203,63 @@ function simIfWon(id, price){
    Analysis layer: the main optimizer/bids stay unconstrained; each
    strategy re-solves the completion under its own philosophy.
    ===================================================================== */
+// Definitions follow published expert guidance: FootballAbsurdity's Barbecue
+// Strategy, FantasyPros/Footballguys/FantasyLife auction guides, canonical
+// Zero RB / Hero RB round rules. See PR notes for sources.
 const STRATEGIES = {
-  stars:   {name:"Stars & Scrubs", auctionOnly:true,
-    desc:"Three elite anchors, $1-tier everywhere else — no middle class"},
-  heroRB:  {name:"Hero RB",
-    desc:"One stud RB, bargain RB depth, budget flows to WR/TE"},
-  zeroRB:  {name:"Zero RB",
-    desc:"No expensive RBs — load WR/TE, find RB value late"},
+  bbq: {name:"BBQ", auctionOnly:true,
+    desc:"FootballAbsurdity's Barbecue Strategy: buy two top studs for ~$115 combined ('the meats'), then ride the mid-draft price crash — WR2s for $5-15, TE $10-15, $1-bin QB/K/DST",
+    use:"12-team or smaller rooms where mid-tier prices crash once the big money is gone",
+    pitfall:"Its own author pivoted after 2022 — if the room also waits, the crash never comes"},
+  stars: {name:"Stars & Scrubs", auctionOnly:true,
+    desc:"65-80% of budget on three elites; everyone else from the $1-5 bin — no middle class",
+    use:"Deep benches and active waivers, and you know the $1 player pool cold",
+    pitfall:"One medium injury to a star wrecks the roster — nothing behind it"},
+  balanced: {name:"Balanced",
+    desc:"No player over ~$42: spread money across $20-40 starters at every position",
+    use:"When the room overpays the elite tier — buy the whole middle class at discount",
+    pitfall:"High floor, lower ceiling — depth rarely wins leagues by itself"},
+  heroRB: {name:"Hero RB",
+    desc:"One anchor RB at $40-55, other RBs from the $5-15 bin, budget flows to WR/TE",
+    use:"When 2-3 true bell-cows exist at fair prices and the WR mid-tier is deep",
+    pitfall:"All RB risk rides on one player — if the hero busts, there's no plan B"},
+  zeroRB: {name:"Zero RB",
+    desc:"No RB over ~$12 — money goes to elite WR/TE/QB; RB from volume + lottery tickets",
+    use:"Full PPR, 3-WR lineups, and an RB market priced above its value",
+    pitfall:"Weekly RB roulette until a lottery ticket hits — and injuries create committees"},
+  robustRB: {name:"Robust RB",
+    desc:"Two $35+ RBs anchored early (~$90-110 on the RB room), WRs from the middle",
+    use:"2-RB + flex lineups, standard scoring, or a workhorse-volume worldview",
+    pitfall:"Passes on elite WRs that historically out-hit early RBs, doubling injury exposure"},
   wrHeavy: {name:"WR Heavy",
-    desc:"Two top-shelf WRs anchored early, value at RB"},
-  waitQB:  {name:"Wait on QB",
-    desc:"Punt QB to the bargain bin / late rounds"},
+    desc:"Two elite WRs at $35-50 anchor the roster; startable WRs stay cheap all draft",
+    use:"Full PPR when the room is overspending on RBs",
+    pitfall:"Same thin-RB weakness as Zero RB — the WR edge has to out-score the RB hole"},
+  waitQB: {name:"Wait on QB",
+    desc:"QB capped at ~$12 (5-7% of budget) — two tier-2 QBs beat one $30 star",
+    use:"1-QB leagues; the savings concentrate on RB/WR where scarcity is real",
+    pitfall:"Forfeits the 30-point weekly ceiling of the elite QBs"},
   eliteTE: {name:"Elite TE",
-    desc:"Pay up for a difference-maker TE"},
-  robustRB:{name:"Robust RB",
-    desc:"Two strong RBs anchored early, WRs from the middle tiers"},
+    desc:"Pay $20-40 for a top-3 TE and bank the weekly positional edge",
+    use:"When the elite-TE gap over the field is at its widest",
+    pitfall:"Early TE money stifles RB/WR depth; tier-2 TEs bust notoriously often"},
 };
-// auction constraint specs — dollar thresholds scale with the league budget
+// auction constraint specs — dollar thresholds scale with the league budget;
+// numbers from the published guidance above (Zero RB's cap is a synthesis —
+// sources describe the build without printing a hard ceiling)
 function stratSpec(key){
   const sc=v=>Math.max(2, Math.round(v*S.settings.cap/200));
   switch(key){
-    case "stars":   return {stars:{min:sc(35), scrubMax:sc(8), n:3}};
-    case "heroRB":  return {tiers:{RB:[{min:sc(30),n:1}]}, caps:{RB:sc(12)}};
-    case "zeroRB":  return {caps:{RB:sc(15)}};
-    case "wrHeavy": return {tiers:{WR:[{min:sc(28),n:2}]}};
-    case "waitQB":  return {caps:{QB:sc(6)}};
-    case "eliteTE": return {tiers:{TE:[{min:sc(22),n:1}]}};
-    case "robustRB":return {tiers:{RB:[{min:sc(25),n:2}]}};
+    case "bbq":     return {studs:{min:sc(40), n:2, from:["RB","WR"]},
+                            caps:{RB:sc(20), WR:sc(20), TE:sc(15), QB:sc(8), K:sc(2), DST:sc(2)}};
+    case "stars":   return {studs:{min:sc(35), n:3, from:["RB","WR","TE"]}, capDefault:sc(5)};
+    case "balanced":return {caps:{QB:sc(42), RB:sc(42), WR:sc(42), TE:sc(42), K:sc(42), DST:sc(42)}};
+    case "heroRB":  return {tiers:{RB:[{min:sc(40),n:1}]}, caps:{RB:sc(15)}};
+    case "zeroRB":  return {caps:{RB:sc(12)}};
+    case "wrHeavy": return {tiers:{WR:[{min:sc(35),n:2}]}};
+    case "waitQB":  return {caps:{QB:sc(12)}};
+    case "eliteTE": return {tiers:{TE:[{min:sc(20),n:1}]}};
+    case "robustRB":return {tiers:{RB:[{min:sc(35),n:2}]}};
   }
 }
 // tier groups PARTITION each position by price (tier = at/above threshold,
@@ -1249,16 +1284,16 @@ function solveStrategyAuction(key){
     }
   };
   for(const v of flexVariants(assign.remaining, assign.flexOpen)){
-    if(spec.stars){
-      const {min,scrubMax}=spec.stars;
-      let need=spec.stars.n;
-      for(const pos of FLEX_POS) for(const pr of owned[pos]||[]) if(pr>=min) need--;
+    if(spec.studs){
+      const {min, from}=spec.studs;
+      let need=spec.studs.n;
+      for(const pos of from) for(const pr of owned[pos]||[]) if(pr>=min) need--;
       need=Math.max(0,need);
       const splits=[];
       const addSplit=(s,left,idx)=>{
         if(left===0){ splits.push(s); return; }
-        for(let k=idx;k<FLEX_POS.length;k++){
-          const pos=FLEX_POS[k];
+        for(let k=idx;k<from.length;k++){
+          const pos=from[k];
           if((s[pos]||0) < (v[pos]||0)) addSplit({...s,[pos]:(s[pos]||0)+1}, left-1, k);
         }
       };
@@ -1276,7 +1311,9 @@ function solveStrategyAuction(key){
           }
           const rest=cnt-studs;
           if(rest>0){
-            const rc=cands[pos].filter(c=>c.cost<=scrubMax);
+            const cap=(spec.caps&&spec.caps[pos]!=null)? spec.caps[pos]
+              : (spec.capDefault!=null? spec.capDefault : Infinity);
+            const rc=cands[pos].filter(c=>c.cost<min && c.cost<=cap);
             if(rc.length<rest){ ok=false; break; }
             groups.push({key:pos+"C",need:rest,cands:rc,table:posTable(rc,rest,B)});
           }
@@ -1318,9 +1355,13 @@ function solveStrategyAuction(key){
   return best;
 }
 // snake: builds are round rules — allowed(pos, round, myCountsSoFar)
+// canonical round rules from the strategy literature: Zero RB = no RB in
+// rounds 1-5; Hero RB = RB round 1, WRs 2-4, RBs resume ~round 7;
+// late-round QB = QB9-14 range (round 8+); elite TE by round 2-3
 const STRAT_SNAKE_RULES = {
-  heroRB:  (pos,rd,c)=> pos!=="RB" ? true : (c.RB===0 ? rd<=2 : rd>=6),
-  zeroRB:  (pos,rd,c)=> pos!=="RB" || rd>=5,
+  balanced:()=> true,
+  heroRB:  (pos,rd,c)=> pos!=="RB" ? true : (c.RB===0 ? rd<=1 : rd>=7),
+  zeroRB:  (pos,rd,c)=> pos!=="RB" || rd>=6,
   wrHeavy: (pos,rd,c)=> (rd>3 || c.WR>=3) ? true : pos==="WR",
   waitQB:  (pos,rd,c)=> pos!=="QB" || rd>=8,
   eliteTE: (pos,rd,c)=> c.TE>=1 ? true : (rd<3 ? true : pos==="TE"),
@@ -1455,7 +1496,9 @@ function scheduleStratLab(){
         ${rows}
         <div class="lognote" style="margin-top:6px">
           ${Math.round(myPts+sol.total)} pts projected${spend}<br>
-          sim: median ${sim.p50} (${sim.p10}–${sim.p90})</div>`;
+          sim: median ${sim.p50} (${sim.p10}–${sim.p90})<br>
+          <span class="up">When:</span> ${meta.use} ·
+          <span class="down">Risk:</span> ${meta.pitfall}</div>`;
       host.appendChild(d);
     }
   }, 40);
