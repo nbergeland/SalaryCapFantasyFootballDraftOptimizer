@@ -360,6 +360,7 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         <p>
           <button class="primary" id="slSyncNow">Sync picks now</button>
           <button id="slAuto">▶ Auto-sync every 5s</button>
+          <button id="slRanks" title="Pull Sleeper's live player ranks, team changes, and injury flags into the pool (no login needed)">Refresh ranks/news</button>
         </p>
         <p class="note" id="slStatus">Reads your league, roster slots, auction budget and
           every pick (with prices) from Sleeper's public API — no login needed.</p>
@@ -2021,6 +2022,44 @@ async function sleeperSync(){
       ` · ${new Date().toLocaleTimeString()}`);
   }catch(e){ slStatus("Sync failed: "+e.message); }
 }
+// one-click live rank/news refresh from Sleeper's free public API — updates
+// consensus rank (ecr), team changes, and injury flags for players already
+// in the pool; never adds or removes players
+async function sleeperRefreshRanks(){
+  try{
+    slStatus("Pulling Sleeper player data (~5 MB, one request)…");
+    const all=await slFetch("players/nfl");
+    const idx=new Map();
+    for(const k in all){
+      const pl=all[k];
+      if(!pl || !pl.full_name) continue;
+      const pos=normPos(pl.position);
+      if(!pos) continue;
+      idx.set(normName(pl.full_name)+"|"+pos, pl);
+    }
+    let ranked=0, teams=0, injured=0;
+    for(const p of S.players){
+      const pl=idx.get(normName(p.name)+"|"+p.pos);
+      if(!pl) continue;
+      if(pl.search_rank && pl.search_rank>0 && pl.search_rank<3000){
+        p.ecr=pl.search_rank; ranked++;
+      }
+      if(pl.team && pl.team!==p.team){ p.team=pl.team; teams++; }
+      if(pl.injury_status){
+        injured++;
+        const tag=`Sleeper: ${pl.injury_status}`;
+        if(!(p.note||"").includes(tag)) p.note=(p.note? p.note+" · ":"")+tag;
+      }
+    }
+    recompute();
+    slStatus(`Sleeper refresh ✓ — ${ranked} ranks updated, ${teams} team changes, `+
+      `${injured} injury flags noted (ⓘ on the player). Ranks feed snake availability; `+
+      `set OUT manually for anyone ruled out.`);
+  }catch(e){
+    slStatus("Couldn't reach Sleeper ("+e.message+"). If you're on the claude.ai "+
+      "artifact, its sandbox blocks outside requests — use the public site or a local copy.");
+  }
+}
 function sleeperAutoToggle(){
   if(SYNC.sl.timer){
     clearInterval(SYNC.sl.timer); SYNC.sl.timer=null;
@@ -2456,6 +2495,7 @@ function bind(){
   $("#slLoad").addEventListener("click",sleeperLoad);
   $("#slSyncNow").addEventListener("click",sleeperSync);
   $("#slAuto").addEventListener("click",sleeperAutoToggle);
+  $("#slRanks").addEventListener("click",sleeperRefreshRanks);
   const esLinkSync=()=>{ $("#esLink").href=espnUrl(); };
   $("#esLeague").addEventListener("input",esLinkSync);
   $("#esSeason").addEventListener("input",esLinkSync); esLinkSync();
@@ -2506,7 +2546,8 @@ recompute();
 window.APP={get S(){return S},get M(){return M},get R(){return R},
   recompute,draftPlayer,undo,importCSV,importRows,importXLSX,parseXLSX,
   solveCompletion,posTable,combine,playerId,normPos,parseCSV,mapHeaders,
-  SYNC,applyExternalPicks,sleeperFind,sleeperLoad,sleeperSync,espnRead,espnApply,
+  SYNC,applyExternalPicks,sleeperFind,sleeperLoad,sleeperSync,sleeperRefreshRanks,
+  espnRead,espnApply,
   yahooParse,yahooApply,normName,matchPlayer,buildNameIndex,
   simulateRoster,simIfWon,outlookRoster,addKeeper,removeKeeper,findPoolPlayer,
   recapData,recapText,keeperAdvice};
