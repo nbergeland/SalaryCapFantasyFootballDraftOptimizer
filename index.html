@@ -126,6 +126,10 @@ tr.sel td{outline:2px solid var(--accent);outline-offset:-2px}
 .scarcity .fill{height:100%;border-radius:3px}
 .legend .sw{display:inline-block;width:10px;height:10px;border-radius:3px;
   margin-right:5px;vertical-align:-1px}
+.strat{border:1px solid var(--grid);border-radius:10px;padding:8px 10px;
+  flex:1 1 240px;max-width:320px;min-width:220px}
+.strat h4{margin:0 0 2px;font-size:13px}
+.strat .sub{font-size:11px;color:var(--muted);margin-bottom:6px}
 #tooltip{position:fixed;pointer-events:none;background:var(--surface);
   border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;
   box-shadow:0 3px 14px rgba(0,0,0,.18);z-index:60;display:none;max-width:230px}
@@ -196,6 +200,16 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
           <tbody></tbody>
         </table></div>
         <div class="note" id="poolNote"></div>
+      </div>
+
+      <div class="card">
+        <h2>Strategy lab</h2>
+        <div class="note">Pick a build — or a few — and see how the model would finish
+          your roster under each philosophy, recomputed live as the draft runs. The
+          Optimal completion card stays unconstrained; these are the constrained
+          alternatives to compare against it.</div>
+        <div class="chips" id="stratChips" style="margin:8px 0"></div>
+        <div id="stratPanels" style="display:flex;flex-wrap:wrap;gap:12px"></div>
       </div>
 
       <div class="card">
@@ -506,6 +520,12 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         is on you.</li>
       <li><b>Nominating:</b> use <i>Nomination ideas</i> — expensive players you don't
         want. Money they burn elsewhere is discount on your targets.</li>
+      <li><b>Strategy lab:</b> toggle build archetypes (Stars &amp; Scrubs, Hero RB,
+        Zero RB, WR Heavy, Wait on QB, Elite TE, Robust RB) to see how the model would
+        finish your roster under each philosophy — with its own projection and Monte
+        Carlo range to compare against the unconstrained optimum. In auction they're
+        price-tier constraints; in snake they're round rules. They update live, so
+        mid-draft you can check "from here, is Zero RB still on the table?"</li>
       <li><b>Roster outlook (Monte Carlo):</b> the floor/median/ceiling card simulates
         1,200 seasons of your picks + the optimizer's plan, week by week, starting your
         best lineup each week — so boom/bust bench depth gets credit the averages miss.
@@ -1162,6 +1182,263 @@ function simIfWon(id, price){
   }
 }
 
+/* =====================================================================
+   STRATEGY LAB — constrained solves for classic build archetypes.
+   Analysis layer: the main optimizer/bids stay unconstrained; each
+   strategy re-solves the completion under its own philosophy.
+   ===================================================================== */
+const STRATEGIES = {
+  stars:   {name:"Stars & Scrubs", auctionOnly:true,
+    desc:"Three elite anchors, $1-tier everywhere else — no middle class"},
+  heroRB:  {name:"Hero RB",
+    desc:"One stud RB, bargain RB depth, budget flows to WR/TE"},
+  zeroRB:  {name:"Zero RB",
+    desc:"No expensive RBs — load WR/TE, find RB value late"},
+  wrHeavy: {name:"WR Heavy",
+    desc:"Two top-shelf WRs anchored early, value at RB"},
+  waitQB:  {name:"Wait on QB",
+    desc:"Punt QB to the bargain bin / late rounds"},
+  eliteTE: {name:"Elite TE",
+    desc:"Pay up for a difference-maker TE"},
+  robustRB:{name:"Robust RB",
+    desc:"Two strong RBs anchored early, WRs from the middle tiers"},
+};
+// auction constraint specs — dollar thresholds scale with the league budget
+function stratSpec(key){
+  const sc=v=>Math.max(2, Math.round(v*S.settings.cap/200));
+  switch(key){
+    case "stars":   return {stars:{min:sc(35), scrubMax:sc(8), n:3}};
+    case "heroRB":  return {tiers:{RB:[{min:sc(30),n:1}]}, caps:{RB:sc(12)}};
+    case "zeroRB":  return {caps:{RB:sc(15)}};
+    case "wrHeavy": return {tiers:{WR:[{min:sc(28),n:2}]}};
+    case "waitQB":  return {caps:{QB:sc(6)}};
+    case "eliteTE": return {tiers:{TE:[{min:sc(22),n:1}]}};
+    case "robustRB":return {tiers:{RB:[{min:sc(25),n:2}]}};
+  }
+}
+// tier groups PARTITION each position by price (tier = at/above threshold,
+// remainder = below it) so no player can be counted twice
+function solveStrategyAuction(key){
+  const spec=stratSpec(key);
+  if(!spec) return null;
+  const assign=myRosterAssignment();
+  const B=budgetForOptimizer(assign).optBudget;
+  const cands=candidatesByPos();
+  const owned={};
+  for(const p of S.players) if(p.drafted&&p.drafted.mine)
+    (owned[p.pos]=owned[p.pos]||[]).push(p.drafted.price);
+  let best=null;
+  const tryGroups=groups=>{
+    if(groups.some(g=>g.need>0 && g.table.dp[g.need][B]<-1e8)) return;
+    const {comb,cpicks}=combine(groups,B);
+    if(comb[B]>-1e8 && (!best||comb[B]>best.total)){
+      const chosen=materialize(cpicks[B]).map(({g,i})=>
+        groups.find(x=>x.key===g).cands[i].row);
+      best={total:comb[B], chosen, B};
+    }
+  };
+  for(const v of flexVariants(assign.remaining, assign.flexOpen)){
+    if(spec.stars){
+      const {min,scrubMax}=spec.stars;
+      let need=spec.stars.n;
+      for(const pos of FLEX_POS) for(const pr of owned[pos]||[]) if(pr>=min) need--;
+      need=Math.max(0,need);
+      const splits=[];
+      const addSplit=(s,left,idx)=>{
+        if(left===0){ splits.push(s); return; }
+        for(let k=idx;k<FLEX_POS.length;k++){
+          const pos=FLEX_POS[k];
+          if((s[pos]||0) < (v[pos]||0)) addSplit({...s,[pos]:(s[pos]||0)+1}, left-1, k);
+        }
+      };
+      addSplit({}, need, 0);
+      if(need===0) splits.push({});
+      for(const sp of splits){
+        const groups=[]; let ok=true;
+        for(const pos of POSITIONS){
+          const cnt=v[pos]||0; if(!cnt) continue;
+          const studs=sp[pos]||0;
+          if(studs>0){
+            const sc2=cands[pos].filter(c=>c.cost>=min);
+            if(sc2.length<studs){ ok=false; break; }
+            groups.push({key:pos+"S",need:studs,cands:sc2,table:posTable(sc2,studs,B)});
+          }
+          const rest=cnt-studs;
+          if(rest>0){
+            const rc=cands[pos].filter(c=>c.cost<=scrubMax);
+            if(rc.length<rest){ ok=false; break; }
+            groups.push({key:pos+"C",need:rest,cands:rc,table:posTable(rc,rest,B)});
+          }
+        }
+        if(ok && groups.length) tryGroups(groups);
+      }
+      continue;
+    }
+    const groups=[]; let ok=true;
+    for(const pos of POSITIONS){
+      const cnt=v[pos]||0; if(!cnt) continue;
+      const cap=spec.caps ? spec.caps[pos] : null;
+      let tierList=((spec.tiers&&spec.tiers[pos])||[]).map(t=>{
+        let n=t.n;
+        for(const pr of owned[pos]||[]) if(pr>=t.min) n--;
+        return {...t, n:Math.max(0,n)};
+      }).filter(t=>t.n>0);
+      let used=0, minTier=Infinity;
+      for(let ti=0; ti<tierList.length && ok; ti++){
+        const t=tierList[ti];
+        minTier=Math.min(minTier, t.min);
+        const tc=cands[pos].filter(c=>c.cost>=t.min);
+        if(t.n>Math.min(tc.length, cnt-used)){ ok=false; break; }
+        groups.push({key:pos+"T"+ti,need:t.n,cands:tc,table:posTable(tc,t.n,B)});
+        used+=t.n;
+      }
+      if(!ok) break;
+      const rest=cnt-used;
+      if(rest>0){
+        let rc=cands[pos];
+        if(minTier<Infinity) rc=rc.filter(c=>c.cost<minTier);
+        if(cap!=null) rc=rc.filter(c=>c.cost<=cap);
+        if(rc.length<rest){ ok=false; break; }
+        groups.push({key:pos+"R",need:rest,cands:rc,table:posTable(rc,rest,B)});
+      }
+    }
+    if(ok && groups.length) tryGroups(groups);
+  }
+  return best;
+}
+// snake: builds are round rules — allowed(pos, round, myCountsSoFar)
+const STRAT_SNAKE_RULES = {
+  heroRB:  (pos,rd,c)=> pos!=="RB" ? true : (c.RB===0 ? rd<=2 : rd>=6),
+  zeroRB:  (pos,rd,c)=> pos!=="RB" || rd>=5,
+  wrHeavy: (pos,rd,c)=> (rd>3 || c.WR>=3) ? true : pos==="WR",
+  waitQB:  (pos,rd,c)=> pos!=="QB" || rd>=8,
+  eliteTE: (pos,rd,c)=> c.TE>=1 ? true : (rd<3 ? true : pos==="TE"),
+  robustRB:(pos,rd,c)=> (rd>3 || c.RB>=2) ? true : pos==="RB",
+};
+function solveStrategySnake(key){
+  const rule=STRAT_SNAKE_RULES[key];
+  if(!rule) return null;
+  const assign=myRosterAssignment();
+  const need={...assign.remaining};
+  let flexOpen=assign.flexOpen;
+  let benchOpen=Math.max(0,S.settings.bench-assign.bench.length);
+  const counts={QB:0,RB:0,WR:0,TE:0,K:0,DST:0};
+  for(const p of S.players) if(p.drafted&&p.drafted.mine) counts[p.pos]++;
+  const cur=currentOverallPick(), T=S.settings.teams;
+  const slotsLeft=POSITIONS.reduce((a,p)=>a+need[p],0)+flexOpen+benchOpen;
+  const picks=myPickNumbers().filter(n=>n>=cur).slice(0, slotsLeft);
+  const used=new Set(); const plan=[]; let relaxed=false;
+  for(let i=0;i<picks.length;i++){
+    const n=picks[i], rd=Math.ceil(n/T);
+    const nxt=i+1<picks.length? picks[i+1] : n+2*T;
+    const avail=(n<=cur
+      ? M.rows.filter(r=>!r.p.drafted&&!r.p.out&&!used.has(playerId(r.p)))
+      : availableAt(n, used));
+    const top2={};
+    for(const r of availableAt(nxt, used)){
+      const t=top2[r.p.pos]||(top2[r.p.pos]=[]);
+      if(t.length<2){ t.push(r); t.sort((a,b)=>b.rpts-a.rpts); }
+      else if(r.rpts>t[1].rpts){ t[1]=r; t.sort((a,b)=>b.rpts-a.rpts); }
+    }
+    const benchQB=plan.filter(s=>s.role==="BN"&&s.r.p.pos==="QB").length;
+    const pickBest=useRule=>{
+      let take=null, role=null, bestScore=-1e9;
+      for(const r of avail){
+        if(useRule && !rule(r.p.pos, rd, counts)) continue;
+        let fit=null;
+        if(need[r.p.pos]>0) fit=r.p.pos;
+        else if(flexOpen>0 && FLEX_POS.includes(r.p.pos)) fit="FLEX";
+        else if(benchOpen>0){
+          if(r.p.pos==="K"||r.p.pos==="DST") continue;
+          if(r.p.pos==="QB"&&benchQB>=1) continue;
+          fit="BN";
+        } else continue;
+        const t=top2[r.p.pos]||[];
+        const later=t[0]===r ? t[1] : t[0];
+        const score=r.rpts-(later? later.rpts:0)+r.rpts*1e-4;
+        if(score>bestScore){ bestScore=score; take=r; role=fit; }
+      }
+      return {take, role};
+    };
+    let {take, role}=pickBest(true);
+    if(!take){ ({take, role}=pickBest(false)); if(take) relaxed=true; }
+    if(!take) continue;
+    used.add(playerId(take.p)); plan.push({r:take, n, role});
+    counts[take.p.pos]++;
+    if(role==="FLEX") flexOpen--;
+    else if(role==="BN") benchOpen--;
+    else need[role]--;
+  }
+  const starters=plan.filter(p=>p.role!=="BN");
+  return {plan, chosen:starters.map(p=>p.r),
+    total:starters.reduce((a,p)=>a+p.r.rpts,0), relaxed, snake:true};
+}
+let stratTimer=null;
+function scheduleStratLab(){
+  clearTimeout(stratTimer);
+  const sel=(S.settings.strategies||[]).filter(k=>STRATEGIES[k]);
+  const host=$("#stratPanels"); if(!host) return;
+  if(!sel.length){ host.innerHTML=""; return; }
+  host.innerHTML='<p class="note">solving strategies…</p>';
+  stratTimer=setTimeout(()=>{
+    host.innerHTML="";
+    for(const key of sel){
+      const meta=STRATEGIES[key];
+      const d=document.createElement("div"); d.className="strat";
+      if(isSnake() && meta.auctionOnly){
+        d.innerHTML=`<h4>${meta.name}</h4><div class="sub">${meta.desc}</div>
+          <p class="note">Auction-only build (prices drive it) — switch to auction mode to model it.</p>`;
+        host.appendChild(d); continue;
+      }
+      const sol=isSnake()? solveStrategySnake(key) : solveStrategyAuction(key);
+      if(!sol || !(isSnake()? sol.plan.length : sol.chosen.length)){
+        d.innerHTML=`<h4>${meta.name}</h4><div class="sub">${meta.desc}</div>
+          <p class="note">Not feasible from here — pool or budget can't support this build.</p>`;
+        host.appendChild(d); continue;
+      }
+      const myPts=S.players.filter(p=>p.drafted&&p.drafted.mine)
+        .reduce((a,p)=>{const r=M.rows.find(r=>r.p===p);return a+(r?r.rpts:0);},0);
+      const roster=[];
+      for(const p of S.players) if(p.drafted&&p.drafted.mine){
+        const r=M.rows.find(r=>r.p===p); roster.push({pos:p.pos, pts:r?r.pts0:p.pts});
+      }
+      const listed=isSnake()? sol.plan : sol.chosen.map(r=>({r}));
+      for(const s of listed) roster.push({pos:s.r.p.pos, pts:s.r.pts0});
+      const sim=simulateRoster(roster, S.settings.slots, 600);
+      let rows="";
+      for(const s of listed){
+        const cost=isSnake()? roundDotPick(s.n).split(".")[0] : fmt$(s.r.adj);
+        rows+=`<div class="roster-slot"><span class="nm"><span class="pos ${s.r.p.pos}">${s.r.p.pos}</span> ${esc(s.r.p.name)}${s.role==="BN"?' <span class="pill">bn</span>':""}</span><span>${cost}</span></div>`;
+      }
+      const spend=isSnake()? "" :
+        ` · spends ${fmt$(sol.chosen.reduce((a,r)=>a+r.adj,0))} of ${fmt$(sol.B)}`;
+      d.innerHTML=`<h4>${meta.name}</h4><div class="sub">${meta.desc}${sol.relaxed?" · (rules relaxed where the pool ran dry)":""}</div>
+        ${rows}
+        <div class="lognote" style="margin-top:6px">
+          ${Math.round(myPts+sol.total)} pts projected${spend}<br>
+          sim: median ${sim.p50} (${sim.p10}–${sim.p90})</div>`;
+      host.appendChild(d);
+    }
+  }, 40);
+}
+function renderStratChips(){
+  const el=$("#stratChips"); if(!el) return;
+  if(el.children.length) return;   // build once; toggling handled per-chip
+  for(const [key,meta] of Object.entries(STRATEGIES)){
+    const c=document.createElement("button");
+    c.className="chip"; c.textContent=meta.name; c.title=meta.desc;
+    c.classList.toggle("active",(S.settings.strategies||[]).includes(key));
+    c.addEventListener("click",()=>{
+      const cur=S.settings.strategies||[];
+      S.settings.strategies = cur.includes(key)
+        ? cur.filter(x=>x!==key) : [...cur, key];
+      c.classList.toggle("active");
+      saveState(); scheduleStratLab();
+    });
+    el.appendChild(c);
+  }
+}
+
 /* ============================ recompute-all ============================ */
 let R = {sol:null, bids:new Map(), without:new Map()};
 function recompute(){
@@ -1176,6 +1453,7 @@ function recompute(){
   }
   renderAll();
   scheduleOutlookSim();   // async — never blocks the bidding loop
+  renderStratChips(); scheduleStratLab();
   saveState();
 }
 
@@ -2550,7 +2828,7 @@ window.APP={get S(){return S},get M(){return M},get R(){return R},
   espnRead,espnApply,
   yahooParse,yahooApply,normName,matchPlayer,buildNameIndex,
   simulateRoster,simIfWon,outlookRoster,addKeeper,removeKeeper,findPoolPlayer,
-  recapData,recapText,keeperAdvice};
+  recapData,recapText,keeperAdvice,STRATEGIES,solveStrategyAuction,solveStrategySnake};
 </script>
 </body>
 </html>
