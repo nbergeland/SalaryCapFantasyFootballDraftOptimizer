@@ -281,9 +281,12 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
           etc. right before your draft and drop it here — <b>.csv or .xlsx</b>. Columns are
           auto-detected (player, team, position, auction value, projected points, and
           optional stat-level columns like pass/rush/rec yards &amp; TDs — stat columns
-          enable exact rescoring under your league's settings). The legacy
-          <code>auc_values_ALL.xlsx</code> sheet format imports directly, stat columns
-          and all — keep building your sheet the way that's worked for you.</p>
+          enable exact rescoring under your league's settings). <b>ADP, ECR /
+          consensus-rank, and Bye columns are detected too</b> — a FantasyPros
+          cheat-sheet export (100+ experts) drops in as-is, and its ECR drives snake
+          availability. The legacy <code>auc_values_ALL.xlsx</code> sheet format imports
+          directly, stat columns and all — keep building your sheet the way that's
+          worked for you.</p>
         <p>
           <input type="file" id="csvFile" accept=".csv,.txt,.xlsx">
           <select id="importMode">
@@ -557,7 +560,7 @@ function normPos(raw){
 function freshPlayer(o){
   return {name:o.name, team:o.team||"", pos:o.pos, aav:Math.max(1,Math.round(o.aav||1)),
     pts:+o.pts||0, stats:o.stats||null, floor:o.floor??null, ceil:o.ceil??null,
-    adp:o.adp??null, bye:o.bye??null, note:o.note||"", src:o.src||"",
+    adp:o.adp??null, ecr:o.ecr??null, bye:o.bye??null, note:o.note||"", src:o.src||"",
     boost:0, out:false, drafted:null};
 }
 function loadState(){
@@ -681,10 +684,12 @@ function rebuildModel(){
     r.leftAfter = (!r.p.drafted && pv.total>0)
       ? Math.max(0, Math.round(100*(pv.left - Math.max(1,r.p.aav))/pv.total)) : null;
   }
-  // market rank for snake availability: explicit ADP when present, else the
-  // market-value ordering (AAV desc, projection as tiebreak)
+  // market rank for snake availability: explicit ADP first, then expert
+  // consensus rank (ECR), else the market-value ordering (AAV desc,
+  // projection as tiebreak)
+  const rankKey = p => p.adp ?? p.ecr ?? null;
   const ranked = rows.slice().sort((a,b)=>{
-    const aa=a.p.adp??null, ba=b.p.adp??null;
+    const aa=rankKey(a.p), ba=rankKey(b.p);
     if(aa!=null && ba!=null) return aa-ba;
     if(aa!=null) return -1;
     if(ba!=null) return 1;
@@ -1214,6 +1219,7 @@ const HEADER_MAP = [
   ["pts",  /^(proj(ected)?\s*)?(fantasy\s*)?(pts|points|fpts)$|^proj$|^projection$/i],
   ["floor",/floor/i], ["ceil",/ceil/i],
   ["adp",/^adp$|av(era)?ge?\.?\s*(draft\s*)?(pos(ition)?|pick)/i],
+  ["ecr",/^ecr$|^(overall\s*|consensus\s*)?rank$|expert\s*consensus/i],
   ["bye",/^bye(\s*week)?$/i],
   ["pass_yd",/^p(ass)?[\s_]*yds?$/i], ["pass_td",/^p(ass)?[\s_]*tds?$|^td$/i],
   ["int",/^ints?$/i],
@@ -1251,6 +1257,7 @@ function importRows(rows, mode, w){
       pos, aav:num(m.aav)??1, pts:num(m.pts)??0,
       floor:m.floor!=null?num(m.floor):null, ceil:m.ceil!=null?num(m.ceil):null,
       adp:m.adp!=null?num(m.adp):null,
+      ecr:m.ecr!=null?num(m.ecr):null,
       bye:m.bye!=null?Math.round(num(m.bye))||null:null,
       stats:hasStats?stats:null});
   }
@@ -1270,6 +1277,7 @@ function importRows(rows, mode, w){
         if(n.floor!=null) ex.floor=n.floor;
         if(n.ceil!=null) ex.ceil=n.ceil;
         if(n.adp!=null) ex.adp=n.adp;
+        if(n.ecr!=null) ex.ecr=n.ecr;
         if(n.bye!=null) ex.bye=n.bye;
         merged++;
       }else{ const np=freshPlayer(n); S.players.push(np); idx.set(id,np); added++; }
