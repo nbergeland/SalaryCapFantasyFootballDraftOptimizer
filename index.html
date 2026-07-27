@@ -449,7 +449,10 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
       <div class="field"><label>Budget per team ($)</label><input type="number" id="s_cap" min="50" max="1000"></div>
       <div class="field"><label>Bench spots</label><input type="number" id="s_bench" min="0" max="12"></div>
       <div class="field"><label>Reserve per bench spot ($)</label><input type="number" id="s_benchRes" min="1" max="20"></div>
-      <p class="note">Budget/reserve apply to auction; draft slot applies to snake.</p>
+      <div class="field"><label>Max spend on DST ($)</label><input type="number" id="s_dstCap" min="1" max="10"></div>
+      <p class="note">Budget/reserve apply to auction; draft slot applies to snake.
+        The DST cap is a house rule: the model never allocates or advises more than
+        this for a defense, whatever the market says.</p>
     </div>
     <div class="card">
       <h2>Starting slots</h2>
@@ -578,7 +581,7 @@ const LS_KEY = "sc-draft-companion-v1";
 
 /* ============================ state ============================ */
 const defaultSettings = () => ({
-  mode:"auction", teams:12, snakeSlot:1, cap:200, bench:6, benchRes:1,
+  mode:"auction", teams:12, snakeSlot:1, cap:200, bench:6, benchRes:1, dstCap:1,
   slots:{QB:1,RB:2,WR:2,TE:1,FLEX:1,K:1,DST:1},
   scoring:{preset:"ppr",rec:1,passYd:25,passTd:4,int:-2,rushYd:10,td:6},
   risk:0, blend:0.35, kcAllowed:2,
@@ -699,9 +702,14 @@ function rebuildModel(){
       .sort((a,b)=>b.blended-a.blended).slice(0, Math.max(0,spotsLeft));
   const expDisc = undrafted.reduce((a,r)=>a+Math.max(0,r.blended-1),0);
   M.infl = expDisc>0 ? Math.min(2, Math.max(.5, discLeft/expDisc)) : 1;
-  for(const r of rows)
+  const dstCap=Math.max(1, S.settings.dstCap||1);
+  for(const r of rows){
     r.adj = r.p.drafted ? r.p.drafted.price
           : Math.max(1, Math.round(1 + (r.blended-1)*M.infl));
+    // house rule: we never pay up for a defense — the model allocates at
+    // most $dstCap to DST, whatever the market says
+    if(r.p.pos==="DST" && !r.p.drafted) r.adj = Math.min(r.adj, dstCap);
+  }
   M.moneyLeft = moneyLeft; M.spent = spent;
   // positional scarcity: share of each position's market value ($) still on the
   // board. Dollar-based (the sheet's Value/AAV column), not VORP.
@@ -937,6 +945,7 @@ function computeMaxBids(base){
     const id = playerId(r.p), pos=r.p.pos;
     const m = minus[pos];
     if(!m){ bids.set(id, 0); continue; }
+    const hardCap = pos==="DST" ? Math.max(1, S.settings.dstCap||1) : Infinity;
     const bestWithout = inOpt.has(id) ? withoutCache.get(id) : base.total;
     // value of winning at price c (non-increasing in c); collisions resolved exactly
     const valueAt = c => {
@@ -953,7 +962,7 @@ function computeMaxBids(base){
     };
     const ok = c => valueAt(c) >= bestWithout - 1e-9;
     if(!ok(1)){ bids.set(id, 0); continue; }
-    let lo=1, hi=base.B;                 // binary search: largest c with ok(c)
+    let lo=1, hi=Math.min(base.B, hardCap);   // binary search: largest c with ok(c)
     while(lo<hi){
       const mid = (lo+hi+1)>>1;
       if(ok(mid)) lo=mid; else hi=mid-1;
@@ -2772,6 +2781,7 @@ function settingsToForm(){
   $("#s_mode").value=s.mode||"auction"; $("#s_slot").value=s.snakeSlot||1;
   $("#s_teams").value=s.teams; $("#s_cap").value=s.cap;
   $("#s_bench").value=s.bench; $("#s_benchRes").value=s.benchRes;
+  $("#s_dstCap").value=s.dstCap||1;
   for(const pos of POSITIONS) $("#s_"+pos).value=s.slots[pos]||0;
   $("#s_FLEX").value=s.slots.FLEX||0;
   $("#s_preset").value=s.scoring.preset;
@@ -2787,6 +2797,7 @@ function formToSettings(){
   s.mode=$("#s_mode").value; s.snakeSlot=+$("#s_slot").value||1;
   s.teams=+$("#s_teams").value||12; s.cap=+$("#s_cap").value||200;
   s.bench=+$("#s_bench").value||0; s.benchRes=+$("#s_benchRes").value||1;
+  s.dstCap=Math.max(1,+$("#s_dstCap").value||1);
   for(const pos of POSITIONS) s.slots[pos]=+$("#s_"+pos).value||0;
   s.slots.FLEX=+$("#s_FLEX").value||0;
   s.scoring.preset=$("#s_preset").value;
