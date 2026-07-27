@@ -1220,6 +1220,10 @@ const STRATEGIES = {
     desc:"FootballAbsurdity's Barbecue Strategy: buy two top studs for ~$115 combined ('the meats'), then ride the mid-draft price crash — WR2s for $5-15, TE $10-15, $1-bin QB/K/DST",
     use:"12-team or smaller rooms where mid-tier prices crash once the big money is gone",
     pitfall:"Its own author pivoted after 2022 — if the room also waits, the crash never comes"},
+  greasy: {name:"Greasy Spoon", auctionOnly:true,
+    desc:"Hoovler's 2026 successor to BBQ: skip the top-15 ranked players entirely (they cost ~90% more than ranks 16-30 for only ~16% more points), QB at $5 max, then load up on consistently good starters once the big names are gone — a diner full of solid plates over two Michelin stars",
+    use:"Hot rooms (his types A/B, ~90% of auctions) where the top-15 go over value and the WR2/flex market crashes later",
+    pitfall:"In the ~1-in-10 room where stars sell at value (type C), skipping them buys a team of mid — watch the market read below"},
   stars: {name:"Stars & Scrubs", auctionOnly:true,
     desc:"65-80% of budget on three elites; everyone else from the $1-5 bin — no middle class",
     use:"Deep benches and active waivers, and you know the $1 player pool cold",
@@ -1261,6 +1265,7 @@ function stratSpec(key){
   switch(key){
     case "bbq":     return {studs:{min:sc(40), n:2, from:["RB","WR"]},
                             caps:{RB:sc(20), WR:sc(20), TE:sc(15), QB:sc(8), K:sc(2), DST:sc(2)}};
+    case "greasy":  return {excludeTopRank:15, caps:{QB:sc(5)}};
     case "stars":   return {studs:{min:sc(35), n:3, from:["RB","WR","TE"]}, capDefault:sc(5)};
     case "balanced":return {caps:{QB:sc(42), RB:sc(42), WR:sc(42), TE:sc(42), K:sc(42), DST:sc(42)}};
     case "heroRB":  return {tiers:{RB:[{min:sc(40),n:1}]}, caps:{RB:sc(15)}};
@@ -1334,6 +1339,10 @@ function solveStrategyAuction(key){
     const groups=[]; let ok=true;
     for(const pos of POSITIONS){
       const cnt=v[pos]||0; if(!cnt) continue;
+      // rank exclusion (e.g. Greasy Spoon: no top-15 ranked players)
+      const base=spec.excludeTopRank
+        ? cands[pos].filter(c=>c.row.mrank>spec.excludeTopRank)
+        : cands[pos];
       const cap=spec.caps ? spec.caps[pos] : null;
       let tierList=((spec.tiers&&spec.tiers[pos])||[]).map(t=>{
         let n=t.n;
@@ -1344,7 +1353,7 @@ function solveStrategyAuction(key){
       for(let ti=0; ti<tierList.length && ok; ti++){
         const t=tierList[ti];
         minTier=Math.min(minTier, t.min);
-        const tc=cands[pos].filter(c=>c.cost>=t.min);
+        const tc=base.filter(c=>c.cost>=t.min);
         if(t.n>Math.min(tc.length, cnt-used)){ ok=false; break; }
         groups.push({key:pos+"T"+ti,need:t.n,cands:tc,table:posTable(tc,t.n,B)});
         used+=t.n;
@@ -1352,7 +1361,7 @@ function solveStrategyAuction(key){
       if(!ok) break;
       const rest=cnt-used;
       if(rest>0){
-        let rc=cands[pos];
+        let rc=base;
         if(minTier<Infinity) rc=rc.filter(c=>c.cost<minTier);
         if(cap!=null) rc=rc.filter(c=>c.cost<=cap);
         if(rc.length<rest){ ok=false; break; }
@@ -1434,6 +1443,21 @@ function solveStrategySnake(key){
   return {plan, chosen:starters.map(p=>p.r),
     total:starters.reduce((a,p)=>a+p.r.rpts,0), relaxed, snake:true};
 }
+// market read for Greasy Spoon: how are the top-15 ranked players actually
+// selling vs their value? A = way over, B = a bit over, C = at/below value
+function marketRead(){
+  let paid=0, val=0, n=0;
+  for(const r of M.rows){
+    if(r.mrank>15 || !r.p.drafted) continue;
+    paid+=r.p.drafted.price; val+=r.blended; n++;
+  }
+  if(!n) return {n:0, txt:"no top-15 sales logged yet — watch the first few nominations"};
+  const pct=Math.round(100*(paid/val-1));
+  const type = pct>15? "A (way over value)" : pct>3? "B (a bit over)" : "C (at/below value)";
+  return {n, pct, type,
+    txt:`market read: Type ${type} — ${n} top-15 sale${n===1?"":"s"} at ${pct>=0?"+":""}${pct}% vs value`+
+      (pct<=3? " · type C room: skipping stars may cost you here" : " · bargains should crash in later")};
+}
 let stratTimer=null;
 function scheduleStratLab(){
   clearTimeout(stratTimer);
@@ -1501,10 +1525,12 @@ function scheduleStratLab(){
         ` · spends ${fmt$(sol.chosen.reduce((a,r)=>a+r.adj,0))} of ${fmt$(sol.B)} starter money`+
         ` — ${fmt$(S.settings.cap)} budget = ${spentByMe? fmt$(spentByMe)+" already spent + ":""}`+
         `${fmt$(sol.B)} starters + ${fmt$(reserve)} bench hold`;
+      const readLine = key==="greasy"
+        ? `<br><b>${esc(marketRead().txt)}</b>` : "";
       d.innerHTML=`<h4>${meta.name}</h4><div class="sub">${meta.desc}${sol.relaxed?" · (rules relaxed where the pool ran dry)":""}</div>
         ${rows}
         <div class="lognote" style="margin-top:6px">
-          ${Math.round(myPts+sol.total)} pts projected${spend}<br>
+          ${Math.round(myPts+sol.total)} pts projected${spend}${readLine}<br>
           sim: median ${sim.p50} (${sim.p10}–${sim.p90})<br>
           <span class="up">When:</span> ${meta.use} ·
           <span class="down">Risk:</span> ${meta.pitfall}</div>`;
