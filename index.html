@@ -193,7 +193,7 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
             <th data-k="pos">Pos</th><th data-k="aav" title="Market average auction value">AAV</th>
             <th data-k="adj" title="Blended value × live inflation">Adj$</th>
             <th data-k="rpts" title="Risk-adjusted projection under your scoring">Proj</th>
-            <th data-k="left" title="Share of this position's market value still on the board if this player is drafted">Pos left</th>
+            <th data-k="left" title="Share of this position's market value left BELOW this player — what's still on the board once he and everyone pricier at his position are gone. Watch where it falls off a cliff.">Pos below</th>
             <th data-k="maxbid" title="Bid up to this; past it, passing is optimal">Max bid</th>
             <th></th>
           </tr></thead>
@@ -724,10 +724,27 @@ function rebuildModel(){
     }
     M.posValue[pos] = {total, left, pct: total>0 ? Math.round(100*left/total) : 0};
   }
-  for(const r of rows){   // % of the position's value left if THIS player also goes
-    const pv = M.posValue[r.p.pos];
-    r.leftAfter = (!r.p.drafted && pv.total>0)
-      ? Math.max(0, Math.round(100*(pv.left - Math.max(1,r.p.aav))/pv.total)) : null;
+  // Cumulative scarcity: for each undrafted player, the share of the position's
+  // market value still on the board once he AND every better (pricier) undrafted
+  // player at his position are gone. Descends down the board and exposes the
+  // tier cliff — a per-player marginal figure would rise as prices fall, which
+  // reads backwards on a value-sorted board.
+  for(const r of rows) r.leftAfter = null;
+  const undraftedByPos = {};
+  for(const r of rows){
+    if(r.p.out || r.p.drafted) continue;
+    (undraftedByPos[r.p.pos] = undraftedByPos[r.p.pos] || []).push(r);
+  }
+  for(const pos in undraftedByPos){
+    const pv = M.posValue[pos];
+    if(!pv || pv.total<=0) continue;
+    const list = undraftedByPos[pos].sort((a,b)=>
+      (Math.max(1,b.p.aav)-Math.max(1,a.p.aav)) || (b.rpts-a.rpts));
+    let acc = pv.left;
+    for(const r of list){
+      acc -= Math.max(1, r.p.aav);
+      r.leftAfter = Math.max(0, Math.round(100*acc/pv.total));
+    }
   }
   // market rank for snake availability: explicit ADP first, then expert
   // consensus rank (ECR), else the market-value ordering (AAV desc,
@@ -1752,7 +1769,7 @@ async function importXLSX(buf, mode, w){
 }
 function exportCSV(){
   const sc=S.settings.scoring;
-  const lines=[["Name","Team","Pos","AAV","Proj","PosLeftAfter%","Fair$","Adj$","MaxBid","Boost%","Out","Drafted","Price","Mine"].join(",")];
+  const lines=[["Name","Team","Pos","AAV","Proj","PosBelow%","Fair$","Adj$","MaxBid","Boost%","Out","Drafted","Price","Mine"].join(",")];
   for(const r of M.rows){
     const id=playerId(r.p);
     lines.push([`"${r.p.name}"`,r.p.team,r.p.pos,r.p.aav,r.pts0.toFixed(1),
@@ -1894,15 +1911,16 @@ function renderPool(){
     tb.appendChild(tr);
   }
   const H={aav: snake?"Mkt#":"AAV", adj: snake?"Rd":"Adj$",
-    maxbid: snake?`@ my #${nextN}`:"Max bid"};
+    left:"Pos below", maxbid: snake?`@ my #${nextN}`:"Max bid"};
   document.querySelectorAll("#pool th[data-k]").forEach(th=>{
     if(H[th.dataset.k]) th.textContent=H[th.dataset.k];
     th.classList.toggle("sorted", th.dataset.k===poolSort.k);});
+  const belowNote = `"Pos below" = % of the position's market value left below that player `+
+    `(once he and everyone pricier there is gone) — it falls off a cliff at the tier break`;
   $("#poolNote").textContent = snake
     ? `${rows.length} shown · Mkt# = market/ADP rank, Rd = expected round · `+
-      `"@ my #${nextN}" = odds they last to your next pick (±${buf} buffer) · `+
-      `"Pos left" = % of position value remaining after that player`
-    : `${rows.length} shown · "Pos left" = % of the position's market value remaining if that player is drafted · ` +
+      `"@ my #${nextN}" = odds they last to your next pick (±${buf} buffer) · ${belowNote}`
+    : `${rows.length} shown · ${belowNote} · ` +
       `Adj$ includes ${Math.round((M.infl-1)*100)}% inflation`;
 }
 
@@ -2150,7 +2168,7 @@ function renderScatter(){
     hit.addEventListener("mousemove",e=>{
       tip.style.display="block"; tip.style.left=(e.clientX+14)+"px"; tip.style.top=(e.clientY+8)+"px";
       tip.innerHTML=`<b>${esc(r.p.name)}</b> ${esc(r.p.team)} · ${r.p.pos}<br>
-        AAV ${fmt$(r.p.aav)} → Adj ${fmt$(r.adj)}<br>${r.rpts.toFixed(0)} pts · ${r.leftAfter!=null?r.p.pos+" "+r.leftAfter+"% left after him":""}
+        AAV ${fmt$(r.p.aav)} → Adj ${fmt$(r.adj)}<br>${r.rpts.toFixed(0)} pts · ${r.leftAfter!=null?r.p.pos+" "+r.leftAfter+"% left below him":""}
         ${drafted? "<br>drafted "+fmt$(r.p.drafted.price):("<br>max bid "+(R.bids.get(playerId(r.p))===0?"pass":fmt$(R.bids.get(playerId(r.p))??0)))}`;});
     hit.addEventListener("mouseleave",()=>tip.style.display="none");
     hit.addEventListener("click",()=>selectPlayer(playerId(r.p)));
@@ -2224,7 +2242,7 @@ function selectPlayer(id){
     $("#blockMine").textContent="My pick";
     $("#blockGone").textContent="Taken";
   }else{
-    $("#blockAav").textContent = `AAV ${fmt$(r.p.aav)} · Adj ${fmt$(r.adj)} · ${r.rpts.toFixed(0)} pts · ${r.p.pos} ${M.posValue[r.p.pos]?.pct??0}% left (${r.leftAfter??0}% after him)${r.p.bye?` · bye ${r.p.bye}`:""}`;
+    $("#blockAav").textContent = `AAV ${fmt$(r.p.aav)} · Adj ${fmt$(r.adj)} · ${r.rpts.toFixed(0)} pts · ${r.p.pos} ${M.posValue[r.p.pos]?.pct??0}% left, ${r.leftAfter??0}% below him${r.p.bye?` · bye ${r.p.bye}`:""}`;
     const bid = R.bids.get(id);
     if(bid===0){ v.textContent="PASS — doesn't make your roster even at $1"; v.className="verdict down"; }
     else if(bid!=null){ v.textContent=`Bid up to ${fmt$(bid)}`; v.className="verdict up"; }
