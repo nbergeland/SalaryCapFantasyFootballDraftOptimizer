@@ -127,6 +127,11 @@ tr.sel td{outline:2px solid var(--accent);outline-offset:-2px}
 .scarcity .fill{height:100%;border-radius:3px}
 .legend .sw{display:inline-block;width:10px;height:10px;border-radius:3px;
   margin-right:5px;vertical-align:-1px}
+.tile#tProjTile:hover{border-color:var(--accent)}
+.card.flash{animation:flashcard 1.4s ease-out}
+@keyframes flashcard{0%{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
+  100%{border-color:var(--border);box-shadow:none}}
+@media (prefers-reduced-motion:reduce){.card.flash{animation:none;border-color:var(--accent)}}
 .strat{border:1px solid var(--grid);border-radius:10px;padding:8px 10px;
   flex:1 1 240px;max-width:320px;min-width:220px}
 .strat h4{margin:0 0 2px;font-size:13px}
@@ -175,7 +180,9 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
       <div class="val" id="tSpots">–</div><div class="sub" id="tSpotsSub"></div></div>
     <div class="tile"><div class="lbl">Room inflation</div>
       <div class="val" id="tInfl">–</div><div class="sub">prices vs expected values</div></div>
-    <div class="tile"><div class="lbl">Best finishable roster</div>
+    <div class="tile" id="tProjTile" style="cursor:pointer"
+      title="Click to see the roster behind this number">
+      <div class="lbl">Best finishable roster</div>
       <div class="val" id="tProj">–</div><div class="sub">projected pts, my picks + optimal completion</div></div>
   </div>
 
@@ -2043,7 +2050,12 @@ function renderOptimal(){
       el.appendChild(d);
     }
     const d=document.createElement("div"); d.className="lognote"; d.style.marginTop="6px";
-    d.textContent=`Starters from plan: ${Math.round(R.sol.total)} pts`;
+    const myPtsSnake=M.rows.filter(r=>r.p.drafted&&r.p.drafted.mine)
+      .reduce((a,r)=>a+r.rpts,0);
+    d.innerHTML = myPtsSnake
+      ? `Starters from plan: <b>${Math.round(R.sol.total)} pts</b> + my picks `+
+        `(${Math.round(myPtsSnake)} pts) = <b>${Math.round(myPtsSnake+R.sol.total)} projected</b>`
+      : `Starters from plan: <b>${Math.round(R.sol.total)} pts</b>`;
     el.appendChild(d);
     return;
   }
@@ -2052,6 +2064,17 @@ function renderOptimal(){
     "recomputed after every pick. Adj$ is the price it assumes.";
   if(!R.sol){ el.innerHTML='<p class="note">No feasible completion — pool too thin or budget too low. Import more players or lower bench reserve.</p>'; return; }
   el.innerHTML="";
+  // already-mine players first, so the card accounts for the whole roster the
+  // "Best finishable roster" tile is reporting
+  const mineRows=M.rows.filter(r=>r.p.drafted&&r.p.drafted.mine)
+    .sort((a,b)=>b.rpts-a.rpts);
+  for(const r of mineRows){
+    const d=document.createElement("div"); d.className="roster-slot";
+    d.innerHTML=`<span class="nm"><span class="pos ${r.p.pos}">${r.p.pos}</span> ${esc(r.p.name)}
+      <span class="pill up">mine</span></span>
+      <span>${r.rpts.toFixed(0)} pts · ${fmt$(r.p.drafted.price)}</span>`;
+    el.appendChild(d);
+  }
   for(const r of R.sol.chosen.slice().sort((a,b)=>b.adj-a.adj)){
     const d=document.createElement("div"); d.className="roster-slot";
     d.innerHTML=`<span class="nm"><span class="pos ${r.p.pos}">${r.p.pos}</span> ${esc(r.p.name)}</span>
@@ -2061,9 +2084,15 @@ function renderOptimal(){
     el.appendChild(d);
   }
   const cost=R.sol.chosen.reduce((a,r)=>a+r.adj,0);
+  const myPts=mineRows.reduce((a,r)=>a+r.rpts,0);
   const d=document.createElement("div"); d.className="lognote";
   d.style.marginTop="6px";
-  d.textContent=`Completion: ${Math.round(R.sol.total)} pts for ${fmt$(cost)} of ${fmt$(R.sol.B)}`;
+  d.innerHTML = mineRows.length
+    ? `To buy: <b>${Math.round(R.sol.total)} pts</b> for ${fmt$(cost)} of ${fmt$(R.sol.B)}<br>`+
+      `+ my ${mineRows.length} pick${mineRows.length===1?"":"s"} (${Math.round(myPts)} pts) = `+
+      `<b>${Math.round(myPts+R.sol.total)} best finishable roster</b>`
+    : `To buy: <b>${Math.round(R.sol.total)} pts</b> for ${fmt$(cost)} of ${fmt$(R.sol.B)} — `+
+      `nothing drafted yet, so this is the whole ${Math.round(R.sol.total)}-point roster`;
   el.appendChild(d);
 }
 
@@ -2886,6 +2915,12 @@ function bind(){
   document.querySelectorAll("nav.tabs button").forEach(b=>
     b.addEventListener("click",()=>showTab(b.dataset.tab)));
   $("#syncBtn").addEventListener("click",gotoSync);
+  $("#tProjTile").addEventListener("click",()=>{
+    showTab("draft");
+    const card=$("#optimal").closest(".card");
+    card.scrollIntoView({behavior:"smooth", block:"center"});
+    card.classList.remove("flash"); void card.offsetWidth; card.classList.add("flash");
+  });
   const chips=$("#posChips");
   for(const p of ["ALL","QB","RB","WR","TE","FLEX","K","DST"]){
     const c=document.createElement("button");
