@@ -74,6 +74,7 @@ main{padding:14px 16px 60px;max-width:1440px;margin:0 auto}
 .tile .val{font-size:24px;font-weight:650;margin-top:2px}
 .tile .sub{font-size:11px;color:var(--muted)}
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px}
+.layout>*{min-width:0}
 @media (max-width:980px){.layout{grid-template-columns:1fr}}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{border:1px solid var(--border);border-radius:999px;padding:2px 11px;
@@ -193,7 +194,7 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
             <th data-k="pos">Pos</th><th data-k="aav" title="Market average auction value">AAV</th>
             <th data-k="adj" title="Blended value × live inflation">Adj$</th>
             <th data-k="rpts" title="Risk-adjusted projection under your scoring">Proj</th>
-            <th data-k="left" title="Share of this position's market value left BELOW this player — what's still on the board once he and everyone pricier at his position are gone. Watch where it falls off a cliff.">Pos below</th>
+            <th data-k="left" title="Positional scarcity — share of this position's market value left BELOW this player — what's still on the board once he and everyone pricier at his position are gone. Watch where it falls off a cliff.">PS</th>
             <th data-k="maxbid" title="Bid up to this; past it, passing is optimal">Max bid</th>
             <th></th>
           </tr></thead>
@@ -1769,7 +1770,7 @@ async function importXLSX(buf, mode, w){
 }
 function exportCSV(){
   const sc=S.settings.scoring;
-  const lines=[["Name","Team","Pos","AAV","Proj","PosBelow%","Fair$","Adj$","MaxBid","Boost%","Out","Drafted","Price","Mine"].join(",")];
+  const lines=[["Name","Team","Pos","AAV","Proj","PositionalScarcity%","Fair$","Adj$","MaxBid","Boost%","Out","Drafted","Price","Mine"].join(",")];
   for(const r of M.rows){
     const id=playerId(r.p);
     lines.push([`"${r.p.name}"`,r.p.team,r.p.pos,r.p.aav,r.pts0.toFixed(1),
@@ -1911,11 +1912,11 @@ function renderPool(){
     tb.appendChild(tr);
   }
   const H={aav: snake?"Mkt#":"AAV", adj: snake?"Rd":"Adj$",
-    left:"Pos below", maxbid: snake?`@ my #${nextN}`:"Max bid"};
+    left:"PS", maxbid: snake?`@ my #${nextN}`:"Max bid"};
   document.querySelectorAll("#pool th[data-k]").forEach(th=>{
     if(H[th.dataset.k]) th.textContent=H[th.dataset.k];
     th.classList.toggle("sorted", th.dataset.k===poolSort.k);});
-  const belowNote = `"Pos below" = % of the position's market value left below that player `+
+  const belowNote = `"Positional scarcity" = % of the position's market value left below that player `+
     `(once he and everyone pricier there is gone) — it falls off a cliff at the tier break`;
   $("#poolNote").textContent = snake
     ? `${rows.length} shown · Mkt# = market/ADP rank, Rd = expected round · `+
