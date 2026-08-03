@@ -539,7 +539,7 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         want. Money they burn elsewhere is discount on your targets.</li>
       <li><b>Strategy lab:</b> toggle build archetypes — BBQ (two studs ~$115
         combined, then ride the price crash), Stars &amp; Scrubs, Balanced, Hero RB,
-        Zero RB, Robust RB, WR Heavy, Wait on QB, Elite TE — to see how the model
+        Zero RB, Robust RB, WR Heavy, $5 QB, Wait on QB, Elite TE — to see how the model
         would finish your roster under each philosophy, with its own projection,
         Monte Carlo range, and when-to-use/risk notes. Definitions follow the
         published strategy literature. In auction they're price-tier constraints;
@@ -1266,8 +1266,12 @@ const STRATEGIES = {
     desc:"Two elite WRs at $35-50 anchor the roster; startable WRs stay cheap all draft",
     use:"Full PPR when the room is overspending on RBs",
     pitfall:"Same thin-RB weakness as Zero RB — the WR edge has to out-score the RB hole"},
+  qb5: {name:"$5 QB",
+    desc:"Hard $5 ceiling at quarterback (Hoovler's rule): once the QB-hungry managers are served early, the remaining bidders don't fight, and the position's market floor drops out fast",
+    use:"1-QB leagues — 12 of the top-15 QBs by PPG went for $5 or less in 2025, and 9 of 15 in 2024; bank the savings in the RB/WR rooms before the draft even starts",
+    pitfall:"You're streaming-adjacent if the cheap starter busts — and dollars at QB correlate with scoring far less than dollars at RB/WR, but only if you actually spend them"},
   waitQB: {name:"Wait on QB",
-    desc:"QB capped at ~$12 (5-7% of budget) — two tier-2 QBs beat one $30 star",
+    desc:"Softer QB fade: capped at ~$12 (5-7% of budget) — two tier-2 QBs beat one $30 star",
     use:"1-QB leagues; the savings concentrate on RB/WR where scarcity is real",
     pitfall:"Forfeits the 30-point weekly ceiling of the elite QBs"},
   eliteTE: {name:"Elite TE",
@@ -1289,6 +1293,7 @@ function stratSpec(key){
     case "heroRB":  return {tiers:{RB:[{min:sc(40),n:1}]}, caps:{RB:sc(15)}};
     case "zeroRB":  return {caps:{RB:sc(12)}};
     case "wrHeavy": return {tiers:{WR:[{min:sc(35),n:2}]}};
+    case "qb5":     return {caps:{QB:sc(5)}};
     case "waitQB":  return {caps:{QB:sc(12)}};
     case "eliteTE": return {tiers:{TE:[{min:sc(20),n:1}]}};
     case "robustRB":return {tiers:{RB:[{min:sc(35),n:2}]}};
@@ -1399,6 +1404,7 @@ const STRAT_SNAKE_RULES = {
   heroRB:  (pos,rd,c)=> pos!=="RB" ? true : (c.RB===0 ? rd<=1 : rd>=7),
   zeroRB:  (pos,rd,c)=> pos!=="RB" || rd>=6,
   wrHeavy: (pos,rd,c)=> (rd>3 || c.WR>=3) ? true : pos==="WR",
+  qb5:     (pos,rd,c)=> pos!=="QB" || rd>=11,   // snake equivalent: QB dart throw
   waitQB:  (pos,rd,c)=> pos!=="QB" || rd>=8,
   eliteTE: (pos,rd,c)=> c.TE>=1 ? true : (rd<3 ? true : pos==="TE"),
   robustRB:(pos,rd,c)=> (rd>3 || c.RB>=2) ? true : pos==="RB",
