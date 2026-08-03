@@ -115,13 +115,34 @@ historical share). Each player's VORP is `points − replacement(pos)`, and the
 lets you blend intrinsic value with market AAV (consensus auction values) via a
 slider, since market prices carry real information about how the room will bid.
 
-### 2.3 Live auction inflation
+### 2.3 Live auction inflation (keeper-aware)
 
 As picks come in, the app tracks `(money actually spent) / (expected value of players
 drafted)`. When the room overpays early, less money chases the remaining talent, so
 remaining values deflate — and vice versa. Adjusted value =
 `intrinsic value × (remaining money / remaining expected value)`. This is the
 standard auction-inflation correction and is recomputed on every pick.
+
+**Keepers enter this calculation as already-spent money against already-gone talent.**
+That is where most of the edge lives in a keeper league: kept players are typically
+held below market, so the money still in the room chases a thinner pool and every
+remaining player's true price rises. Entering the league's full keeper slate before
+the draft is therefore the single highest-value input the model takes.
+
+A **house rule cap** overrides the market for positions you refuse to pay for — by
+default DST is capped at $1, which clamps its adjusted price, its max-bid advice, and
+its treatment inside every solver. Freed dollars flow to positions where scarcity is
+real.
+
+### 2.3b Positional scarcity (tier cliffs)
+
+For each undrafted player the app reports the share of that position's market value
+still on the board **below** him — what remains once he and every pricier undrafted
+player at his position are gone. This is deliberately *cumulative* rather than
+marginal: a per-player "value remaining if only he is drafted" figure rises as prices
+fall, which inverts on a value-sorted board and hides the thing that matters. The
+cumulative form descends monotonically to zero, and the size of each step down *is*
+the tier cliff at that position.
 
 ### 2.4 Risk-adjusted objective
 
@@ -130,6 +151,46 @@ Where floor/ceiling (or stdev) columns are provided, the optimizer maximizes
 for λ < 0 (floor protection), with λ exposed as a risk-appetite slider. Without
 distribution columns, λ falls back to a position-volatility heuristic. This is a
 tractable stand-in for full stochastic programming — see §3.
+
+### 2.4b Monte Carlo roster outlook (evaluation layer)
+
+Maximizing a sum of point estimates cannot see two things that matter: **bench option
+value** (you start your best lineup each week, so a volatile bench player is worth more
+than his mean) and **roster-level risk shape** (two rosters projecting the same total
+can be a safe band or a boom/bust spread).
+
+The app therefore simulates ~1,200 seasons of your picks plus the optimizer's plan at
+**weekly resolution**, selecting the best legal lineup each week, with per-position
+volatility and per-week availability risk (weekly means are rescaled so the season
+expectation still matches the projection — misses add variance, not double-counted
+drag). It reports floor (10th) / median / ceiling (90th), and a *what-if* variant
+prices winning a nominated player at a given bid.
+
+Two deliberate constraints: the simulation is an **evaluation layer only** — it never
+runs inside the bidding loop, so max bids and completion stay instant — and its inputs
+are position-level variance assumptions, so the honest use is comparing roster *shape*,
+not adjudicating ±20-point differences.
+
+### 2.4c Strategy Lab (constrained solves)
+
+Classic build philosophies are modeled as *constraints on the same exact solver*, not
+as separate heuristics — which makes "what does this philosophy cost me?" a precise
+question with a numeric answer (the gap to the unconstrained optimum).
+
+- **Auction:** price-tier constraints. Positions are partitioned into tiers by price so
+  no player is double-counted; stud requirements can span positions (Stars & Scrubs,
+  BBQ); rank-exclusion constraints support builds defined by what they refuse to buy
+  (Greasy Spoon skips the top-15 entirely); players you already own credit a build's
+  requirements.
+- **Snake:** canonical round rules (no RB before round 6 for Zero RB, QB from round 8
+  or 11, etc.) applied to the marginal-value plan, relaxing gracefully when the pool
+  can't satisfy them.
+
+Definitions are taken from the published strategy literature rather than invented, and
+thresholds scale with league budget. Greasy Spoon additionally computes a live
+**market-type read** — classifying the room by how top-15 players are actually selling
+against value — because that classification is the first decision its own author asks
+you to make.
 
 ### 2.5 Consensus, news, and season fine-tuning
 
@@ -171,11 +232,33 @@ tractable stand-in for full stochastic programming — see §3.
 ## 4. Practical guidance for your season
 
 1. A week before your draft, export current projections + auction values
-   (e.g., FantasyPros cheat sheet CSV) and import them in the app's Data tab.
-2. Set your league's exact budget, roster slots, and scoring in Settings.
-3. Apply boosts/fades for late-breaking news; toggle OUT for injured players.
-4. On draft day, run the app beside your draft room: log every pick with its price,
-   nominate from the app's suggestions, and treat the max-bid number as your
-   discipline line.
-5. After the draft, export the draft log JSON for a post-mortem against the
-   optimizer's counterfactual best roster.
+   (e.g., FantasyPros cheat sheet CSV) and import them in the app's Data tab, then hit
+   **Refresh ranks/news** for live ranks, team changes, and injury flags.
+2. Set your league's exact budget, roster slots, scoring, and draft type in Settings.
+3. In keeper leagues, enter the **entire league's** keepers before draft day and check
+   the "Who should I keep?" verdicts on your own candidates. Then look at Adj$ versus
+   AAV — that gap is your league's real price list.
+4. Apply boosts/fades for late-breaking news; toggle OUT for injured players.
+5. Skim the Strategy Lab: the gap between each build and the unconstrained optimum
+   tells you which philosophies are cheap in *this* market before you're on the clock.
+6. On draft day, connect league sync (or log picks manually), nominate from the app's
+   suggestions, and treat the max-bid number as your discipline line.
+7. After the draft, export the draft log JSON and copy the recap for a post-mortem
+   against the optimizer's counterfactual best roster.
+
+## 5. Known limitations
+
+Stated plainly, because they bound how much weight the outputs deserve:
+
+- **The bundled dataset is a snapshot, and mostly estimated.** Of its 190 players, only
+  ~19 dollar values came from published figures; the rest are curve-based estimates
+  anchored to public ranks. It is a starting point, not a projection system — importing
+  current consensus before your draft matters more than any modeling choice here.
+- **Simulation inputs are position-level, not player-level.** Floor/ceiling numbers
+  inherit those assumptions; treat them as shape, not precision.
+- **Snake availability is a rank model with a buffer**, not a probabilistic ADP
+  distribution — it answers "likely / risky / gone," not "63.4%."
+- **Nothing models opponent behavior.** Inflation is measured from what the room
+  actually does, but the app doesn't predict what any particular manager will do next.
+- **Projections are consumed, not produced.** Beating public expert consensus was
+  explicitly out of scope (§3).
