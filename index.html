@@ -2487,16 +2487,19 @@ function matchPlayer(idx, name, pos, team){
 // list: [{name,pos,team,price,mine}] — applies new picks, skips already-drafted
 function applyExternalPicks(list){
   const idx=buildNameIndex();
-  let applied=0, skipped=0; const unmatched=[];
+  let applied=0, keepers=0, skipped=0; const unmatched=[];
   for(const pk of list){
     if(!pk.name || !pk.pos){ skipped++; continue; }
     const p=matchPlayer(idx, pk.name, pk.pos, pk.team);
     if(!p){ unmatched.push(pk.name); continue; }
     if(p.drafted){ skipped++; continue; }
-    applyPick(p, pk.price||1, !!pk.mine); applied++;
+    if(pk.keeper){   // platforms flag keepers in the same feed as picks
+      p.drafted={price:Math.max(1,Math.round(pk.price||1)), mine:!!pk.mine, keeper:true};
+      keepers++;
+    }else{ applyPick(p, pk.price||1, !!pk.mine); applied++; }
   }
-  if(applied) recompute();
-  return {applied, skipped, unmatched};
+  if(applied||keepers) recompute();
+  return {applied, keepers, skipped, unmatched};
 }
 
 /* ---------- Sleeper ---------- */
@@ -2733,19 +2736,33 @@ function espnApply(opts){
     settingsToForm();
   }
   const me=+$("#esMyTeam").value;
-  const picks=((data.draftDetail&&data.draftDetail.picks)||[]).map(pk=>{
+  const dd=data.draftDetail||{};
+  const all=dd.picks||[];
+  // ESPN pre-populates every future slot with playerId -1; those aren't picks
+  const made=all.filter(pk=>pk.playerId>0);
+  const picks=made.map(pk=>{
     const pl=SYNC.es.playersById.get(pk.playerId)||{};
-    return {name:pl.name, pos:pl.pos, team:"",
+    return {name:pl.name, pos:pl.pos, team:"", keeper:!!pk.keeper,
       price:+(pk.bidAmount||0)||1, mine:pk.teamId===me};
   });
   const res=applyExternalPicks(picks);
-  if(!res.applied && !live) recompute();  // settings may still have changed
-  esStatus(live
-    ? `Live bridge ✓ ${new Date().toLocaleTimeString()} — ${res.applied} new, ${res.skipped} already in`+
-      (res.unmatched.length? `, unmatched: ${res.unmatched.slice(0,3).join(", ")}` : "")
-    : `Applied ${res.applied} new picks, ${res.skipped} already in`+
-      (res.unmatched.length? `, unmatched: ${res.unmatched.slice(0,4).join(", ")}`+
-        (res.unmatched.length>4?"…":"") : "")+".");
+  if(!res.applied && !res.keepers && !live) recompute();  // settings may have changed
+  const parts=[];
+  if(res.applied) parts.push(`${res.applied} pick${res.applied===1?"":"s"} applied`);
+  if(res.keepers) parts.push(`${res.keepers} keeper${res.keepers===1?"":"s"}`);
+  if(res.skipped) parts.push(`${res.skipped} already recorded`);
+  if(res.unmatched.length) parts.push(`unmatched: ${res.unmatched.slice(0,3).join(", ")}`+
+    (res.unmatched.length>3?"…":""));
+  const stamp=live? `Live bridge ✓ ${new Date().toLocaleTimeString()} — ` : "";
+  if(!made.length){
+    const waiting=all.length? ` ESPN has ${all.length} empty pick slots ready.` : "";
+    esStatus(`${stamp}Connected to your league — ${data.teams.length} teams, settings imported.`+
+      ` The draft hasn't started yet, so there's nothing to pull in.${waiting}`+
+      (live? " The bridge will keep watching." : " Re-paste once picks are in, or use the live bridge."));
+  }else{
+    esStatus(`${stamp}${parts.length? parts.join(" · ") : "nothing new"} `+
+      `(${made.length} of ${all.length} slots used${dd.inProgress? ", draft in progress":""}).`);
+  }
 }
 /* ---------- live bridge (bookmarklets): ESPN/Yahoo tab -> this app ---------- */
 function bridgeHref(kind){
