@@ -392,10 +392,15 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
 
         <h3 style="margin-top:14px">ESPN — paste sync</h3>
         <p>
-          <input type="text" id="esLeague" placeholder="League ID" style="width:110px">
+          <input type="text" id="esLeague" placeholder="League ID or paste league URL" style="width:210px"
+            title="The number in your ESPN league URL — or just paste the whole URL and I'll pull it out">
           <input type="number" id="esSeason" value="2026" style="width:74px" title="Season">
           <a id="esLink" href="#" target="_blank" rel="noopener">open league JSON ↗</a>
         </p>
+        <p class="note" id="esIdHint">ESPN identifies leagues by <b>number</b>, not name. Open your
+          league on espn.com and copy the digits after <code>leagueId=</code> — e.g.
+          <code>fantasy.espn.com/football/league?leagueId=<b>123456</b></code>. Pasting the
+          whole URL works too.</p>
         <p class="note">ESPN blocks cross-site reads from private leagues (login cookies),
           so full auto-sync isn't possible from a static page. Instead: log into ESPN in
           this browser, click the link above, copy the whole JSON page, paste below, and
@@ -2644,8 +2649,21 @@ function sleeperAutoToggle(){
 /* ---------- ESPN ---------- */
 const ES_POS={1:"QB",2:"RB",3:"WR",4:"TE",5:"K",16:"DST"};
 const esStatus=t=>{ $("#esStatus").textContent=t; };
+// ESPN keys leagues by number. Accept the raw id, a pasted league URL, or
+// anything with leagueId= in it — but never a league NAME, which ESPN rejects
+// with "Invalid parameter for 'leagueId'".
+function espnLeagueId(raw){
+  const v=String(raw==null? ($("#esLeague")||{}).value||"" : raw).trim();
+  if(!v) return null;
+  const q=v.match(/leagueId[=/](\d+)/i);
+  if(q) return q[1];
+  if(/^\d+$/.test(v)) return v;
+  const anyNum=v.match(/\b(\d{4,})\b/);      // a URL shaped differently
+  return (/[/?=]/.test(v) && anyNum) ? anyNum[1] : null;
+}
 function espnUrl(){
-  const id=$("#esLeague").value.trim(), season=$("#esSeason").value||"2026";
+  const id=espnLeagueId(), season=$("#esSeason").value||"2026";
+  if(!id) return "#";
   return `https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${season}`+
     `/segments/0/leagues/${id}?view=mDraftDetail&view=mTeam&view=mRoster&view=mSettings`;
 }
@@ -2735,7 +2753,7 @@ function bridgeHref(kind){
   const app=location.origin+location.pathname;
   let js;
   if(kind==="espn"){
-    const id=$("#esLeague").value.trim(), yr=$("#esSeason").value||"2026";
+    const id=espnLeagueId(), yr=$("#esSeason").value||"2026";
     if(!id) return null;
     js=`(()=>{var w=window.open(${JSON.stringify(app)},"bergsheets");`+
       `var f=()=>fetch("https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${yr}/segments/0/leagues/${id}?view=mDraftDetail&view=mTeam&view=mRoster",{credentials:"include"})`+
@@ -2752,11 +2770,25 @@ function refreshBridgeLinks(){
   const es=$("#esBridge"), yh=$("#yhBridge");
   const hosted=location.protocol.startsWith("http");
   const jsonLink=$("#esLink");
-  if(jsonLink){                       // a blank league id builds a 404 URL
-    const id=$("#esLeague").value.trim();
+  const id=espnLeagueId();
+  const raw=($("#esLeague")||{}).value||"";
+  if(jsonLink){                       // a missing/non-numeric id builds a 404 URL
     jsonLink.style.opacity = id? 1 : .45;
     jsonLink.title = id? "Opens your league's JSON — log into ESPN in this browser first"
-                       : "Enter your League ID first";
+      : "Enter the numeric League ID (or paste your league URL)";
+  }
+  const hint=$("#esIdHint");
+  if(hint){
+    const bad = raw.trim() && !id;
+    hint.classList.toggle("down", !!bad);
+    hint.style.fontWeight = bad? "600" : "";
+    if(bad) hint.innerHTML = `<b>“${esc(raw.trim())}” looks like a league name.</b> `+
+      `ESPN identifies leagues by number — open your league on espn.com and copy the `+
+      `digits after <code>leagueId=</code>, or paste the whole URL here.`;
+    else hint.innerHTML = `ESPN identifies leagues by <b>number</b>, not name. Open your `+
+      `league on espn.com and copy the digits after <code>leagueId=</code> — e.g. `+
+      `<code>fantasy.espn.com/football/league?leagueId=<b>123456</b></code>. Pasting the `+
+      `whole URL works too.`;
   }
   if(es){
     const h=hosted? bridgeHref("espn") : null;
@@ -3221,11 +3253,21 @@ function bind(){
         `logged-in ${label} tab — clicking it here can't reach ${label}.`);
     });
   }
+  $("#esLeague").addEventListener("change",()=>{     // normalize a pasted URL
+    const el=$("#esLeague"), id=espnLeagueId();
+    if(id && el.value.trim()!==id){
+      el.value=id; refreshBridgeLinks();
+      toast(`Pulled league ID ${id} out of that URL.`);
+    }
+  });
   $("#esLink").addEventListener("click",e=>{
-    if(!$("#esLeague").value.trim()){
+    if(!espnLeagueId()){
       e.preventDefault();
-      toast("Enter your ESPN League ID first — it's the number in your league's URL.");
-      $("#esLeague").focus();
+      const raw=$("#esLeague").value.trim();
+      toast(raw
+        ? `“${raw}” isn't a league ID — ESPN uses numbers. Copy the digits after leagueId= in your league's URL (or paste the URL here).`
+        : "Enter your ESPN League ID first — it's the number in your league's URL.");
+      $("#esLeague").focus(); $("#esLeague").select();
     }
   });
   $("#esRead").addEventListener("click",espnRead);
@@ -3277,7 +3319,7 @@ window.APP={get S(){return S},get M(){return M},get R(){return R},
   recompute,draftPlayer,undo,importCSV,importRows,importXLSX,parseXLSX,
   solveCompletion,posTable,combine,playerId,normPos,parseCSV,mapHeaders,
   SYNC,applyExternalPicks,sleeperFind,sleeperLoad,sleeperSync,sleeperRefreshRanks,
-  espnRead,espnApply,espnIngest,bridgeHref,
+  espnRead,espnApply,espnIngest,bridgeHref,espnLeagueId,espnUrl,
   yahooParse,yahooApply,normName,matchPlayer,buildNameIndex,
   get LEAGUES(){return LEAGUES},switchLeague,addLeague,activeLeague,saveState,loadState,
   simulateRoster,simIfWon,outlookRoster,addKeeper,removeKeeper,findPoolPlayer,
