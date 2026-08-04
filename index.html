@@ -151,6 +151,7 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
 <body>
 <header>
   <h1>BERG SHEETS</h1><span class="season">2026</span>
+  <select id="leagueSel" title="Switch league — each keeps its own settings, keepers and draft"></select>
   <span class="asof" id="asof"></span>
   <span class="spacer"></span>
   <button id="syncBtn" title="Connect your Sleeper / ESPN / Yahoo league">⚡ League sync</button>
@@ -448,6 +449,22 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
 <section id="tab-settings" class="hidden">
   <div class="settings-grid">
     <div class="card">
+      <h2>My leagues</h2>
+      <p class="note" id="lgCount"></p>
+      <div class="field"><label>Name</label>
+        <input type="text" id="lgName" style="flex:1" placeholder="League name"></div>
+      <p>
+        <button id="lgRename">Rename</button>
+        <button id="lgNew">+ New</button>
+        <button id="lgDup">Duplicate</button>
+        <button id="lgDelete">Delete</button>
+      </p>
+      <p class="note">Switch leagues any time from the picker in the header. Imported
+        projections, values and news are shared across all of them — load your data
+        once. Each league keeps its own draft type, budget, slots, scoring, keepers,
+        draft log and boosts.</p>
+    </div>
+    <div class="card">
       <h2>League</h2>
       <div class="field"><label>Draft type</label>
         <select id="s_mode"><option value="auction">Salary cap (auction)</option>
@@ -585,7 +602,8 @@ const POSITIONS = ["QB","RB","WR","TE","K","DST"];
 const FLEX_POS = ["RB","WR","TE"];
 const POS_VOL = {QB:.10,RB:.16,WR:.15,TE:.18,K:.08,DST:.12}; // volatility heuristic
 const SCATTER_COLORS = {QB:"var(--qb)",RB:"var(--rb)",WR:"var(--wr)",TE:"var(--te)"};
-const LS_KEY = "sc-draft-companion-v1";
+const LS_KEY = "sc-draft-companion-v1";      // legacy single-league state
+const LS_MULTI = "sc-draft-companion-v2";    // multi-league: shared pool + leagues
 
 /* ============================ state ============================ */
 const defaultSettings = () => ({
@@ -611,22 +629,125 @@ function freshPlayer(o){
     adp:o.adp??null, ecr:o.ecr??null, bye:o.bye??null, note:o.note||"", src:o.src||"",
     boost:0, out:false, drafted:null};
 }
+/* =====================================================================
+   LEAGUES — the player pool (projections, values, news) is shared, so you
+   import data once; each league carries its own settings, keepers, draft
+   log, and per-player marks (drafted / boost / OUT).
+   ===================================================================== */
+let LEAGUES = {activeId:null, list:[]};
+const activeLeague = () => LEAGUES.list.find(l=>l.id===LEAGUES.activeId) || null;
+function blankLeague(name){
+  return {id:"lg"+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36),
+    name:name||"New league", settings:defaultSettings(), log:[], kpCands:[], marks:{}};
+}
+function captureMarks(){          // only players that differ from the pool default
+  const m={};
+  for(const p of S.players){
+    if(p.drafted || p.boost || p.out)
+      m[playerId(p)] = {drafted:p.drafted||null, boost:p.boost||0, out:!!p.out};
+  }
+  return m;
+}
+function applyMarks(marks){
+  for(const p of S.players){ p.drafted=null; p.boost=0; p.out=false; }
+  for(const p of S.players){
+    const m = marks && marks[playerId(p)];
+    if(!m) continue;
+    p.drafted = m.drafted||null; p.boost = m.boost||0; p.out = !!m.out;
+  }
+}
+function adoptLeague(lg){
+  LEAGUES.activeId = lg.id;
+  S.settings = Object.assign(defaultSettings(), lg.settings);
+  S.log = lg.log||[]; S.kpCands = lg.kpCands||[]; S.sel = null;
+  applyMarks(lg.marks);
+  if(typeof SYNC!=="undefined"){          // league sync belongs to the old league
+    if(SYNC.sl.timer) sleeperAutoToggle();
+    SYNC.sl.applied = new Set(); SYNC.es.settingsApplied = false;
+  }
+}
 function loadState(){
   try{
-    const raw = localStorage.getItem(LS_KEY);
-    if(raw){ const s = JSON.parse(raw);
-      if(s && s.players && s.players.length){
-        S = s; S.sel=null;
-        S.kpCands = S.kpCands||[];
-        S.settings = Object.assign(defaultSettings(), S.settings);
+    const raw = localStorage.getItem(LS_MULTI);
+    if(raw){
+      const s = JSON.parse(raw);
+      if(s && s.pool && s.pool.length && s.leagues && s.leagues.length){
+        S.players = s.pool.map(freshPlayer);
+        LEAGUES = {activeId:s.activeId, list:s.leagues};
+        adoptLeague(activeLeague() || s.leagues[0]);
         return;
-      } }
+      }
+    }
+    const legacy = localStorage.getItem(LS_KEY);   // migrate single-league state
+    if(legacy){
+      const s = JSON.parse(legacy);
+      if(s && s.players && s.players.length){
+        S.players = s.players.map(p=>Object.assign(freshPlayer(p),
+          {drafted:p.drafted||null, boost:p.boost||0, out:!!p.out}));
+        const lg = blankLeague("My league");
+        lg.settings = Object.assign(defaultSettings(), s.settings);
+        lg.log = s.log||[]; lg.kpCands = s.kpCands||[]; lg.marks = {};
+        LEAGUES = {activeId:lg.id, list:[lg]};
+        S.settings = lg.settings; S.log = lg.log; S.kpCands = lg.kpCands;
+        lg.marks = captureMarks();
+        return;
+      }
+    }
   }catch(e){ console.warn("state load failed", e); }
   S.players = BUNDLED.players.map(freshPlayer);
-  S.kpCands = [];
+  const lg = blankLeague("My league");
+  LEAGUES = {activeId:lg.id, list:[lg]};
+  S.settings = lg.settings; S.log = []; S.kpCands = [];
 }
-function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(
-  {settings:S.settings, players:S.players, log:S.log, kpCands:S.kpCands||[]})); }catch(e){} }
+function saveState(){
+  try{
+    const lg = activeLeague();
+    if(lg){ lg.settings=S.settings; lg.log=S.log; lg.kpCands=S.kpCands||[];
+      lg.marks=captureMarks(); }
+    localStorage.setItem(LS_MULTI, JSON.stringify({
+      v:2, activeId:LEAGUES.activeId, leagues:LEAGUES.list,
+      pool:S.players.map(p=>{ const {drafted,boost,out,...pool}=p; return pool; }),
+    }));
+  }catch(e){ console.warn("state save failed", e); }
+}
+function switchLeague(id){
+  if(id===LEAGUES.activeId) return;
+  const lg = LEAGUES.list.find(l=>l.id===id);
+  if(!lg) return;
+  saveState();                      // bank the league we're leaving
+  adoptLeague(lg);
+  settingsToForm(); recompute(); renderLeagueSel();
+  toast(`Switched to ${lg.name}`);
+}
+function addLeague(name, copyCurrentSettings){
+  saveState();
+  const lg = blankLeague(name);
+  if(copyCurrentSettings) lg.settings = JSON.parse(JSON.stringify(S.settings));
+  LEAGUES.list.push(lg);
+  adoptLeague(lg);
+  settingsToForm(); recompute(); renderLeagueSel();
+  return lg;
+}
+function renderLeagueSel(){
+  const sel=$("#leagueSel");
+  if(sel){
+    sel.innerHTML="";
+    for(const l of LEAGUES.list){
+      const o=document.createElement("option");
+      o.value=l.id; o.textContent=l.name;
+      if(l.id===LEAGUES.activeId) o.selected=true;
+      sel.appendChild(o);
+    }
+    const o=document.createElement("option");
+    o.value="__new"; o.textContent="+ New league…";
+    sel.appendChild(o);
+  }
+  const nm=$("#lgName"); if(nm) nm.value=(activeLeague()||{}).name||"";
+  const del=$("#lgDelete"); if(del) del.disabled = LEAGUES.list.length<2;
+  const cnt=$("#lgCount");
+  if(cnt) cnt.textContent = `${LEAGUES.list.length} league${LEAGUES.list.length===1?"":"s"} saved · `+
+    `the player pool and imports are shared; settings, keepers and the draft are per league`;
+}
 
 /* ============================ scoring ============================ */
 function scorePlayer(p, sc){
@@ -2915,6 +3036,52 @@ function bind(){
   document.querySelectorAll("nav.tabs button").forEach(b=>
     b.addEventListener("click",()=>showTab(b.dataset.tab)));
   $("#syncBtn").addEventListener("click",gotoSync);
+  $("#leagueSel").addEventListener("change",e=>{
+    if(e.target.value==="__new"){
+      const lg=addLeague(`League ${LEAGUES.list.length+1}`, true);
+      showTab("settings");
+      const nm=$("#lgName"); nm.focus(); nm.select();
+      toast(`Created "${lg.name}" — name it here; your player data carries over`);
+    }else switchLeague(e.target.value);
+  });
+  $("#lgRename").addEventListener("click",()=>{
+    const lg=activeLeague(), v=$("#lgName").value.trim();
+    if(!lg||!v) return;
+    lg.name=v; saveState(); renderLeagueSel(); toast("Renamed to "+v);
+  });
+  $("#lgNew").addEventListener("click",()=>{
+    const lg=addLeague(`League ${LEAGUES.list.length+1}`, true);
+    $("#lgName").focus(); $("#lgName").select();
+    toast(`Created "${lg.name}" — settings copied, draft is empty`);
+  });
+  $("#lgDup").addEventListener("click",()=>{
+    saveState();
+    const src=activeLeague(); if(!src) return;
+    const copy=JSON.parse(JSON.stringify(src));
+    copy.id=blankLeague().id; copy.name=src.name+" (copy)";
+    LEAGUES.list.push(copy); adoptLeague(copy);
+    settingsToForm(); recompute(); renderLeagueSel();
+    toast(`Duplicated as "${copy.name}"`);
+  });
+  let delArmed=null;
+  $("#lgDelete").addEventListener("click",()=>{     // two-click confirm, no modals
+    const lg=activeLeague();
+    if(!lg || LEAGUES.list.length<2) return;
+    if(!delArmed){
+      delArmed=setTimeout(()=>{ delArmed=null; $("#lgDelete").textContent="Delete";
+        $("#lgDelete").classList.remove("danger"); }, 4000);
+      $("#lgDelete").textContent="Delete for good?";
+      $("#lgDelete").classList.add("danger");
+      return;
+    }
+    clearTimeout(delArmed); delArmed=null;
+    $("#lgDelete").textContent="Delete"; $("#lgDelete").classList.remove("danger");
+    const name=lg.name;
+    LEAGUES.list=LEAGUES.list.filter(l=>l.id!==lg.id);
+    adoptLeague(LEAGUES.list[0]);
+    settingsToForm(); recompute(); renderLeagueSel();
+    toast(`Deleted "${name}"`);
+  });
   $("#tProjTile").addEventListener("click",()=>{
     showTab("draft");
     const card=$("#optimal").closest(".card");
@@ -3068,6 +3235,7 @@ function bind(){
 loadState();
 bind();
 settingsToForm();
+renderLeagueSel();
 recompute();
 
 // expose for headless tests
@@ -3077,6 +3245,7 @@ window.APP={get S(){return S},get M(){return M},get R(){return R},
   SYNC,applyExternalPicks,sleeperFind,sleeperLoad,sleeperSync,sleeperRefreshRanks,
   espnRead,espnApply,espnIngest,bridgeHref,
   yahooParse,yahooApply,normName,matchPlayer,buildNameIndex,
+  get LEAGUES(){return LEAGUES},switchLeague,addLeague,activeLeague,saveState,loadState,
   simulateRoster,simIfWon,outlookRoster,addKeeper,removeKeeper,findPoolPlayer,
   recapData,recapText,keeperAdvice,STRATEGIES,solveStrategyAuction,solveStrategySnake};
 </script>
