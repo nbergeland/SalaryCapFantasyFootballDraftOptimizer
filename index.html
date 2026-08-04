@@ -91,6 +91,8 @@ th.sorted{color:var(--ink)}
 td.l,th.l{text-align:left}
 tr.inopt td{background:color-mix(in srgb,var(--accent) 8%,transparent)}
 tr.gone td{color:var(--muted);text-decoration:line-through}
+tr.dnd td{opacity:.55}
+tr.dnd td.l{text-decoration:line-through solid var(--bad) 1px}
 tr.mine td{color:var(--good);font-weight:600}
 tr.sel td{outline:2px solid var(--accent);outline-offset:-2px}
 .pos{display:inline-block;min-width:30px;text-align:center;border-radius:6px;
@@ -277,6 +279,7 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
     <span class="verdict" id="blockVerdict"></span>
     <span class="pill" id="blockSim" title="Monte Carlo what-if vs your current outlook (same random seed)"></span>
     <span class="spacer"></span>
+    <button id="blockDnd" title="Do Not Draft: never recommend this player to me (he stays on the board for everyone else)">⊘ DND</button>
     <label class="note" title="Record as a pre-draft keeper: fills a roster and consumes budget without advancing the pick counter"><input type="checkbox" id="blockKeeper"> keeper</label>
     <label id="blockPriceWrap">$ <input type="number" id="blockPrice" min="1" value="1" style="width:64px"></label>
     <button class="primary" id="blockMine">I won it</button>
@@ -293,11 +296,14 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         <h2>Player pool</h2>
         <p class="note" id="dataMeta"></p>
         <p class="note">Fine-tune any player for your season: <b>boost/fade</b> (%) folds in
-          news the projections haven't caught up to; <b>OUT</b> removes them from
-          optimization without deleting them.</p>
+          news the projections haven't caught up to; <b>OUT</b> removes a player from the
+          market entirely (injured, not playing); <b>DND</b> is your Do Not Draft list —
+          he stays on the board and still counts toward market prices and scarcity, but
+          the model will never recommend him to you.</p>
         <div class="tblwrap" style="max-height:480px"><table id="editTable">
           <thead><tr><th class="l">Player</th><th>Pos</th><th>AAV</th><th>Proj</th>
-          <th>Boost %</th><th>OUT</th></tr></thead><tbody></tbody>
+          <th>Boost %</th><th title="Injured / not playing — removed from the market entirely">OUT</th>
+          <th title="Do Not Draft — never recommended to you, but still on the board for everyone else">DND</th></tr></thead><tbody></tbody>
         </table></div>
       </div>
       <div class="card">
@@ -632,7 +638,7 @@ function freshPlayer(o){
   return {name:o.name, team:o.team||"", pos:o.pos, aav:Math.max(1,Math.round(o.aav||1)),
     pts:+o.pts||0, stats:o.stats||null, floor:o.floor??null, ceil:o.ceil??null,
     adp:o.adp??null, ecr:o.ecr??null, bye:o.bye??null, note:o.note||"", src:o.src||"",
-    boost:0, out:false, drafted:null};
+    boost:0, out:false, dnd:false, drafted:null};
 }
 /* =====================================================================
    LEAGUES — the player pool (projections, values, news) is shared, so you
@@ -648,17 +654,19 @@ function blankLeague(name){
 function captureMarks(){          // only players that differ from the pool default
   const m={};
   for(const p of S.players){
-    if(p.drafted || p.boost || p.out)
-      m[playerId(p)] = {drafted:p.drafted||null, boost:p.boost||0, out:!!p.out};
+    if(p.drafted || p.boost || p.out || p.dnd)
+      m[playerId(p)] = {drafted:p.drafted||null, boost:p.boost||0, out:!!p.out,
+        dnd:!!p.dnd};
   }
   return m;
 }
 function applyMarks(marks){
-  for(const p of S.players){ p.drafted=null; p.boost=0; p.out=false; }
+  for(const p of S.players){ p.drafted=null; p.boost=0; p.out=false; p.dnd=false; }
   for(const p of S.players){
     const m = marks && marks[playerId(p)];
     if(!m) continue;
     p.drafted = m.drafted||null; p.boost = m.boost||0; p.out = !!m.out;
+    p.dnd = !!m.dnd;
   }
 }
 function adoptLeague(lg){
@@ -688,7 +696,7 @@ function loadState(){
       const s = JSON.parse(legacy);
       if(s && s.players && s.players.length){
         S.players = s.players.map(p=>Object.assign(freshPlayer(p),
-          {drafted:p.drafted||null, boost:p.boost||0, out:!!p.out}));
+          {drafted:p.drafted||null, boost:p.boost||0, out:!!p.out, dnd:!!p.dnd}));
         const lg = blankLeague("My league");
         lg.settings = Object.assign(defaultSettings(), s.settings);
         lg.log = s.log||[]; lg.kpCands = s.kpCands||[]; lg.marks = {};
@@ -1001,7 +1009,7 @@ function candidatesByPos(excludeId){
   const by = {};
   for(const pos of POSITIONS){
     by[pos] = M.rows
-      .filter(r=>r.p.pos===pos && !r.p.out && !r.p.drafted
+      .filter(r=>r.p.pos===pos && !r.p.out && !r.p.dnd && !r.p.drafted
                  && playerId(r.p)!==excludeId)
       .sort((a,b)=>b.rpts-a.rpts).slice(0,90)
       .map(r=>({cost:r.adj, val:r.rpts, row:r}));
@@ -1092,7 +1100,7 @@ function computeMaxBids(base){
     });
   };
   for(const r of M.rows){
-    if(r.p.drafted || r.p.out) continue;
+    if(r.p.drafted || r.p.out || r.p.dnd) continue;
     const id = playerId(r.p), pos=r.p.pos;
     const m = minus[pos];
     if(!m){ bids.set(id, 0); continue; }
@@ -1149,7 +1157,7 @@ function roundDotPick(n){
 // undrafted players plausibly still on the board at overall pick n
 function availableAt(n, used){
   const buf=snakeBuffer();
-  return M.rows.filter(r=>!r.p.drafted && !r.p.out
+  return M.rows.filter(r=>!r.p.drafted && !r.p.out && !r.p.dnd
     && !(used&&used.has(playerId(r.p))) && r.mrank > n-buf);
 }
 // projected plan for my remaining picks. At each pick, take the player whose
@@ -1171,7 +1179,7 @@ function solveSnakePlan(){
     // at the CURRENT pick everyone undrafted is truly on the board (fallers
     // included); the rank model only gates FUTURE picks
     const avail = (n<=cur
-      ? M.rows.filter(r=>!r.p.drafted && !r.p.out && !used.has(playerId(r.p)))
+      ? M.rows.filter(r=>!r.p.drafted && !r.p.out && !r.p.dnd && !used.has(playerId(r.p)))
       : availableAt(n, used));
     // best two per position at my next pick (to price "waiting")
     const top2={};
@@ -1559,7 +1567,7 @@ function solveStrategySnake(key){
     const n=picks[i], rd=Math.ceil(n/T);
     const nxt=i+1<picks.length? picks[i+1] : n+2*T;
     const avail=(n<=cur
-      ? M.rows.filter(r=>!r.p.drafted&&!r.p.out&&!used.has(playerId(r.p)))
+      ? M.rows.filter(r=>!r.p.drafted&&!r.p.out&&!r.p.dnd&&!used.has(playerId(r.p)))
       : availableAt(n, used));
     const top2={};
     for(const r of availableAt(nxt, used)){
@@ -1909,12 +1917,12 @@ async function importXLSX(buf, mode, w){
 }
 function exportCSV(){
   const sc=S.settings.scoring;
-  const lines=[["Name","Team","Pos","AAV","Proj","PositionalScarcity%","Fair$","Adj$","MaxBid","Boost%","Out","Drafted","Price","Mine"].join(",")];
+  const lines=[["Name","Team","Pos","AAV","Proj","PositionalScarcity%","Fair$","Adj$","MaxBid","Boost%","Out","DND","Drafted","Price","Mine"].join(",")];
   for(const r of M.rows){
     const id=playerId(r.p);
     lines.push([`"${r.p.name}"`,r.p.team,r.p.pos,r.p.aav,r.pts0.toFixed(1),
       (r.leftAfter??""),Math.round(r.fair),r.adj,(R.bids.get(id)??""),r.p.boost||0,
-      r.p.out?1:"",r.p.drafted?1:"",r.p.drafted?r.p.drafted.price:"",
+      r.p.out?1:"",r.p.dnd?1:"",r.p.drafted?1:"",r.p.drafted?r.p.drafted.price:"",
       r.p.drafted&&r.p.drafted.mine?1:""].join(","));
   }
   const blob=new Blob([lines.join("\n")],{type:"text/csv"});
@@ -2031,12 +2039,15 @@ function renderPool(){
       inOpt.has(id)?"inopt":"", S.sel===id?"sel":""].join(" ").trim();
     const availCell = ()=>{ if(r.p.drafted) return "—";
       const [cls,txt]=availClass(r); return `<span class="${cls}">${txt}</span>`; };
-    tr.innerHTML = `<td class="l">${esc(r.p.name)}${r.p.out?' <span class="pill">OUT</span>':""}${r.p.note?` <span class="pill" title="${esc(r.p.note)}">ⓘ</span>`:""}</td>
+    if(r.p.dnd) tr.classList.add("dnd");
+    tr.innerHTML = `<td class="l">${esc(r.p.name)}${r.p.out?' <span class="pill">OUT</span>':""}${r.p.dnd?' <span class="pill down" title="On your Do Not Draft list — never recommended to you">DND</span>':""}${r.p.note?` <span class="pill" title="${esc(r.p.note)}">ⓘ</span>`:""}</td>
       <td>${esc(r.p.team)}</td><td><span class="pos ${r.p.pos}">${r.p.pos}</span></td>
       <td>${snake? "#"+r.mrank : fmt$(r.p.aav)}</td>
       <td>${snake? roundDotPick(Math.min(r.mrank, S.settings.teams*rosterSizeTotal())).split(".")[0] : "<b>"+fmt$(r.adj)+"</b>"}</td>
       <td>${r.rpts.toFixed(0)}</td><td>${r.leftAfter!=null?r.leftAfter+"%":"—"}</td>
-      <td>${snake? availCell() : (r.p.drafted?"—": bid===0?'<span class="down">pass</span>':bid!=null?"<b>"+fmt$(bid)+"</b>":"…")}</td>
+      <td>${r.p.dnd? '<span class="down">DND</span>'
+        : snake? availCell()
+        : (r.p.drafted?"—": bid===0?'<span class="down">pass</span>':bid!=null?"<b>"+fmt$(bid)+"</b>":"…")}</td>
       <td>${r.p.drafted?
         `<button class="small" data-act="undo" data-id="${id}">undo</button>`:
         `<button class="small" data-act="sel" data-id="${id}">block ▸</button>`}</td>`;
@@ -2235,7 +2246,7 @@ function renderNominate(){
     const fits=r=> assign.remaining[r.p.pos]>0
       || (assign.flexOpen>0 && FLEX_POS.includes(r.p.pos))
       || (S.settings.bench-assign.bench.length)>0;
-    const ideas=M.rows.filter(r=>!r.p.drafted && !r.p.out && fits(r))
+    const ideas=M.rows.filter(r=>!r.p.drafted && !r.p.out && !r.p.dnd && fits(r))
       .sort((a,b)=>b.rpts-a.rpts).slice(0,40)
       .map(r=>({r, u:snakeUrgency(r, nxt)}))
       .sort((a,b)=>b.u.dropoff-a.u.dropoff).slice(0,6);
@@ -2369,11 +2380,14 @@ function renderData(){
       <td><span class="pos ${r.p.pos}">${r.p.pos}</span></td>
       <td>${fmt$(r.p.aav)}</td><td>${r.pts0.toFixed(0)}</td>
       <td><input type="number" step="5" min="-90" max="90" value="${r.p.boost||0}" style="width:64px"></td>
-      <td><input type="checkbox" ${r.p.out?"checked":""}></td>`;
+      <td><input type="checkbox" data-k="out" ${r.p.out?"checked":""}></td>
+      <td><input type="checkbox" data-k="dnd" ${r.p.dnd?"checked":""}></td>`;
     tr.querySelector("input[type=number]").addEventListener("change",e=>{
       r.p.boost=+e.target.value||0; recompute();});
-    tr.querySelector("input[type=checkbox]").addEventListener("change",e=>{
+    tr.querySelector('input[data-k="out"]').addEventListener("change",e=>{
       r.p.out=e.target.checked; recompute();});
+    tr.querySelector('input[data-k="dnd"]').addEventListener("change",e=>{
+      r.p.dnd=e.target.checked; recompute();});
     tb.appendChild(tr);
   }
   $("#newsAsOf").textContent = `Consensus & news snapshot as of ${BUNDLED.meta.asOf} — verify against current reporting before draft day.`;
@@ -2392,7 +2406,20 @@ function selectPlayer(id){
   if(!r || r.p.drafted){ S.sel=null; $("#block").classList.add("hidden"); renderPool(); return; }
   $("#block").classList.remove("hidden");
   $("#blockWho").textContent = `${r.p.name} (${r.p.team} ${r.p.pos})`;
+  const dndBtn=$("#blockDnd");
+  dndBtn.textContent = r.p.dnd? "✓ on DND list" : "⊘ DND";
+  dndBtn.classList.toggle("danger", !!r.p.dnd);
   const v=$("#blockVerdict");
+  if(r.p.dnd){
+    $("#blockAav").textContent = `${r.p.pos} · ${r.rpts.toFixed(0)} pts · market ${fmt$(r.adj)}`;
+    v.textContent="DO NOT DRAFT — on your no-list"; v.className="verdict down";
+    $("#blockPriceWrap").classList.toggle("hidden", isSnake());
+    $("#blockMine").textContent = isSnake()? "My pick" : "I won it";
+    $("#blockGone").textContent = isSnake()? "Taken" : "Someone else";
+    $("#blockSim").textContent="";
+    renderPool();
+    return;
+  }
   if(isSnake()){
     const cur=currentOverallPick(), nxt=nextMyPickAfter(cur), buf=snakeBuffer();
     $("#blockAav").textContent = `Mkt #${r.mrank} · ${r.rpts.toFixed(0)} pts · ${r.p.pos} ${M.posValue[r.p.pos]?.pct??0}% left${r.p.bye?` · bye ${r.p.bye}`:""}`;
@@ -3172,6 +3199,16 @@ function bind(){
   }));
   $("#blockPrice").addEventListener("input",()=>{   // live what-if as the bid moves
     if(S.sel){ const r=M.rows.find(r=>playerId(r.p)===S.sel); if(r) updateBlockSim(S.sel, r); }
+  });
+  $("#blockDnd").addEventListener("click",()=>{
+    const r=M.rows.find(r=>playerId(r.p)===S.sel);
+    if(!r) return;
+    r.p.dnd=!r.p.dnd;
+    toast(r.p.dnd
+      ? `${r.p.name} added to Do Not Draft — he'll never be recommended to you`
+      : `${r.p.name} is back on your board`);
+    recompute();
+    if(S.sel) selectPlayer(S.sel);
   });
   $("#blockMine").addEventListener("click",()=>blockAction(true));
   $("#blockGone").addEventListener("click",()=>blockAction(false));
