@@ -2650,6 +2650,16 @@ function espnUrl(){
     `/segments/0/leagues/${id}?view=mDraftDetail&view=mTeam&view=mRoster&view=mSettings`;
 }
 function espnIngest(data, live){
+  // ESPN answers auth/id failures with valid JSON that has no teams — say so
+  // plainly instead of reporting "Read OK: 0 teams"
+  if(!data || !Array.isArray(data.teams) || !data.teams.length){
+    const msg = data && (data.messages||data.details||data.message);
+    esStatus("That JSON has no teams in it"+(msg? ` — ESPN said: ${
+      Array.isArray(msg)? msg.join("; ") : msg}` : "")+
+      ". Check the League ID, make sure you're logged into ESPN in this browser, "+
+      "and that you copied the whole page from the league JSON link above.");
+    return;
+  }
   SYNC.es.data=data;
   const byId=new Map();
   for(const t of (data.teams||[]))
@@ -2741,6 +2751,13 @@ function bridgeHref(kind){
 function refreshBridgeLinks(){
   const es=$("#esBridge"), yh=$("#yhBridge");
   const hosted=location.protocol.startsWith("http");
+  const jsonLink=$("#esLink");
+  if(jsonLink){                       // a blank league id builds a 404 URL
+    const id=$("#esLeague").value.trim();
+    jsonLink.style.opacity = id? 1 : .45;
+    jsonLink.title = id? "Opens your league's JSON — log into ESPN in this browser first"
+                       : "Enter your League ID first";
+  }
   if(es){
     const h=hosted? bridgeHref("espn") : null;
     es.href=h||"#";
@@ -3192,6 +3209,23 @@ function bind(){
       yhStatus(`Live bridge ✓ ${new Date().toLocaleTimeString()} — ${res.applied} new, `+
         `${res.skipped} already in`+
         (picks.length? "" : " · no picks recognized — keep the Draft Results panel visible"));
+    }
+  });
+  // A bookmarklet clicked *inside* this page would run on our origin, where
+  // ESPN/Yahoo block the request — explain instead of failing silently.
+  for(const [sel,label] of [["#esBridge","ESPN"],["#yhBridge","Yahoo"]]){
+    const a=$(sel); if(!a) continue;
+    a.addEventListener("click",e=>{
+      e.preventDefault();
+      toast(`Drag the ${label} bridge to your bookmarks bar, then click it from your `+
+        `logged-in ${label} tab — clicking it here can't reach ${label}.`);
+    });
+  }
+  $("#esLink").addEventListener("click",e=>{
+    if(!$("#esLeague").value.trim()){
+      e.preventDefault();
+      toast("Enter your ESPN League ID first — it's the number in your league's URL.");
+      $("#esLeague").focus();
     }
   });
   $("#esRead").addEventListener("click",espnRead);
