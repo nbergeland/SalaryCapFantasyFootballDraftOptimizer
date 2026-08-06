@@ -140,11 +140,25 @@ live re-optimization and instant max-bid advice possible. Monte Carlo sits on to
 |---|---|
 | `index.html` | The entire app — self-contained, bundled 2026 data |
 | `.github/workflows/pages.yml` | Auto-deploys the app to GitHub Pages on every push to `main` |
+| `.nojekyll` | Lets Pages serve straight from a branch — see below |
 | `optimizer.py` | Python optimization engine (PuLP) |
 | `DraftOptimizer.ipynb` | Executed reference notebook |
 | `MODELING.md` | Modeling evaluation & methodology |
 | `auc_values_ALL.xlsx` | Legacy player sheet (still imports directly) |
 | `NU_MSDS460_FFBSalaryCapOptimizer.ipynb` | Original notebook, kept for history (superseded) |
+
+### If a deploy gets stuck
+
+Occasionally an Actions job is queued but never assigned a runner — `runner_id: 0`,
+zero billable time, no logs — and errors out ~15 minutes later. It's intermittent and
+unrelated to this repo's code; two identical dispatches seconds apart can behave
+differently. **Re-run the workflow** (Actions → *Deploy BERG SHEETS to GitHub Pages* →
+*Run workflow*) and it normally picks up a runner.
+
+If it won't budge on draft day, bypass Actions entirely: **Settings → Pages → Source →
+Deploy from a branch → `main` / `/ (root)`**. `index.html` is fully self-contained and
+needs no build step, so GitHub serves it directly off its own infrastructure with no
+runner involved. `.nojekyll` is committed so this works immediately.
 
 ## Origins
 
