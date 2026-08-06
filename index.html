@@ -91,6 +91,8 @@ th.sorted{color:var(--ink)}
 td.l,th.l{text-align:left}
 tr.inopt td{background:color-mix(in srgb,var(--accent) 8%,transparent)}
 tr.gone td{color:var(--muted);text-decoration:line-through}
+tr.star td{background:color-mix(in srgb,var(--good) 10%,transparent)}
+tr.star td.l{font-weight:600}
 tr.dnd td{opacity:.55}
 tr.dnd td.l{text-decoration:line-through solid var(--bad) 1px}
 tr.mine td{color:var(--good);font-weight:600}
@@ -279,6 +281,8 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
     <span class="verdict" id="blockVerdict"></span>
     <span class="pill" id="blockSim" title="Monte Carlo what-if vs your current outlook (same random seed)"></span>
     <span class="spacer"></span>
+    <button id="blockStar" title="Target: highlight this player on my board">☆ Target</button>
+    <button id="blockNom" title="Nominate: someone I don't want — throw him out early to drain rival budgets">📣 Nominate</button>
     <button id="blockDnd" title="Do Not Draft: never recommend this player to me (he stays on the board for everyone else)">⊘ DND</button>
     <label class="note" title="Record as a pre-draft keeper: fills a roster and consumes budget without advancing the pick counter"><input type="checkbox" id="blockKeeper"> keeper</label>
     <label id="blockPriceWrap">$ <input type="number" id="blockPrice" min="1" value="1" style="width:64px"></label>
@@ -303,7 +307,9 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         <div class="tblwrap" style="max-height:480px"><table id="editTable">
           <thead><tr><th class="l">Player</th><th>Pos</th><th>AAV</th><th>Proj</th>
           <th>Boost %</th><th title="Injured / not playing — removed from the market entirely">OUT</th>
-          <th title="Do Not Draft — never recommended to you, but still on the board for everyone else">DND</th></tr></thead><tbody></tbody>
+          <th title="Do Not Draft — never recommended to you, but still on the board for everyone else">DND</th>
+          <th title="Target — highlight this player on my board">★</th>
+          <th title="Nominate — someone I don't want; throw him out to drain rival budgets">📣</th></tr></thead><tbody></tbody>
         </table></div>
       </div>
       <div class="card">
@@ -570,8 +576,11 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         all positions live, and the "Pos left" column shows what would remain after
         each specific player goes — when RB drops under ~30% left, the tier cliff
         is on you.</li>
-      <li><b>Nominating:</b> use <i>Nomination ideas</i> — expensive players you don't
-        want. Money they burn elsewhere is discount on your targets.</li>
+      <li><b>Targets and nominations:</b> star (★) the players you want — they highlight
+        on the board and the ★ filter chip shows just your list. Mark players you
+        <i>don't</i> want with 📣 and they queue up in <i>Nomination ideas</i>, ahead of
+        your DND players and the app's own suggestions. Money rivals burn on them is a
+        discount on your targets.</li>
       <li><b>Strategy lab:</b> toggle build archetypes — BBQ (two studs ~$115
         combined, then ride the price crash), Stars &amp; Scrubs, Balanced, Hero RB,
         Zero RB, Robust RB, WR Heavy, $5 QB, Wait on QB, Elite TE — to see how the model
@@ -638,7 +647,7 @@ function freshPlayer(o){
   return {name:o.name, team:o.team||"", pos:o.pos, aav:Math.max(1,Math.round(o.aav||1)),
     pts:+o.pts||0, stats:o.stats||null, floor:o.floor??null, ceil:o.ceil??null,
     adp:o.adp??null, ecr:o.ecr??null, bye:o.bye??null, note:o.note||"", src:o.src||"",
-    boost:0, out:false, dnd:false, drafted:null};
+    boost:0, out:false, dnd:false, star:false, nom:false, drafted:null};
 }
 /* =====================================================================
    LEAGUES — the player pool (projections, values, news) is shared, so you
@@ -654,19 +663,20 @@ function blankLeague(name){
 function captureMarks(){          // only players that differ from the pool default
   const m={};
   for(const p of S.players){
-    if(p.drafted || p.boost || p.out || p.dnd)
+    if(p.drafted || p.boost || p.out || p.dnd || p.star || p.nom)
       m[playerId(p)] = {drafted:p.drafted||null, boost:p.boost||0, out:!!p.out,
-        dnd:!!p.dnd};
+        dnd:!!p.dnd, star:!!p.star, nom:!!p.nom};
   }
   return m;
 }
 function applyMarks(marks){
-  for(const p of S.players){ p.drafted=null; p.boost=0; p.out=false; p.dnd=false; }
+  for(const p of S.players){ p.drafted=null; p.boost=0; p.out=false; p.dnd=false;
+    p.star=false; p.nom=false; }
   for(const p of S.players){
     const m = marks && marks[playerId(p)];
     if(!m) continue;
     p.drafted = m.drafted||null; p.boost = m.boost||0; p.out = !!m.out;
-    p.dnd = !!m.dnd;
+    p.dnd = !!m.dnd; p.star = !!m.star; p.nom = !!m.nom;
   }
 }
 function adoptLeague(lg){
@@ -696,7 +706,8 @@ function loadState(){
       const s = JSON.parse(legacy);
       if(s && s.players && s.players.length){
         S.players = s.players.map(p=>Object.assign(freshPlayer(p),
-          {drafted:p.drafted||null, boost:p.boost||0, out:!!p.out, dnd:!!p.dnd}));
+          {drafted:p.drafted||null, boost:p.boost||0, out:!!p.out, dnd:!!p.dnd,
+           star:!!p.star, nom:!!p.nom}));
         const lg = blankLeague("My league");
         lg.settings = Object.assign(defaultSettings(), s.settings);
         lg.log = s.log||[]; lg.kpCands = s.kpCands||[]; lg.marks = {};
@@ -1917,12 +1928,12 @@ async function importXLSX(buf, mode, w){
 }
 function exportCSV(){
   const sc=S.settings.scoring;
-  const lines=[["Name","Team","Pos","AAV","Proj","PositionalScarcity%","Fair$","Adj$","MaxBid","Boost%","Out","DND","Drafted","Price","Mine"].join(",")];
+  const lines=[["Name","Team","Pos","AAV","Proj","PositionalScarcity%","Fair$","Adj$","MaxBid","Boost%","Out","DND","Target","Nominate","Drafted","Price","Mine"].join(",")];
   for(const r of M.rows){
     const id=playerId(r.p);
     lines.push([`"${r.p.name}"`,r.p.team,r.p.pos,r.p.aav,r.pts0.toFixed(1),
       (r.leftAfter??""),Math.round(r.fair),r.adj,(R.bids.get(id)??""),r.p.boost||0,
-      r.p.out?1:"",r.p.dnd?1:"",r.p.drafted?1:"",r.p.drafted?r.p.drafted.price:"",
+      r.p.out?1:"",r.p.dnd?1:"",r.p.star?1:"",r.p.nom?1:"",r.p.drafted?1:"",r.p.drafted?r.p.drafted.price:"",
       r.p.drafted&&r.p.drafted.mine?1:""].join(","));
   }
   const blob=new Blob([lines.join("\n")],{type:"text/csv"});
@@ -2004,7 +2015,9 @@ function renderPool(){
   const hide = $("#hideDrafted").checked;
   const inOpt = new Set(R.sol? R.sol.chosen.map(r=>playerId(r.p)):[]);
   let rows = M.rows.filter(r=>{
-    if(posFilter==="FLEX"){ if(!FLEX_POS.includes(r.p.pos)) return false; }
+    if(posFilter==="★"){ if(!r.p.star) return false; }
+    else if(posFilter==="📣"){ if(!r.p.nom && !r.p.dnd) return false; }
+    else if(posFilter==="FLEX"){ if(!FLEX_POS.includes(r.p.pos)) return false; }
     else if(posFilter!=="ALL" && r.p.pos!==posFilter) return false;
     if(hide && r.p.drafted) return false;
     if(q && !(r.p.name.toLowerCase().includes(q)||r.p.team.toLowerCase().includes(q))) return false;
@@ -2040,7 +2053,8 @@ function renderPool(){
     const availCell = ()=>{ if(r.p.drafted) return "—";
       const [cls,txt]=availClass(r); return `<span class="${cls}">${txt}</span>`; };
     if(r.p.dnd) tr.classList.add("dnd");
-    tr.innerHTML = `<td class="l">${esc(r.p.name)}${r.p.out?' <span class="pill">OUT</span>':""}${r.p.dnd?' <span class="pill down" title="On your Do Not Draft list — never recommended to you">DND</span>':""}${r.p.note?` <span class="pill" title="${esc(r.p.note)}">ⓘ</span>`:""}</td>
+    if(r.p.star) tr.classList.add("star");
+    tr.innerHTML = `<td class="l">${esc(r.p.name)}${r.p.out?' <span class="pill">OUT</span>':""}${r.p.star?' <span class="pill up" title="One of your targets">★</span>':""}${r.p.nom?' <span class="pill" title="On your nomination list — throw him out to drain rival budgets">📣</span>':""}${r.p.dnd?' <span class="pill down" title="On your Do Not Draft list — never recommended to you">DND</span>':""}${r.p.note?` <span class="pill" title="${esc(r.p.note)}">ⓘ</span>`:""}</td>
       <td>${esc(r.p.team)}</td><td><span class="pos ${r.p.pos}">${r.p.pos}</span></td>
       <td>${snake? "#"+r.mrank : fmt$(r.p.aav)}</td>
       <td>${snake? roundDotPick(Math.min(r.mrank, S.settings.teams*rosterSizeTotal())).split(".")[0] : "<b>"+fmt$(r.adj)+"</b>"}</td>
@@ -2050,13 +2064,15 @@ function renderPool(){
         : (r.p.drafted?"—": bid===0?'<span class="down">pass</span>':bid!=null?"<b>"+fmt$(bid)+"</b>":"…")}</td>
       <td>${r.p.drafted?
         `<button class="small" data-act="undo" data-id="${id}">undo</button>`:
-        `<button class="small" data-act="sel" data-id="${id}">block ▸</button>`}</td>`;
+        `<button class="small" data-act="sel" data-id="${id}">block ▸</button>
+         <button class="small" data-act="star" title="${r.p.star?"Remove from targets":"Add to my targets"}">${r.p.star?"★":"☆"}</button>`}</td>`;
     tr.addEventListener("click",e=>{
       if(e.target.dataset.act==="undo"){
         if(r.p.drafted&&r.p.drafted.keeper) removeKeeper(r.p);
         else undo(S.log.findIndex(x=>x.id===id));
         return;
       }
+      if(e.target.dataset.act==="star"){ r.p.star=!r.p.star; recompute(); return; }
       selectPlayer(id);
     });
     tb.appendChild(tr);
@@ -2262,17 +2278,30 @@ function renderNominate(){
     return;
   }
   head.textContent="Nomination ideas";
-  note.textContent="Big names you should not buy — nominate them to drain other budgets.";
+  note.textContent="Players you don't want — throw them out early so someone else spends. "+
+    "Your 📣 list comes first, then your DND players, then suggestions.";
   const inOpt=new Set(R.sol? R.sol.chosen.map(r=>playerId(r.p)):[]);
-  const ideas = M.rows
-    .filter(r=>!r.p.drafted && !r.p.out && !inOpt.has(playerId(r.p)))
-    .filter(r=>{const b=R.bids.get(playerId(r.p)); return b!=null && b < r.p.aav*0.6;})
-    .sort((a,b)=>b.p.aav-a.p.aav).slice(0,6);
-  if(!ideas.length){ el.innerHTML='<p class="note">Nothing juicy right now.</p>'; return;}
-  for(const r of ideas){
+  const live=r=>!r.p.drafted && !r.p.out;
+  const seen=new Set();
+  const take=(rows,why)=>rows.filter(r=>{
+      const id=playerId(r.p);
+      if(seen.has(id)) return false; seen.add(id); return true;
+    }).map(r=>({r,why}));
+  const mine=take(M.rows.filter(r=>live(r) && r.p.nom).sort((a,b)=>b.p.aav-a.p.aav), "yours");
+  const dnd =take(M.rows.filter(r=>live(r) && r.p.dnd).sort((a,b)=>b.p.aav-a.p.aav), "DND");
+  const auto=take(M.rows.filter(r=>live(r) && !inOpt.has(playerId(r.p)))
+      .filter(r=>{const b=R.bids.get(playerId(r.p)); return b!=null && b < r.p.aav*0.6;})
+      .sort((a,b)=>b.p.aav-a.p.aav), "value trap");
+  const ideas=[...mine,...dnd,...auto].slice(0,8);
+  if(!ideas.length){ el.innerHTML='<p class="note">Nothing juicy right now — mark players with 📣 as you spot them.</p>'; return;}
+  for(const {r,why} of ideas){
+    const bid=R.bids.get(playerId(r.p));
     const d=document.createElement("div"); d.className="roster-slot";
-    d.innerHTML=`<span class="nm"><span class="pos ${r.p.pos}">${r.p.pos}</span> ${esc(r.p.name)}</span>
-      <span>room pays ~${fmt$(r.adj)} · you'd pay ${R.bids.get(playerId(r.p))===0?"nothing":fmt$(R.bids.get(playerId(r.p)))}</span>`;
+    d.style.cursor="pointer";
+    d.innerHTML=`<span class="nm"><span class="pos ${r.p.pos}">${r.p.pos}</span> ${esc(r.p.name)}
+      <span class="pill${why==="yours"?" up":""}">${why}</span></span>
+      <span>room pays ~${fmt$(r.adj)}${bid!=null? ` · you'd pay ${bid===0?"nothing":fmt$(bid)}`:""}</span>`;
+    d.addEventListener("click",()=>selectPlayer(playerId(r.p)));
     el.appendChild(d);
   }
 }
@@ -2381,13 +2410,19 @@ function renderData(){
       <td>${fmt$(r.p.aav)}</td><td>${r.pts0.toFixed(0)}</td>
       <td><input type="number" step="5" min="-90" max="90" value="${r.p.boost||0}" style="width:64px"></td>
       <td><input type="checkbox" data-k="out" ${r.p.out?"checked":""}></td>
-      <td><input type="checkbox" data-k="dnd" ${r.p.dnd?"checked":""}></td>`;
+      <td><input type="checkbox" data-k="dnd" ${r.p.dnd?"checked":""}></td>
+      <td><input type="checkbox" data-k="star" ${r.p.star?"checked":""}></td>
+      <td><input type="checkbox" data-k="nom" ${r.p.nom?"checked":""}></td>`;
     tr.querySelector("input[type=number]").addEventListener("change",e=>{
       r.p.boost=+e.target.value||0; recompute();});
     tr.querySelector('input[data-k="out"]').addEventListener("change",e=>{
       r.p.out=e.target.checked; recompute();});
     tr.querySelector('input[data-k="dnd"]').addEventListener("change",e=>{
       r.p.dnd=e.target.checked; recompute();});
+    tr.querySelector('input[data-k="star"]').addEventListener("change",e=>{
+      r.p.star=e.target.checked; recompute();});
+    tr.querySelector('input[data-k="nom"]').addEventListener("change",e=>{
+      r.p.nom=e.target.checked; recompute();});
     tb.appendChild(tr);
   }
   $("#newsAsOf").textContent = `Consensus & news snapshot as of ${BUNDLED.meta.asOf} — verify against current reporting before draft day.`;
@@ -2409,6 +2444,12 @@ function selectPlayer(id){
   const dndBtn=$("#blockDnd");
   dndBtn.textContent = r.p.dnd? "✓ on DND list" : "⊘ DND";
   dndBtn.classList.toggle("danger", !!r.p.dnd);
+  const starBtn=$("#blockStar");
+  starBtn.textContent = r.p.star? "★ Targeted" : "☆ Target";
+  starBtn.classList.toggle("primary", !!r.p.star);
+  const nomBtn=$("#blockNom");
+  nomBtn.textContent = r.p.nom? "📣 On nom list" : "📣 Nominate";
+  nomBtn.classList.toggle("primary", !!r.p.nom);
   const v=$("#blockVerdict");
   if(r.p.dnd){
     $("#blockAav").textContent = `${r.p.pos} · ${r.rpts.toFixed(0)} pts · market ${fmt$(r.adj)}`;
@@ -3182,7 +3223,7 @@ function bind(){
     card.classList.remove("flash"); void card.offsetWidth; card.classList.add("flash");
   });
   const chips=$("#posChips");
-  for(const p of ["ALL","QB","RB","WR","TE","FLEX","K","DST"]){
+  for(const p of ["ALL","QB","RB","WR","TE","FLEX","K","DST","★","📣"]){
     const c=document.createElement("button");
     c.className="chip"+(p==="ALL"?" active":""); c.textContent=p;
     c.addEventListener("click",()=>{ posFilter=p;
@@ -3199,6 +3240,20 @@ function bind(){
   }));
   $("#blockPrice").addEventListener("input",()=>{   // live what-if as the bid moves
     if(S.sel){ const r=M.rows.find(r=>playerId(r.p)===S.sel); if(r) updateBlockSim(S.sel, r); }
+  });
+  $("#blockStar").addEventListener("click",()=>{
+    const r=M.rows.find(r=>playerId(r.p)===S.sel); if(!r) return;
+    r.p.star=!r.p.star;
+    toast(r.p.star? `★ ${r.p.name} added to your targets`
+                  : `${r.p.name} removed from targets`);
+    recompute(); if(S.sel) selectPlayer(S.sel);
+  });
+  $("#blockNom").addEventListener("click",()=>{
+    const r=M.rows.find(r=>playerId(r.p)===S.sel); if(!r) return;
+    r.p.nom=!r.p.nom;
+    toast(r.p.nom? `📣 ${r.p.name} queued to nominate — let someone else pay`
+                 : `${r.p.name} off the nomination list`);
+    recompute(); if(S.sel) selectPlayer(S.sel);
   });
   $("#blockDnd").addEventListener("click",()=>{
     const r=M.rows.find(r=>playerId(r.p)===S.sel);
