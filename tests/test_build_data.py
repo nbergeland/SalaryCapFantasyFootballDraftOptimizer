@@ -178,6 +178,17 @@ class FixtureBuild(unittest.TestCase):
         chase = by_name(self.players, "Ja'Marr Chase")
         self.assertNotIn("projection split", chase["note"])   # 373 vs 366 is fine
 
+    def test_negative_projection_is_clamped_to_zero(self):
+        # Sleeper really does this: return specialists (e.g. Derius Davis)
+        # project slightly negative in offense-only scoring, which tripped the
+        # pts >= 0 validation gate on the first live build.
+        recs = {"x": {"sleeper_pts": -0.9, "espn_pts": None, "flags": [], "name": "X", "pos": "WR"}}
+        bd.blend_projections(recs, {})
+        self.assertEqual(recs["x"]["pts"], 0.0)
+        recs = {"x": {"sleeper_pts": -0.9, "espn_pts": 4.0, "flags": [], "name": "X", "pos": "WR"}}
+        bd.blend_projections(recs, {})
+        self.assertAlmostEqual(recs["x"]["pts"], 0.4 * 4.0, places=1)
+
     def test_adp_is_median_of_sleeper_and_ffc(self):
         bijan = by_name(self.players, "Bijan Robinson")
         self.assertAlmostEqual(bijan["adp"], (1.4 + 1.6) / 2, places=2)

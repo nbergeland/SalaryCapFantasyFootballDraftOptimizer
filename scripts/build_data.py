@@ -501,7 +501,10 @@ def resolve_teams(recs, report):
 def blend_projections(recs, report):
     splits = []
     for rec in recs.values():
-        s, e = rec["sleeper_pts"], rec["espn_pts"]
+        # Sleeper projects a handful of return specialists slightly negative
+        # (offense-only scoring); the app treats pts as non-negative.
+        s = rec["sleeper_pts"] if rec["sleeper_pts"] is None else max(0.0, rec["sleeper_pts"])
+        e = rec["espn_pts"] if rec["espn_pts"] is None else max(0.0, rec["espn_pts"])
         if s is not None and e is not None:
             rec["pts"] = round(0.6 * s + 0.4 * e, 1)
             gap = abs(s - e)
