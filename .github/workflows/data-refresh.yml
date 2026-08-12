@@ -1,0 +1,66 @@
+name: Refresh bundled player data
+
+# Rebuilds the player pool inside index.html from the free upstream APIs and
+# commits the result. Pushing to main is what triggers pages.yml, so a green
+# run here deploys the new data — that chain is intentional. This workflow has
+# no push trigger of its own, so its own commit cannot re-trigger it.
+on:
+  schedule:
+    - cron: "20 9 * * *"      # 09:20 UTC daily, after overnight projection updates
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# This repo has a history of intermittent runner stalls; cap the run and let a
+# newer run replace a stuck one rather than queueing behind it.
+concurrency:
+  group: data-refresh
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Verify the builder against the committed fixtures
+        # cheap guard: if the builder is broken, fail before touching index.html
+        run: python3 -m unittest discover -s tests
+
+      - name: Build player data
+        # A failure here means a required source was down or the validation
+        # gate rejected the result. index.html is left untouched, the run goes
+        # red, and yesterday's data stays live.
+        run: python3 scripts/build_data.py
+
+      - name: Commit and push if the data changed
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- index.html DATA_REPORT.md; then
+            echo "No data changes today."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html DATA_REPORT.md
+          git commit -m "Refresh bundled player data ($(date -u +%Y-%m-%d))" \
+                     -m "Automated rebuild by .github/workflows/data-refresh.yml. See DATA_REPORT.md for per-source status, unmatched rows and cross-source disagreements."
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      - name: Upload the build report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: data-report
+          path: DATA_REPORT.md
+          if-no-files-found: ignore
