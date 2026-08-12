@@ -157,6 +157,7 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
   <h1>BERG SHEETS</h1><span class="season">2026</span>
   <select id="leagueSel" title="Switch league — each keeps its own settings, keepers and draft"></select>
   <span class="asof" id="asof"></span>
+  <button id="refreshBtn" title="Pull live consensus ranks, team changes and injury flags from Sleeper's free API — no login needed">↻ Refresh data</button>
   <span class="spacer"></span>
   <button id="syncBtn" title="Connect your Sleeper / ESPN / Yahoo league">⚡ League sync</button>
   <button id="themeBtn" title="Toggle light/dark">◐</button>
@@ -696,6 +697,7 @@ function loadState(){
       const s = JSON.parse(raw);
       if(s && s.pool && s.pool.length && s.leagues && s.leagues.length){
         S.players = s.pool.map(freshPlayer);
+        S.poolMeta = Object.assign(defaultPoolMeta(), s.poolMeta||{});
         LEAGUES = {activeId:s.activeId, list:s.leagues};
         adoptLeague(activeLeague() || s.leagues[0]);
         return;
@@ -719,9 +721,16 @@ function loadState(){
     }
   }catch(e){ console.warn("state load failed", e); }
   S.players = BUNDLED.players.map(freshPlayer);
+  S.poolMeta = defaultPoolMeta();
   const lg = blankLeague("My league");
   LEAGUES = {activeId:lg.id, list:[lg]};
   S.settings = lg.settings; S.log = []; S.kpCands = [];
+}
+// freshness of the shared player pool. Values (projections + $) and ranks age
+// separately: a CSV import refreshes values, the Sleeper pull refreshes ranks.
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function defaultPoolMeta(){
+  return {valuesAsOf: BUNDLED.meta.asOf, valuesSrc: "bundled snapshot", ranksAsOf: null};
 }
 function saveState(){
   try{
@@ -730,6 +739,7 @@ function saveState(){
       lg.marks=captureMarks(); }
     localStorage.setItem(LS_MULTI, JSON.stringify({
       v:2, activeId:LEAGUES.activeId, leagues:LEAGUES.list,
+      poolMeta:S.poolMeta||defaultPoolMeta(),
       pool:S.players.map(p=>{ const {drafted,boost,out,...pool}=p; return pool; }),
     }));
   }catch(e){ console.warn("state save failed", e); }
@@ -1855,6 +1865,11 @@ function importRows(rows, mode, w){
       }else{ const np=freshPlayer(n); S.players.push(np); idx.set(id,np); added++; }
     }
   }
+  // fresh projections/prices just landed — the header stamp reflects this file,
+  // not the bundled snapshot, so the staleness warning can legitimately clear
+  const pm = S.poolMeta || (S.poolMeta = defaultPoolMeta());
+  pm.valuesAsOf = todayISO();
+  pm.valuesSrc = mode==="replace" ? "imported file" : "imported file (blended)";
   recompute();
   return `Imported: ${added} added, ${merged} blended (weight ${w}), ${skipped} skipped.`;
 }
@@ -2398,9 +2413,11 @@ function renderScatter(){
 
 /* ---------- data tab ---------- */
 function renderData(){
+  const pm = S.poolMeta || (S.poolMeta = defaultPoolMeta());
   $("#dataMeta").textContent =
-    `${S.players.length} players in pool · bundled snapshot: ${BUNDLED.meta.format}, as of ${BUNDLED.meta.asOf}. `+
-    `Values marked from consensus sources where available, estimated otherwise — import a fresh CSV the week of your draft.`;
+    `${S.players.length} players in pool · values: ${pm.valuesSrc} (${BUNDLED.meta.format}), as of ${pm.valuesAsOf}`+
+    (pm.ranksAsOf? ` · ranks refreshed ${pm.ranksAsOf}` : ``)+
+    `. Values marked from consensus sources where available, estimated otherwise — import a fresh CSV the week of your draft.`;
   const tb=$("#editTable tbody"); tb.innerHTML="";
   const rows=M.rows.slice().sort((a,b)=>b.blended-a.blended).slice(0,400);
   for(const r of rows){
@@ -2425,7 +2442,9 @@ function renderData(){
       r.p.nom=e.target.checked; recompute();});
     tb.appendChild(tr);
   }
-  $("#newsAsOf").textContent = `Consensus & news snapshot as of ${BUNDLED.meta.asOf} — verify against current reporting before draft day.`;
+  $("#newsAsOf").textContent = `Consensus & news snapshot as of ${BUNDLED.meta.asOf}`+
+    ((S.poolMeta&&S.poolMeta.ranksAsOf)? ` · ranks/injuries refreshed ${S.poolMeta.ranksAsOf}` : ``)+
+    ` — verify against current reporting before draft day.`;
   const nl=$("#news"); nl.innerHTML="";
   for(const n of BUNDLED.news){
     const d=document.createElement("div"); d.className="newsitem"; d.textContent=n;
@@ -2697,13 +2716,18 @@ async function sleeperRefreshRanks(){
         if(!(p.note||"").includes(tag)) p.note=(p.note? p.note+" · ":"")+tag;
       }
     }
+    (S.poolMeta || (S.poolMeta=defaultPoolMeta())).ranksAsOf = todayISO();
     recompute();
     slStatus(`Sleeper refresh ✓ — ${ranked} ranks updated, ${teams} team changes, `+
       `${injured} injury flags noted (ⓘ on the player). Ranks feed snake availability; `+
-      `set OUT manually for anyone ruled out.`);
+      `set OUT manually for anyone ruled out. Dollar values and projections are not `+
+      `part of this pull — import a fresh CSV/xlsx for those.`);
+    return `Refreshed ✓ ${ranked} ranks · ${teams} team changes · ${injured} injury flags`;
   }catch(e){
-    slStatus("Couldn't reach Sleeper ("+e.message+"). If you're on the claude.ai "+
-      "artifact, its sandbox blocks outside requests — use the public site or a local copy.");
+    const msg = "Couldn't reach Sleeper ("+e.message+"). If you're on the claude.ai "+
+      "artifact, its sandbox blocks outside requests — use the public site or a local copy.";
+    slStatus(msg);
+    return msg;
   }
 }
 function sleeperAutoToggle(){
@@ -3143,13 +3167,45 @@ function formToSettings(){
 }
 const PRESET_REC={ppr:1,half:.5,std:0};
 
+// Header freshness stamp. Values and ranks age independently, so say which is
+// stale rather than one blanket warning — the ↻ button fixes ranks, only a CSV
+// import fixes values.
+function renderAsOf(){
+  const pm = S.poolMeta || (S.poolMeta = defaultPoolMeta());
+  const age = d => Math.floor((Date.now()-new Date(d))/86400000);
+  const vAge = age(pm.valuesAsOf);
+  let html = `values as of ${pm.valuesAsOf}`;
+  if(pm.ranksAsOf){
+    const rAge = age(pm.ranksAsOf);
+    html += ` · <span class="up">ranks ${rAge<=0?"refreshed today":rAge===1?"refreshed yesterday":`${rAge}d old`}</span>`;
+  }
+  if(vAge>21)
+    html += ` <span class="down" title="Projections and dollar values move all summer. ↻ Refresh updates ranks, teams and injuries from Sleeper; dollar values need a fresh CSV/xlsx import in Data & News.">⚠ ${vAge} days old — <u style="cursor:pointer" id="asofImport">import fresh values</u></span>`;
+  $("#asof").innerHTML = html;
+  const jump = $("#asofImport");
+  if(jump) jump.addEventListener("click", ()=>{ showTab("data"); $("#csvFile").scrollIntoView({behavior:"smooth",block:"center"}); });
+}
+// ↻ Refresh data — pulls everything that can be pulled without a login.
+async function refreshData(){
+  const b = $("#refreshBtn");
+  if(b.disabled) return;
+  const label = b.textContent;
+  b.disabled = true; b.textContent = "↻ Refreshing…";
+  try{
+    const summary = await sleeperRefreshRanks();   // recomputes + saves internally
+    toast(summary);
+  }catch(e){
+    toast("Refresh failed: "+e.message);
+  }finally{
+    b.disabled = false; b.textContent = label;
+  }
+}
+
 /* ---------- glue ---------- */
 function renderAll(){
   renderTiles(); renderScarcity(); renderPool(); renderRoster(); renderOptimal();
   renderNominate(); renderLog(); renderRecap(); renderKeepers(); renderScatter(); renderData();
-  const ageDays=Math.floor((Date.now()-new Date(BUNDLED.meta.asOf))/86400000);
-  $("#asof").innerHTML = `data as of ${BUNDLED.meta.asOf}`+
-    (ageDays>21? ` <span class="down" title="Projections and prices move all summer — import a fresh CSV/xlsx in Data & News">⚠ ${ageDays} days old — import fresh data</span>`:"");
+  renderAsOf();
   if(S.sel) selectPlayer(S.sel);           // keep block bar fresh after recompute
   else $("#block").classList.add("hidden");
 }
@@ -3331,6 +3387,7 @@ function bind(){
   $("#slSyncNow").addEventListener("click",sleeperSync);
   $("#slAuto").addEventListener("click",sleeperAutoToggle);
   $("#slRanks").addEventListener("click",sleeperRefreshRanks);
+  $("#refreshBtn").addEventListener("click",refreshData);
   const esLinkSync=()=>{ $("#esLink").href=espnUrl(); refreshBridgeLinks(); };
   $("#esLeague").addEventListener("input",esLinkSync);
   $("#esSeason").addEventListener("input",esLinkSync); esLinkSync();
@@ -3428,6 +3485,7 @@ window.APP={get S(){return S},get M(){return M},get R(){return R},
   recompute,draftPlayer,undo,importCSV,importRows,importXLSX,parseXLSX,
   solveCompletion,posTable,combine,playerId,normPos,parseCSV,mapHeaders,
   SYNC,applyExternalPicks,sleeperFind,sleeperLoad,sleeperSync,sleeperRefreshRanks,
+  refreshData,renderAsOf,defaultPoolMeta,todayISO,
   espnRead,espnApply,espnIngest,bridgeHref,espnLeagueId,espnUrl,
   yahooParse,yahooApply,normName,matchPlayer,buildNameIndex,
   get LEAGUES(){return LEAGUES},switchLeague,addLeague,activeLeague,saveState,loadState,
