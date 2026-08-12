@@ -12,7 +12,7 @@ on:
   # until they reach the default branch, so run the first real build via push.
   push:
     branches: [claude/analytics-modeling-evaluation-dz5iic]
-    paths: [".github/workflows/data-refresh.yml"]
+    paths: [".github/workflows/data-refresh.yml", "scripts/build_data.py"]
 
 permissions:
   contents: write
