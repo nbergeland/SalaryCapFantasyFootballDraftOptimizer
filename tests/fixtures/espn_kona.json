@@ -1,0 +1,1382 @@
+{
+ "players": [
+  {
+   "id": 2000,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 62,
+   "ratings": {},
+   "player": {
+    "id": 2000,
+    "fullName": "Bijan Robinson",
+    "defaultPositionId": 2,
+    "proTeamId": 1,
+    "eligibleSlots": [
+     2
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 1,
+      "auctionValue": 62,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 1,
+      "auctionValue": 62,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 62.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 358.4,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 322.56,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2001,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 60,
+   "ratings": {},
+   "player": {
+    "id": 2001,
+    "fullName": "Ja'Marr Chase",
+    "defaultPositionId": 3,
+    "proTeamId": 4,
+    "eligibleSlots": [
+     3
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 2,
+      "auctionValue": 60,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 2,
+      "auctionValue": 60,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 60.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 366.2,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 329.58,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2002,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 58,
+   "ratings": {},
+   "player": {
+    "id": 2002,
+    "fullName": "Jahmyr Gibbs",
+    "defaultPositionId": 2,
+    "proTeamId": 8,
+    "eligibleSlots": [
+     2
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 3,
+      "auctionValue": 58,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 3,
+      "auctionValue": 58,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 58.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 341.7,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 307.53,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2003,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 55,
+   "ratings": {},
+   "player": {
+    "id": 2003,
+    "fullName": "Justin Jefferson",
+    "defaultPositionId": 3,
+    "proTeamId": 16,
+    "eligibleSlots": [
+     3
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 4,
+      "auctionValue": 55,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 4,
+      "auctionValue": 55,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 55.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 338.0,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 304.2,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2004,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 53,
+   "ratings": {},
+   "player": {
+    "id": 2004,
+    "fullName": "Saquon Barkley",
+    "defaultPositionId": 2,
+    "proTeamId": 21,
+    "eligibleSlots": [
+     2
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 5,
+      "auctionValue": 53,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 5,
+      "auctionValue": 53,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 53.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 327.5,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 294.75,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2005,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 52,
+   "ratings": {},
+   "player": {
+    "id": 2005,
+    "fullName": "CeeDee Lamb",
+    "defaultPositionId": 3,
+    "proTeamId": 6,
+    "eligibleSlots": [
+     3
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 6,
+      "auctionValue": 52,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 6,
+      "auctionValue": 52,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 52.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 333.1,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 299.79,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2006,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 50,
+   "ratings": {},
+   "player": {
+    "id": 2006,
+    "fullName": "Puka Nacua",
+    "defaultPositionId": 3,
+    "proTeamId": 14,
+    "eligibleSlots": [
+     3
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 7,
+      "auctionValue": 50,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 7,
+      "auctionValue": 50,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 50.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 315.6,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 284.04,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2007,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 48,
+   "ratings": {},
+   "player": {
+    "id": 2007,
+    "fullName": "Amon-Ra St. Brown",
+    "defaultPositionId": 3,
+    "proTeamId": 8,
+    "eligibleSlots": [
+     3
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 8,
+      "auctionValue": 48,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 8,
+      "auctionValue": 48,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 48.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 329.4,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 296.46,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2008,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 44,
+   "ratings": {},
+   "player": {
+    "id": 2008,
+    "fullName": "Jonathan Taylor",
+    "defaultPositionId": 2,
+    "proTeamId": 11,
+    "eligibleSlots": [
+     2
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 9,
+      "auctionValue": 44,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 9,
+      "auctionValue": 44,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 44.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 214.0,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 192.6,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2009,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 40,
+   "ratings": {},
+   "player": {
+    "id": 2009,
+    "fullName": "Brock Bowers",
+    "defaultPositionId": 4,
+    "proTeamId": 13,
+    "eligibleSlots": [
+     4
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 10,
+      "auctionValue": 40,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 10,
+      "auctionValue": 40,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 40.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 259.3,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 233.37,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2010,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 38,
+   "ratings": {},
+   "player": {
+    "id": 2010,
+    "fullName": "Malik Nabers",
+    "defaultPositionId": 3,
+    "proTeamId": 19,
+    "eligibleSlots": [
+     3
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 11,
+      "auctionValue": 38,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 11,
+      "auctionValue": 38,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 38.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 308.8,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 277.92,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2011,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 30,
+   "ratings": {},
+   "player": {
+    "id": 2011,
+    "fullName": "Trey McBride",
+    "defaultPositionId": 4,
+    "proTeamId": 22,
+    "eligibleSlots": [
+     4
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 14,
+      "auctionValue": 30,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 14,
+      "auctionValue": 30,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 30.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 233.7,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 210.32999999999998,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2012,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 27,
+   "ratings": {},
+   "player": {
+    "id": 2012,
+    "fullName": "Josh Allen",
+    "defaultPositionId": 1,
+    "proTeamId": 2,
+    "eligibleSlots": [
+     1
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 20,
+      "auctionValue": 27,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 20,
+      "auctionValue": 27,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 27.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 391.0,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 351.90000000000003,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2013,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 24,
+   "ratings": {},
+   "player": {
+    "id": 2013,
+    "fullName": "Lamar Jackson",
+    "defaultPositionId": 1,
+    "proTeamId": 33,
+    "eligibleSlots": [
+     1
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 22,
+      "auctionValue": 24,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 22,
+      "auctionValue": 24,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 24.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 374.5,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 337.05,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2014,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 21,
+   "ratings": {},
+   "player": {
+    "id": 2014,
+    "fullName": "Marvin Harrison Jr.",
+    "defaultPositionId": 3,
+    "proTeamId": 22,
+    "eligibleSlots": [
+     3
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 26,
+      "auctionValue": 21,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 26,
+      "auctionValue": 21,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 21.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 262.4,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 236.16,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2015,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 20,
+   "ratings": {},
+   "player": {
+    "id": 2015,
+    "fullName": "Jayden Daniels",
+    "defaultPositionId": 1,
+    "proTeamId": 28,
+    "eligibleSlots": [
+     1
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 30,
+      "auctionValue": 20,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 30,
+      "auctionValue": 20,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 20.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 365.1,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 328.59000000000003,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2016,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 12,
+   "ratings": {},
+   "player": {
+    "id": 2016,
+    "fullName": "Kenneth Walker III",
+    "defaultPositionId": 2,
+    "proTeamId": 26,
+    "eligibleSlots": [
+     2
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 46,
+      "auctionValue": 12,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 46,
+      "auctionValue": 12,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 12.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 231.5,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 208.35,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2017,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 9,
+   "ratings": {},
+   "player": {
+    "id": 2017,
+    "fullName": "Patrick Mahomes",
+    "defaultPositionId": 1,
+    "proTeamId": 12,
+    "eligibleSlots": [
+     1
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 58,
+      "auctionValue": 9,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 58,
+      "auctionValue": 9,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 9.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 337.0,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 303.3,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2018,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 4,
+   "ratings": {},
+   "player": {
+    "id": 2018,
+    "fullName": "Deebo Samuel",
+    "defaultPositionId": 3,
+    "proTeamId": 25,
+    "eligibleSlots": [
+     3
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 90,
+      "auctionValue": 4,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 90,
+      "auctionValue": 4,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 4.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 181.0,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 162.9,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2019,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 2,
+   "ratings": {},
+   "player": {
+    "id": 2019,
+    "fullName": "Michael Wilson",
+    "defaultPositionId": 3,
+    "proTeamId": 22,
+    "eligibleSlots": [
+     3
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 155,
+      "auctionValue": 2,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 155,
+      "auctionValue": 2,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 2.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 158.5,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 142.65,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2020,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 2,
+   "ratings": {},
+   "player": {
+    "id": 2020,
+    "fullName": "Brandon Aubrey",
+    "defaultPositionId": 5,
+    "proTeamId": 6,
+    "eligibleSlots": [
+     5
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 130,
+      "auctionValue": 2,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 130,
+      "auctionValue": 2,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 2.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 165.0,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 148.5,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2021,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 1,
+   "ratings": {},
+   "player": {
+    "id": 2021,
+    "fullName": "Cameron Dicker",
+    "defaultPositionId": 5,
+    "proTeamId": 24,
+    "eligibleSlots": [
+     5
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 158,
+      "auctionValue": 1,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 158,
+      "auctionValue": 1,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 1.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 150.0,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 135.0,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2022,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 3,
+   "ratings": {},
+   "player": {
+    "id": 2022,
+    "fullName": "Seahawks D/ST",
+    "defaultPositionId": 16,
+    "proTeamId": 26,
+    "eligibleSlots": [
+     16
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 128,
+      "auctionValue": 3,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 128,
+      "auctionValue": 3,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 3.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 139.0,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 125.10000000000001,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2023,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 2,
+   "ratings": {},
+   "player": {
+    "id": 2023,
+    "fullName": "Eagles D/ST",
+    "defaultPositionId": 16,
+    "proTeamId": 21,
+    "eligibleSlots": [
+     16
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 133,
+      "auctionValue": 2,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 133,
+      "auctionValue": 2,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 2.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 137.0,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 123.3,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2024,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 5,
+   "ratings": {},
+   "player": {
+    "id": 2024,
+    "fullName": "Tyler Warren",
+    "defaultPositionId": 4,
+    "proTeamId": 11,
+    "eligibleSlots": [
+     4
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 95,
+      "auctionValue": 5,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 95,
+      "auctionValue": 5,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 5.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 178.0,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 160.20000000000002,
+      "stats": {}
+     }
+    ]
+   }
+  },
+  {
+   "id": 2025,
+   "onTeamId": 0,
+   "keeperValue": 0,
+   "draftAuctionValue": 0,
+   "ratings": {},
+   "player": {
+    "id": 2025,
+    "fullName": "Deep Bench Wideout",
+    "defaultPositionId": 3,
+    "proTeamId": 20,
+    "eligibleSlots": [
+     3
+    ],
+    "active": true,
+    "injured": false,
+    "draftRanksByRankType": {
+     "PPR": {
+      "rank": 452,
+      "auctionValue": 0,
+      "rankType": "PPR",
+      "published": true
+     },
+     "STANDARD": {
+      "rank": 452,
+      "auctionValue": 0,
+      "rankType": "STANDARD"
+     }
+    },
+    "ownership": {
+     "auctionValueAverage": 0.0,
+     "percentOwned": 90.0
+    },
+    "stats": [
+     {
+      "id": "102026",
+      "seasonId": 2026,
+      "statSourceId": 1,
+      "statSplitTypeId": 0,
+      "appliedTotal": 40.0,
+      "stats": {}
+     },
+     {
+      "id": "002025",
+      "seasonId": 2025,
+      "statSourceId": 0,
+      "statSplitTypeId": 0,
+      "appliedTotal": 36.0,
+      "stats": {}
+     }
+    ]
+   }
+  }
+ ]
+}

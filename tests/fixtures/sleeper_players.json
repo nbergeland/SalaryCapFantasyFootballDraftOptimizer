@@ -1,0 +1,444 @@
+{
+ "4984": {
+  "player_id": "4984",
+  "full_name": "Josh Allen",
+  "first_name": "Josh",
+  "last_name": "Allen",
+  "position": "QB",
+  "fantasy_positions": [
+   "QB"
+  ],
+  "team": "BUF",
+  "search_rank": 12,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "4881": {
+  "player_id": "4881",
+  "full_name": "Lamar Jackson",
+  "first_name": "Lamar",
+  "last_name": "Jackson",
+  "position": "QB",
+  "fantasy_positions": [
+   "QB"
+  ],
+  "team": "BAL",
+  "search_rank": 15,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "11566": {
+  "player_id": "11566",
+  "full_name": "Jayden Daniels",
+  "first_name": "Jayden",
+  "last_name": "Daniels",
+  "position": "QB",
+  "fantasy_positions": [
+   "QB"
+  ],
+  "team": "WAS",
+  "search_rank": 18,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "4046": {
+  "player_id": "4046",
+  "full_name": "Patrick Mahomes",
+  "first_name": "Patrick",
+  "last_name": "Mahomes",
+  "position": "QB",
+  "fantasy_positions": [
+   "QB"
+  ],
+  "team": "KC",
+  "search_rank": 24,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "8151": {
+  "player_id": "8151",
+  "full_name": "Bijan Robinson",
+  "first_name": "Bijan",
+  "last_name": "Robinson",
+  "position": "RB",
+  "fantasy_positions": [
+   "RB"
+  ],
+  "team": "ATL",
+  "search_rank": 1,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "9509": {
+  "player_id": "9509",
+  "full_name": "Jahmyr Gibbs",
+  "first_name": "Jahmyr",
+  "last_name": "Gibbs",
+  "position": "RB",
+  "fantasy_positions": [
+   "RB"
+  ],
+  "team": "DET",
+  "search_rank": 2,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "4866": {
+  "player_id": "4866",
+  "full_name": "Saquon Barkley",
+  "first_name": "Saquon",
+  "last_name": "Barkley",
+  "position": "RB",
+  "fantasy_positions": [
+   "RB"
+  ],
+  "team": "PHI",
+  "search_rank": 5,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "8155": {
+  "player_id": "8155",
+  "full_name": "Kenneth Walker III",
+  "first_name": "Kenneth",
+  "last_name": "Walker III",
+  "position": "RB",
+  "fantasy_positions": [
+   "RB"
+  ],
+  "team": "SEA",
+  "search_rank": 44,
+  "injury_status": "Questionable",
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "6813": {
+  "player_id": "6813",
+  "full_name": "Jonathan Taylor",
+  "first_name": "Jonathan",
+  "last_name": "Taylor",
+  "position": "RB",
+  "fantasy_positions": [
+   "RB"
+  ],
+  "team": "IND",
+  "search_rank": 9,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "6794": {
+  "player_id": "6794",
+  "full_name": "Ja'Marr Chase",
+  "first_name": "Ja'Marr",
+  "last_name": "Chase",
+  "position": "WR",
+  "fantasy_positions": [
+   "WR"
+  ],
+  "team": "CIN",
+  "search_rank": 3,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "6794x": {
+  "player_id": "6794x",
+  "full_name": "Justin Jefferson",
+  "first_name": "Justin",
+  "last_name": "Jefferson",
+  "position": "WR",
+  "fantasy_positions": [
+   "WR"
+  ],
+  "team": "MIN",
+  "search_rank": 4,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "6786": {
+  "player_id": "6786",
+  "full_name": "CeeDee Lamb",
+  "first_name": "CeeDee",
+  "last_name": "Lamb",
+  "position": "WR",
+  "fantasy_positions": [
+   "WR"
+  ],
+  "team": "DAL",
+  "search_rank": 6,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "9493": {
+  "player_id": "9493",
+  "full_name": "Puka Nacua",
+  "first_name": "Puka",
+  "last_name": "Nacua",
+  "position": "WR",
+  "fantasy_positions": [
+   "WR"
+  ],
+  "team": "LAR",
+  "search_rank": 7,
+  "injury_status": "Questionable",
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "7525": {
+  "player_id": "7525",
+  "full_name": "Amon-Ra St. Brown",
+  "first_name": "Amon-Ra",
+  "last_name": "St. Brown",
+  "position": "WR",
+  "fantasy_positions": [
+   "WR"
+  ],
+  "team": "DET",
+  "search_rank": 8,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "11631": {
+  "player_id": "11631",
+  "full_name": "Marvin Harrison Jr.",
+  "first_name": "Marvin",
+  "last_name": "Harrison Jr.",
+  "position": "WR",
+  "fantasy_positions": [
+   "WR"
+  ],
+  "team": "ARI",
+  "search_rank": 21,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "9227": {
+  "player_id": "9227",
+  "full_name": "Michael Wilson",
+  "first_name": "Michael",
+  "last_name": "Wilson",
+  "position": "WR",
+  "fantasy_positions": [
+   "WR"
+  ],
+  "team": "ARI",
+  "search_rank": 168,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "11624": {
+  "player_id": "11624",
+  "full_name": "Malik Nabers",
+  "first_name": "Malik",
+  "last_name": "Nabers",
+  "position": "WR",
+  "fantasy_positions": [
+   "WR"
+  ],
+  "team": "NYG",
+  "search_rank": 11,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "5846": {
+  "player_id": "5846",
+  "full_name": "Deebo Samuel",
+  "first_name": "Deebo",
+  "last_name": "Samuel",
+  "position": "WR",
+  "fantasy_positions": [
+   "WR"
+  ],
+  "team": "WAS",
+  "search_rank": 96,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "11604": {
+  "player_id": "11604",
+  "full_name": "Brock Bowers",
+  "first_name": "Brock",
+  "last_name": "Bowers",
+  "position": "TE",
+  "fantasy_positions": [
+   "TE"
+  ],
+  "team": "LV",
+  "search_rank": 10,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "8130": {
+  "player_id": "8130",
+  "full_name": "Trey McBride",
+  "first_name": "Trey",
+  "last_name": "McBride",
+  "position": "TE",
+  "fantasy_positions": [
+   "TE"
+  ],
+  "team": "ARI",
+  "search_rank": 14,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "4217": {
+  "player_id": "4217",
+  "full_name": "George Kittle",
+  "first_name": "George",
+  "last_name": "Kittle",
+  "position": "TE",
+  "fantasy_positions": [
+   "TE"
+  ],
+  "team": "SF",
+  "search_rank": 40,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "9777": {
+  "player_id": "9777",
+  "full_name": "Brandon Aubrey",
+  "first_name": "Brandon",
+  "last_name": "Aubrey",
+  "position": "K",
+  "fantasy_positions": [
+   "K"
+  ],
+  "team": "DAL",
+  "search_rank": 150,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "8259": {
+  "player_id": "8259",
+  "full_name": "Cameron Dicker",
+  "first_name": "Cameron",
+  "last_name": "Dicker",
+  "position": "K",
+  "fantasy_positions": [
+   "K"
+  ],
+  "team": "LAC",
+  "search_rank": 175,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "11298": {
+  "player_id": "11298",
+  "full_name": "Jake Bates",
+  "first_name": "Jake",
+  "last_name": "Bates",
+  "position": "K",
+  "fantasy_positions": [
+   "K"
+  ],
+  "team": "DET",
+  "search_rank": 190,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "11635": {
+  "player_id": "11635",
+  "full_name": "Ricky Pearsall",
+  "first_name": "Ricky",
+  "last_name": "Pearsall",
+  "position": "WR",
+  "fantasy_positions": [
+   "WR"
+  ],
+  "team": "SF",
+  "search_rank": 240,
+  "injury_status": null,
+  "status": "Active",
+  "age": 26,
+  "years_exp": 4
+ },
+ "SEA": {
+  "player_id": "SEA",
+  "full_name": null,
+  "first_name": "Seattle",
+  "last_name": "Seahawks",
+  "position": "DEF",
+  "fantasy_positions": [
+   "DEF"
+  ],
+  "team": "SEA",
+  "search_rank": 220,
+  "injury_status": null,
+  "status": "Active"
+ },
+ "PHI": {
+  "player_id": "PHI",
+  "full_name": null,
+  "first_name": "Philadelphia",
+  "last_name": "Eagles",
+  "position": "DEF",
+  "fantasy_positions": [
+   "DEF"
+  ],
+  "team": "PHI",
+  "search_rank": 220,
+  "injury_status": null,
+  "status": "Active"
+ },
+ "99999": {
+  "player_id": "99999",
+  "full_name": "Practice Squad Guy",
+  "first_name": "Practice",
+  "last_name": "Guy",
+  "position": "WR",
+  "fantasy_positions": [
+   "WR"
+  ],
+  "team": "NYJ",
+  "search_rank": 2400,
+  "injury_status": null,
+  "status": "Inactive"
+ }
+}

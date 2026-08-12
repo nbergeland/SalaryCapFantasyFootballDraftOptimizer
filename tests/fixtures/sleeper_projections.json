@@ -1,0 +1,673 @@
+[
+ {
+  "player_id": "4984",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "BUF",
+  "company": "rotowire",
+  "stats": {
+   "pass_yd": 4100,
+   "pass_td": 32,
+   "pass_int": 11,
+   "rush_yd": 560,
+   "rush_td": 9,
+   "pts_ppr": 395.4,
+   "pts_half_ppr": 395.4,
+   "pts_std": 395.4,
+   "adp_ppr": 22.5
+  },
+  "player": {
+   "player_id": "4984",
+   "first_name": "Josh",
+   "last_name": "Allen",
+   "position": "QB",
+   "team": "BUF",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "4881",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "BAL",
+  "company": "rotowire",
+  "stats": {
+   "pass_yd": 3800,
+   "pass_td": 30,
+   "pass_int": 8,
+   "rush_yd": 780,
+   "rush_td": 5,
+   "pts_ppr": 378.1,
+   "pts_half_ppr": 378.1,
+   "pts_std": 378.1,
+   "adp_ppr": 26.0
+  },
+  "player": {
+   "player_id": "4881",
+   "first_name": "Lamar",
+   "last_name": "Jackson",
+   "position": "QB",
+   "team": "BAL",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "11566",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "WAS",
+  "company": "rotowire",
+  "stats": {
+   "pass_yd": 3900,
+   "pass_td": 27,
+   "pass_int": 10,
+   "rush_yd": 760,
+   "rush_td": 7,
+   "pts_ppr": 368.9,
+   "pts_half_ppr": 368.9,
+   "pts_std": 368.9,
+   "adp_ppr": 30.4
+  },
+  "player": {
+   "player_id": "11566",
+   "first_name": "Jayden",
+   "last_name": "Daniels",
+   "position": "QB",
+   "team": "WAS",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "4046",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "KC",
+  "company": "rotowire",
+  "stats": {
+   "pass_yd": 4300,
+   "pass_td": 31,
+   "pass_int": 9,
+   "rush_yd": 320,
+   "rush_td": 3,
+   "pts_ppr": 340.2,
+   "pts_half_ppr": 340.2,
+   "pts_std": 340.2,
+   "adp_ppr": 62.0
+  },
+  "player": {
+   "player_id": "4046",
+   "first_name": "Patrick",
+   "last_name": "Mahomes",
+   "position": "QB",
+   "team": "KC",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "8151",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "ATL",
+  "company": "rotowire",
+  "stats": {
+   "rush_yd": 1420,
+   "rush_td": 12,
+   "rec": 70,
+   "rec_yd": 560,
+   "rec_td": 3,
+   "pts_ppr": 361.0,
+   "pts_half_ppr": 326.0,
+   "pts_std": 291.0,
+   "adp_ppr": 1.4
+  },
+  "player": {
+   "player_id": "8151",
+   "first_name": "Bijan",
+   "last_name": "Robinson",
+   "position": "RB",
+   "team": "ATL",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "9509",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "DET",
+  "company": "rotowire",
+  "stats": {
+   "rush_yd": 1180,
+   "rush_td": 13,
+   "rec": 62,
+   "rec_yd": 520,
+   "rec_td": 3,
+   "pts_ppr": 344.0,
+   "pts_half_ppr": 313.0,
+   "pts_std": 282.0,
+   "adp_ppr": 2.6
+  },
+  "player": {
+   "player_id": "9509",
+   "first_name": "Jahmyr",
+   "last_name": "Gibbs",
+   "position": "RB",
+   "team": "DET",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "4866",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "PHI",
+  "company": "rotowire",
+  "stats": {
+   "rush_yd": 1500,
+   "rush_td": 13,
+   "rec": 40,
+   "rec_yd": 290,
+   "rec_td": 1,
+   "pts_ppr": 330.0,
+   "pts_half_ppr": 310.0,
+   "pts_std": 290.0,
+   "adp_ppr": 5.1
+  },
+  "player": {
+   "player_id": "4866",
+   "first_name": "Saquon",
+   "last_name": "Barkley",
+   "position": "RB",
+   "team": "PHI",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "8155",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "SEA",
+  "company": "rotowire",
+  "stats": {
+   "rush_yd": 980,
+   "rush_td": 8,
+   "rec": 40,
+   "rec_yd": 300,
+   "rec_td": 1,
+   "pts_ppr": 236.0,
+   "pts_half_ppr": 216.0,
+   "pts_std": 196.0,
+   "adp_ppr": 48.2
+  },
+  "player": {
+   "player_id": "8155",
+   "first_name": "Kenneth",
+   "last_name": "Walker III",
+   "position": "RB",
+   "team": "SEA",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "6813",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "IND",
+  "company": "rotowire",
+  "stats": {
+   "rush_yd": 1380,
+   "rush_td": 14,
+   "rec": 32,
+   "rec_yd": 240,
+   "rec_td": 1,
+   "pts_ppr": 314.0,
+   "pts_half_ppr": 298.0,
+   "pts_std": 282.0,
+   "adp_ppr": 8.7
+  },
+  "player": {
+   "player_id": "6813",
+   "first_name": "Jonathan",
+   "last_name": "Taylor",
+   "position": "RB",
+   "team": "IND",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "6794",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "CIN",
+  "company": "rotowire",
+  "stats": {
+   "rec": 112,
+   "rec_yd": 1580,
+   "rec_td": 12,
+   "rush_yd": 30,
+   "pts_ppr": 373.0,
+   "pts_half_ppr": 317.0,
+   "pts_std": 261.0,
+   "adp_ppr": 1.9
+  },
+  "player": {
+   "player_id": "6794",
+   "first_name": "Ja'Marr",
+   "last_name": "Chase",
+   "position": "WR",
+   "team": "CIN",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "6794x",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "MIN",
+  "company": "rotowire",
+  "stats": {
+   "rec": 104,
+   "rec_yd": 1520,
+   "rec_td": 9,
+   "pts_ppr": 340.0,
+   "pts_half_ppr": 288.0,
+   "pts_std": 236.0,
+   "adp_ppr": 4.3
+  },
+  "player": {
+   "player_id": "6794x",
+   "first_name": "Justin",
+   "last_name": "Jefferson",
+   "position": "WR",
+   "team": "MIN",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "6786",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "DAL",
+  "company": "rotowire",
+  "stats": {
+   "rec": 106,
+   "rec_yd": 1440,
+   "rec_td": 9,
+   "pts_ppr": 336.0,
+   "pts_half_ppr": 283.0,
+   "pts_std": 230.0,
+   "adp_ppr": 6.2
+  },
+  "player": {
+   "player_id": "6786",
+   "first_name": "CeeDee",
+   "last_name": "Lamb",
+   "position": "WR",
+   "team": "DAL",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "9493",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "LAR",
+  "company": "rotowire",
+  "stats": {
+   "rec": 101,
+   "rec_yd": 1330,
+   "rec_td": 7,
+   "pts_ppr": 318.0,
+   "pts_half_ppr": 267.5,
+   "pts_std": 217.0,
+   "adp_ppr": 7.5
+  },
+  "player": {
+   "player_id": "9493",
+   "first_name": "Puka",
+   "last_name": "Nacua",
+   "position": "WR",
+   "team": "LAR",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "7525",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "DET",
+  "company": "rotowire",
+  "stats": {
+   "rec": 112,
+   "rec_yd": 1290,
+   "rec_td": 9,
+   "pts_ppr": 331.0,
+   "pts_half_ppr": 275.0,
+   "pts_std": 219.0,
+   "adp_ppr": 9.1
+  },
+  "player": {
+   "player_id": "7525",
+   "first_name": "Amon-Ra",
+   "last_name": "St. Brown",
+   "position": "WR",
+   "team": "DET",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "11631",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "ARI",
+  "company": "rotowire",
+  "stats": {
+   "rec": 84,
+   "rec_yd": 1180,
+   "rec_td": 8,
+   "pts_ppr": 268.0,
+   "pts_half_ppr": 226.0,
+   "pts_std": 184.0,
+   "adp_ppr": 27.8
+  },
+  "player": {
+   "player_id": "11631",
+   "first_name": "Marvin",
+   "last_name": "Harrison Jr.",
+   "position": "WR",
+   "team": "ARI",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "9227",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "ARI",
+  "company": "rotowire",
+  "stats": {
+   "rec": 58,
+   "rec_yd": 720,
+   "rec_td": 5,
+   "pts_ppr": 160.0,
+   "pts_half_ppr": 131.0,
+   "pts_std": 102.0,
+   "adp_ppr": 142.0
+  },
+  "player": {
+   "player_id": "9227",
+   "first_name": "Michael",
+   "last_name": "Wilson",
+   "position": "WR",
+   "team": "ARI",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "11624",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "NYG",
+  "company": "rotowire",
+  "stats": {
+   "rec": 102,
+   "rec_yd": 1290,
+   "rec_td": 7,
+   "pts_ppr": 313.0,
+   "pts_half_ppr": 262.0,
+   "pts_std": 211.0,
+   "adp_ppr": 11.3
+  },
+  "player": {
+   "player_id": "11624",
+   "first_name": "Malik",
+   "last_name": "Nabers",
+   "position": "WR",
+   "team": "NYG",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "5846",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "WAS",
+  "company": "rotowire",
+  "stats": {
+   "rec": 62,
+   "rec_yd": 740,
+   "rec_td": 4,
+   "rush_yd": 180,
+   "rush_td": 2,
+   "pts_ppr": 186.0,
+   "pts_half_ppr": 155.0,
+   "pts_std": 124.0,
+   "adp_ppr": 88.0
+  },
+  "player": {
+   "player_id": "5846",
+   "first_name": "Deebo",
+   "last_name": "Samuel",
+   "position": "WR",
+   "team": "WAS",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "11604",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "LV",
+  "company": "rotowire",
+  "stats": {
+   "rec": 104,
+   "rec_yd": 1180,
+   "rec_td": 7,
+   "pts_ppr": 264.0,
+   "pts_half_ppr": 212.0,
+   "pts_std": 160.0,
+   "adp_ppr": 10.2
+  },
+  "player": {
+   "player_id": "11604",
+   "first_name": "Brock",
+   "last_name": "Bowers",
+   "position": "TE",
+   "team": "LV",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "8130",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "ARI",
+  "company": "rotowire",
+  "stats": {
+   "rec": 98,
+   "rec_yd": 1030,
+   "rec_td": 6,
+   "pts_ppr": 237.0,
+   "pts_half_ppr": 188.0,
+   "pts_std": 139.0,
+   "adp_ppr": 14.9
+  },
+  "player": {
+   "player_id": "8130",
+   "first_name": "Trey",
+   "last_name": "McBride",
+   "position": "TE",
+   "team": "ARI",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "4217",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "SF",
+  "company": "rotowire",
+  "stats": {
+   "rec": 72,
+   "rec_yd": 920,
+   "rec_td": 7,
+   "pts_ppr": 206.0,
+   "pts_half_ppr": 170.0,
+   "pts_std": 134.0,
+   "adp_ppr": 42.0
+  },
+  "player": {
+   "player_id": "4217",
+   "first_name": "George",
+   "last_name": "Kittle",
+   "position": "TE",
+   "team": "SF",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "9777",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "DAL",
+  "company": "rotowire",
+  "stats": {
+   "pts_ppr": 168.0,
+   "pts_half_ppr": 168.0,
+   "pts_std": 168.0,
+   "adp_ppr": 118.0
+  },
+  "player": {
+   "player_id": "9777",
+   "first_name": "Brandon",
+   "last_name": "Aubrey",
+   "position": "K",
+   "team": "DAL",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "8259",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "LAC",
+  "company": "rotowire",
+  "stats": {
+   "pts_ppr": 152.0,
+   "pts_half_ppr": 152.0,
+   "pts_std": 152.0,
+   "adp_ppr": 140.0
+  },
+  "player": {
+   "player_id": "8259",
+   "first_name": "Cameron",
+   "last_name": "Dicker",
+   "position": "K",
+   "team": "LAC",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "11298",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "DET",
+  "company": "rotowire",
+  "stats": {
+   "pts_ppr": 149.0,
+   "pts_half_ppr": 149.0,
+   "pts_std": 149.0,
+   "adp_ppr": 145.0
+  },
+  "player": {
+   "player_id": "11298",
+   "first_name": "Jake",
+   "last_name": "Bates",
+   "position": "K",
+   "team": "DET",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "11635",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "SF",
+  "company": "rotowire",
+  "stats": {},
+  "player": {
+   "player_id": "11635",
+   "first_name": "Ricky",
+   "last_name": "Pearsall",
+   "position": "WR",
+   "team": "SF",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "SEA",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "SEA",
+  "company": "rotowire",
+  "stats": {
+   "pts_ppr": 141.0,
+   "adp_ppr": 132.0,
+   "def_st_td": 1.0,
+   "sack": 44.0
+  },
+  "player": {
+   "player_id": "SEA",
+   "first_name": "Seattle",
+   "last_name": "Seahawks",
+   "position": "DEF",
+   "team": "SEA"
+  }
+ },
+ {
+  "player_id": "PHI",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "PHI",
+  "company": "rotowire",
+  "stats": {
+   "pts_ppr": 138.0,
+   "adp_ppr": 136.0,
+   "def_st_td": 1.0,
+   "sack": 44.0
+  },
+  "player": {
+   "player_id": "PHI",
+   "first_name": "Philadelphia",
+   "last_name": "Eagles",
+   "position": "DEF",
+   "team": "PHI"
+  }
+ }
+]

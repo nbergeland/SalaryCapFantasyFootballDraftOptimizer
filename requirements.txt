@@ -3,3 +3,4 @@ pulp>=2.7
 openpyxl>=3.1
 plotly>=5.18
 jupyter
+requests>=2.31

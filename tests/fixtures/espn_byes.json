@@ -1,0 +1,231 @@
+{
+ "id": 2026,
+ "settings": {
+  "proTeams": [
+   {
+    "id": 1,
+    "abbrev": "ATL",
+    "byeWeek": 5,
+    "location": "",
+    "name": "ATL"
+   },
+   {
+    "id": 2,
+    "abbrev": "BUF",
+    "byeWeek": 7,
+    "location": "",
+    "name": "BUF"
+   },
+   {
+    "id": 3,
+    "abbrev": "CHI",
+    "byeWeek": 5,
+    "location": "",
+    "name": "CHI"
+   },
+   {
+    "id": 4,
+    "abbrev": "CIN",
+    "byeWeek": 10,
+    "location": "",
+    "name": "CIN"
+   },
+   {
+    "id": 5,
+    "abbrev": "CLE",
+    "byeWeek": 9,
+    "location": "",
+    "name": "CLE"
+   },
+   {
+    "id": 6,
+    "abbrev": "DAL",
+    "byeWeek": 7,
+    "location": "",
+    "name": "DAL"
+   },
+   {
+    "id": 7,
+    "abbrev": "DEN",
+    "byeWeek": 12,
+    "location": "",
+    "name": "DEN"
+   },
+   {
+    "id": 8,
+    "abbrev": "DET",
+    "byeWeek": 8,
+    "location": "",
+    "name": "DET"
+   },
+   {
+    "id": 9,
+    "abbrev": "GB",
+    "byeWeek": 5,
+    "location": "",
+    "name": "GB"
+   },
+   {
+    "id": 10,
+    "abbrev": "TEN",
+    "byeWeek": 10,
+    "location": "",
+    "name": "TEN"
+   },
+   {
+    "id": 11,
+    "abbrev": "IND",
+    "byeWeek": 11,
+    "location": "",
+    "name": "IND"
+   },
+   {
+    "id": 12,
+    "abbrev": "KC",
+    "byeWeek": 10,
+    "location": "",
+    "name": "KC"
+   },
+   {
+    "id": 13,
+    "abbrev": "LV",
+    "byeWeek": 10,
+    "location": "",
+    "name": "LV"
+   },
+   {
+    "id": 14,
+    "abbrev": "LAR",
+    "byeWeek": 8,
+    "location": "",
+    "name": "LAR"
+   },
+   {
+    "id": 15,
+    "abbrev": "MIA",
+    "byeWeek": 12,
+    "location": "",
+    "name": "MIA"
+   },
+   {
+    "id": 16,
+    "abbrev": "MIN",
+    "byeWeek": 6,
+    "location": "",
+    "name": "MIN"
+   },
+   {
+    "id": 17,
+    "abbrev": "NE",
+    "byeWeek": 14,
+    "location": "",
+    "name": "NE"
+   },
+   {
+    "id": 18,
+    "abbrev": "NO",
+    "byeWeek": 11,
+    "location": "",
+    "name": "NO"
+   },
+   {
+    "id": 19,
+    "abbrev": "NYG",
+    "byeWeek": 14,
+    "location": "",
+    "name": "NYG"
+   },
+   {
+    "id": 20,
+    "abbrev": "NYJ",
+    "byeWeek": 9,
+    "location": "",
+    "name": "NYJ"
+   },
+   {
+    "id": 21,
+    "abbrev": "PHI",
+    "byeWeek": 9,
+    "location": "",
+    "name": "PHI"
+   },
+   {
+    "id": 22,
+    "abbrev": "ARI",
+    "byeWeek": 8,
+    "location": "",
+    "name": "ARI"
+   },
+   {
+    "id": 23,
+    "abbrev": "PIT",
+    "byeWeek": 5,
+    "location": "",
+    "name": "PIT"
+   },
+   {
+    "id": 24,
+    "abbrev": "LAC",
+    "byeWeek": 12,
+    "location": "",
+    "name": "LAC"
+   },
+   {
+    "id": 25,
+    "abbrev": "SF",
+    "byeWeek": 14,
+    "location": "",
+    "name": "SF"
+   },
+   {
+    "id": 26,
+    "abbrev": "SEA",
+    "byeWeek": 8,
+    "location": "",
+    "name": "SEA"
+   },
+   {
+    "id": 27,
+    "abbrev": "TB",
+    "byeWeek": 9,
+    "location": "",
+    "name": "TB"
+   },
+   {
+    "id": 28,
+    "abbrev": "WSH",
+    "byeWeek": 14,
+    "location": "",
+    "name": "WSH"
+   },
+   {
+    "id": 29,
+    "abbrev": "CAR",
+    "byeWeek": 14,
+    "location": "",
+    "name": "CAR"
+   },
+   {
+    "id": 30,
+    "abbrev": "JAX",
+    "byeWeek": 8,
+    "location": "",
+    "name": "JAX"
+   },
+   {
+    "id": 33,
+    "abbrev": "BAL",
+    "byeWeek": 7,
+    "location": "",
+    "name": "BAL"
+   },
+   {
+    "id": 34,
+    "abbrev": "HOU",
+    "byeWeek": 6,
+    "location": "",
+    "name": "HOU"
+   }
+  ]
+ }
+}
