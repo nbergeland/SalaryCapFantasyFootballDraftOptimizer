@@ -85,16 +85,48 @@ whether bargains should crash in later or whether skipping the stars will cost y
 
 ## 🔄 Keeping the data sharp
 
-- **Refresh ranks/news** — one click pulls Sleeper's free public player feed for live
-  consensus ranks, team changes, and injury flags.
+The bundled player pool is **rebuilt every night** by
+[`scripts/build_data.py`](scripts/build_data.py), run from
+[`.github/workflows/data-refresh.yml`](.github/workflows/data-refresh.yml) at 09:20 UTC
+and spliced straight into `index.html`, which then redeploys through the usual Pages
+workflow. Each build writes [`DATA_REPORT.md`](DATA_REPORT.md) — per-source status,
+unmatched rows, cross-source team disagreements, projection splits, and how well the
+auction model tracks ESPN's prices.
+
+| Source | Contributes |
+|---|---|
+| Sleeper players | roster, teams, injury flags, search rank |
+| Sleeper projections | stat-level season projections, PPR points, ADP |
+| Fantasy Football Calculator | ADP from real mock drafts |
+| ESPN (`kona_player_info`) | auction values, PPR ranks, a second projection |
+| ESPN pro teams | bye weeks |
+
+Sleeper is required: if either Sleeper call fails the build aborts and yesterday's data
+stays live. ESPN and FFC are degradable — the build proceeds and flags itself in the app.
+Nothing is written until the whole bundle clears a validation gate (minimum player count,
+per-record schema, no duplicate IDs, a sanity list of consensus stars).
+
+*ADP data courtesy of [Fantasy Football Calculator](https://fantasyfootballcalculator.com).*
+
+In the app itself:
+
+- **↻ Refresh data** — a live pull from the two CORS-open sources: Sleeper's player feed
+  (ranks, team changes, injury flags), Sleeper's season projections (points, stat lines,
+  ADP), and Fantasy Football Calculator's ADP, blended with Sleeper's. Draftable players
+  your pool is missing are appended at $1; the nightly build is what prices them properly.
+  Each source is independent, so one being down costs you only that source.
+- **Reload bundled data** (Data & News) — force the pool back to the dataset built into
+  the page. Your draft, keepers, boosts and OUT/DND/★ marks are re-applied afterwards.
 - **Import CSV or Excel** — FantasyPros cheat-sheet exports (100+ expert ECR) drop in
   as-is; ECR, ADP, Bye, and stat-level columns are auto-detected, and the legacy
   `auc_values_ALL.xlsx` format imports unchanged. Multiple sources can be blended by
-  weight, and stat columns enable exact rescoring under your league's settings.
+  weight, and stat columns enable exact rescoring under your league's settings. Imported
+  values are treated as yours: later nightly builds fill in ADP, bye and ranks around
+  them but never overwrite your dollar values or projections.
 - **Boost/fade and OUT toggles** for news the projections haven't caught up to.
-- The bundled dataset is a **July 2026 consensus snapshot** (190 players, mostly
-  estimated dollar values, with offseason news annotations). The header warns when it
-  goes stale — **always import fresh data the week of your draft.**
+
+The header still warns when values go stale, and importing a fresh sheet the week of your
+draft is still the surest thing you can do.
 
 ## 🏆 Keepers
 
@@ -122,6 +154,13 @@ pip install -r requirements.txt
 jupyter notebook DraftOptimizer.ipynb
 ```
 
+The data builder is plain-stdlib Python and its tests need no network:
+
+```bash
+python3 -m unittest discover -s tests
+python3 scripts/build_data.py --fixtures-dir tests/fixtures --dry-run
+```
+
 ## 📐 Modeling
 
 **[`MODELING.md`](MODELING.md)** evaluates the original approach and documents the
@@ -138,8 +177,14 @@ live re-optimization and instant max-bid advice possible. Monte Carlo sits on to
 
 | File | Purpose |
 |---|---|
-| `index.html` | The entire app — self-contained, bundled 2026 data |
+| `index.html` | The entire app — self-contained, with the player pool spliced in between `/*__DATA__*/` markers |
+| `scripts/build_data.py` | Nightly data builder: fetches, cross-validates and splices the player pool |
+| `.github/workflows/data-refresh.yml` | Runs the builder daily at 09:20 UTC and commits the result |
 | `.github/workflows/pages.yml` | Auto-deploys the app to GitHub Pages on every push to `main` |
+| `DATA_REPORT.md` | Written by each data build — source status, disagreements, calibration |
+| `tests/test_build_data.py` | Builder unit tests (stdlib `unittest`, offline via fixtures) |
+| `tests/fixtures/` | Schema-faithful slices of the five upstream payloads |
+| `tests/test_migration.js` | Playwright suite for bundle migration and the live refresh |
 | `.nojekyll` | Lets Pages serve straight from a branch — see below |
 | `optimizer.py` | Python optimization engine (PuLP) |
 | `DraftOptimizer.ipynb` | Executed reference notebook |
