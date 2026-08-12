@@ -1,6 +1,6 @@
 # Data build report
 
-- Built: 2026-08-12T01:40:10+00:00
+- Built: 2026-08-12T10:27:23+00:00
 - Season: 2026
 - Players in bundle: **600**
 - News lines: 25
@@ -18,10 +18,10 @@
 ## Counts
 
 - Sleeper players DB entries: 4385
-- Sleeper projection rows: 3301
-- Dropped (no stats, no ADP): 2483
+- Sleeper projection rows: 3300
+- Dropped (no stats, no ADP): 2482
 - ESPN matched / added: 619 / 0
-- FFC matched / added: 254 / 2
+- FFC matched / added: 255 / 2
 - Pool before cutoff: 745 → kept 600
 
 ### Position breakdown
@@ -36,7 +36,7 @@
 ## Auction values
 
 - Replacement points: {'DST': 91.9, 'QB': 291.1, 'WR': 170.4, 'RB': 168.8, 'TE': 156.0, 'K': 116.2}
-- $/VORP scale: 0.4046 (calibration factor 0.9311)
+- $/VORP scale: 0.4046 (calibration factor 0.931)
 - ESPN-priced players: 100
 - Mean abs error of the VORP model vs ESPN prices: 5.62
 
@@ -134,8 +134,8 @@ _none_
 
 ## FFC rows with no Sleeper match (2)
 
-- Ricky Pearsall (SF WR) adp=112.0
-- AJ Dillon (CAR RB) adp=166.4
+- Ricky Pearsall (SF WR) adp=112.3
+- AJ Dillon (CAR RB) adp=163.0
 
 ---
 
