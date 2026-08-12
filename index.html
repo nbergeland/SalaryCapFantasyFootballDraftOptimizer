@@ -300,6 +300,12 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
       <div class="card">
         <h2>Player pool</h2>
         <p class="note" id="dataMeta"></p>
+        <p class="note" id="dataSources"></p>
+        <p><button id="reloadBundleBtn">Reload bundled data</button>
+          <span class="note">Replaces the pool with the dataset built into this
+          page — rebuilt nightly from Sleeper, ESPN and Fantasy Football
+          Calculator. Your draft, keepers, boosts and OUT/DND/★/📣 marks are
+          re-applied afterwards; values you imported yourself are not kept.</span></p>
         <p class="note">Fine-tune any player for your season: <b>boost/fade</b> (%) folds in
           news the projections haven't caught up to; <b>OUT</b> removes a player from the
           market entirely (injured, not playing); <b>DND</b> is your Do Not Draft list —
@@ -625,6 +631,21 @@ const POS_VOL = {QB:.10,RB:.16,WR:.15,TE:.18,K:.08,DST:.12}; // volatility heuri
 const SCATTER_COLORS = {QB:"var(--qb)",RB:"var(--rb)",WR:"var(--wr)",TE:"var(--te)"};
 const LS_KEY = "sc-draft-companion-v1";      // legacy single-league state
 const LS_MULTI = "sc-draft-companion-v2";    // multi-league: shared pool + leagues
+// Fantasy Football Calculator asks for attribution wherever their ADP is used.
+const FFC_ATTRIBUTION =
+  "ADP data courtesy of Fantasy Football Calculator (fantasyfootballcalculator.com).";
+const SEASON = String((BUNDLED.meta && BUNDLED.meta.asOf) || "2026").slice(0,4);
+// the two CORS-open endpoints the ↻ button can reach from a browser; the
+// nightly GitHub Action additionally pulls ESPN, which is server-side only
+const SLEEPER_PROJ_URL = `https://api.sleeper.com/projections/nfl/${SEASON}`+
+  `?season_type=regular&order_by=ppr&position[]=QB&position[]=RB&position[]=WR`+
+  `&position[]=TE&position[]=K&position[]=DEF`;
+const FFC_ADP_URL =
+  `https://fantasyfootballcalculator.com/api/v1/adp/ppr?teams=12&year=${SEASON}`;
+// Sleeper's stat key -> the key scorePlayer() reads
+const PROJ_STAT_KEYS = [["pass_yd","pass_yd"],["pass_td","pass_td"],["int","pass_int"],
+  ["rush_yd","rush_yd"],["rush_td","rush_td"],["rec","rec"],["rec_yd","rec_yd"],
+  ["rec_td","rec_td"]];
 
 /* ============================ state ============================ */
 const defaultSettings = () => ({
@@ -700,6 +721,7 @@ function loadState(){
         S.poolMeta = Object.assign(defaultPoolMeta(), s.poolMeta||{});
         LEAGUES = {activeId:s.activeId, list:s.leagues};
         adoptLeague(activeLeague() || s.leagues[0]);
+        S.migration = migrateBundle();   // pull in a newer bundle if there is one
         return;
       }
     }
@@ -716,6 +738,11 @@ function loadState(){
         LEAGUES = {activeId:lg.id, list:[lg]};
         S.settings = lg.settings; S.log = lg.log; S.kpCands = lg.kpCands;
         lg.marks = captureMarks();
+        // a v1 save carries no provenance, so we cannot tell a stale copy of
+        // the old bundle from an imported sheet — treat it as the user's own
+        // and only enrich, never overwrite their numbers
+        S.poolMeta = Object.assign(defaultPoolMeta(), {valuesSrc:"legacy saved pool"});
+        S.migration = migrateBundle();
         return;
       }
     }
@@ -731,6 +758,89 @@ function loadState(){
 function todayISO(){ return new Date().toISOString().slice(0,10); }
 function defaultPoolMeta(){
   return {valuesAsOf: BUNDLED.meta.asOf, valuesSrc: "bundled snapshot", ranksAsOf: null};
+}
+/* =====================================================================
+   BUNDLE MIGRATION — the bundled pool is rebuilt nightly by
+   scripts/build_data.py, but a pool saved in localStorage used to shadow it
+   forever: a returning user kept whatever pool they first loaded, so better
+   data could never reach them. migrateBundle() reconciles a restored pool
+   with a newer bundle without destroying anything the user owns.
+
+   Two paths, decided by where the current values came from:
+     bundled  → adopt the new bundle wholesale, carrying marks across
+     imported → the user's own numbers win; only fill in the blanks
+   ===================================================================== */
+function bundleIsNewer(pm){
+  const a = BUNDLED.meta && BUNDLED.meta.asOf;
+  return !!a && String(a) > String(pm.valuesAsOf || "");   // ISO dates sort as text
+}
+// Replace the pool with the bundle, keeping every mark the user has made.
+// A marked player the new bundle no longer lists (name spelling drift, a
+// retirement, a keeper from an old sheet) is carried over rather than dropped
+// — losing a keeper or breaking a draft-log link would be far worse than
+// carrying one stale row.
+function adoptBundle(){
+  const marks = captureMarks();
+  const before = S.players.length;
+  const next = BUNDLED.players.map(freshPlayer);
+  const have = new Set(next.map(playerId));
+  let carried = 0;
+  for(const p of S.players){
+    const id = playerId(p);
+    if(have.has(id) || !marks[id]) continue;
+    next.push(p); have.add(id); carried++;
+  }
+  S.players = next;
+  applyMarks(marks);
+  const pm = S.poolMeta || (S.poolMeta = defaultPoolMeta());
+  pm.valuesAsOf = BUNDLED.meta.asOf;
+  pm.valuesSrc = "bundled snapshot";
+  pm.bundleMergedAsOf = BUNDLED.meta.asOf;
+  return {mode:"adopt", size:S.players.length, before, carried};
+}
+// Imported values are the user's own work — never overwrite aav or pts, and
+// only set stats where there were none (their sheet's stats rescore under
+// their scoring settings; ours would silently replace that).
+function enrichFromBundle(){
+  const idx = new Map(S.players.map(p=>[playerId(p),p]));
+  let enriched=0, added=0;
+  for(const b of BUNDLED.players){
+    const ex = idx.get(playerId(b));
+    if(ex){
+      if(b.team) ex.team = b.team;
+      if(b.bye!=null && ex.bye==null) ex.bye = b.bye;
+      if(b.adp!=null) ex.adp = b.adp;
+      if(b.ecr!=null) ex.ecr = b.ecr;
+      if(b.stats && !ex.stats) ex.stats = b.stats;
+      if(b.note && !(ex.note||"").includes(b.note))
+        ex.note = ex.note ? ex.note+" · "+b.note : b.note;
+      enriched++;
+    }else{
+      const np = freshPlayer(b);
+      S.players.push(np); idx.set(playerId(np), np); added++;
+    }
+  }
+  const pm = S.poolMeta || (S.poolMeta = defaultPoolMeta());
+  pm.bundleMergedAsOf = BUNDLED.meta.asOf;
+  return {mode:"enrich", size:S.players.length, enriched, added};
+}
+function migrateBundle(){
+  const pm = S.poolMeta || (S.poolMeta = defaultPoolMeta());
+  if(!BUNDLED.meta || !BUNDLED.meta.asOf) return null;
+  const bundled = String(pm.valuesSrc||"").startsWith("bundled");
+  if(bundled) return bundleIsNewer(pm) ? adoptBundle() : null;
+  if(pm.bundleMergedAsOf && String(BUNDLED.meta.asOf) <= String(pm.bundleMergedAsOf))
+    return null;                                   // already merged this bundle
+  return enrichFromBundle();
+}
+function migrationSummary(r){
+  if(!r) return null;
+  if(r.mode==="adopt")
+    return `Player pool updated to the ${BUNDLED.meta.asOf} data build — `+
+      `${r.size} players (was ${r.before}). Your marks, keepers and draft are intact.`;
+  return `Bundled data from ${BUNDLED.meta.asOf} merged into your imported pool — `+
+    `${r.added} players added, ${r.enriched} enriched with ADP/rank/bye. `+
+    `Your imported dollar values and projections were left alone.`;
 }
 function saveState(){
   try{
@@ -2414,10 +2524,22 @@ function renderScatter(){
 /* ---------- data tab ---------- */
 function renderData(){
   const pm = S.poolMeta || (S.poolMeta = defaultPoolMeta());
+  const degraded = (BUNDLED.meta.degraded||[]).length
+    ? ` · ⚠ the ${BUNDLED.meta.asOf} build ran degraded (${BUNDLED.meta.degraded.join(", ")} unavailable) — some values fell back to the model`
+    : ``;
+  const sourced = S.players.filter(p=>!/est/.test(p.src||"")).length;
   $("#dataMeta").textContent =
     `${S.players.length} players in pool · values: ${pm.valuesSrc} (${BUNDLED.meta.format}), as of ${pm.valuesAsOf}`+
     (pm.ranksAsOf? ` · ranks refreshed ${pm.ranksAsOf}` : ``)+
-    `. Values marked from consensus sources where available, estimated otherwise — import a fresh CSV the week of your draft.`;
+    (pm.liveRefreshedAsOf? ` · live pull ${pm.liveRefreshedAsOf}` : ``)+
+    ` · ${sourced} of ${S.players.length} dollar values come straight from a source, the rest are model-derived`+
+    degraded+
+    `. Import a fresh CSV the week of your draft if you trust your own sheet more.`;
+  const srcs = BUNDLED.meta.sources||[];
+  $("#dataSources").textContent =
+    (srcs.length? `Sources: ${srcs.slice(0,5).join(" · ")}`+
+      (srcs.length>5? ` · +${srcs.length-5} more` : ``)+`. ` : ``)+
+    (BUNDLED.meta.attribution || FFC_ATTRIBUTION);
   const tb=$("#editTable tbody"); tb.innerHTML="";
   const rows=M.rows.slice().sort((a,b)=>b.blended-a.blended).slice(0,400);
   for(const r of rows){
@@ -3185,15 +3307,100 @@ function renderAsOf(){
   const jump = $("#asofImport");
   if(jump) jump.addEventListener("click", ()=>{ showTab("data"); $("#csvFile").scrollIntoView({behavior:"smooth",block:"center"}); });
 }
-// ↻ Refresh data — pulls everything that can be pulled without a login.
+// Sleeper's season projections: real stat lines and a real ADP for everyone,
+// which is what makes custom scoring and snake ordering mean anything. Values
+// the user imported themselves are left alone — only ranks are refreshed for
+// those, since an import means they trust their own sheet's numbers.
+const dstFor = team => S.players.find(p=>p.pos==="DST" && p.team===team) || null;
+async function refreshProjections(){
+  const r = await fetch(SLEEPER_PROJ_URL);
+  if(!r.ok) throw new Error("Sleeper projections "+r.status);
+  const rows = await r.json();
+  const idx = buildNameIndex();
+  const imported = !String((S.poolMeta||{}).valuesSrc||"").startsWith("bundled");
+  let updated=0, added=0;
+  for(const row of (Array.isArray(rows)?rows:[])){
+    const meta = row.player || {};
+    const pos = normPos(meta.position);
+    if(!pos) continue;
+    const team = String(row.team || meta.team || "").toUpperCase();
+    const name = [meta.first_name, meta.last_name].filter(Boolean).join(" ").trim();
+    const st = row.stats || {};
+    const stats = {}; let hasStats = false;
+    for(const [k, src] of PROJ_STAT_KEYS) if(st[src]){ stats[k] = +st[src]; hasStats = true; }
+    const adp = (st.adp_ppr!=null && +st.adp_ppr>0) ? +(+st.adp_ppr).toFixed(1) : null;
+    const p = pos==="DST" ? dstFor(team) : (name ? matchPlayer(idx, name, pos, team) : null);
+    if(p){
+      if(!imported){
+        if(st.pts_ppr) p.pts = +(+st.pts_ppr).toFixed(1);
+        if(hasStats) p.stats = stats;
+      }
+      if(adp!=null) p.adp = adp;
+      if(team && pos!=="DST") p.team = team;
+      updated++;
+    }else if(pos!=="DST" && name && adp!=null && adp<=240){
+      // a draftable body the pool is missing entirely. $1 is deliberate: the
+      // nightly build is the authority on dollar values, this pull is not.
+      const np = freshPlayer({name, team, pos, aav:1, pts:+st.pts_ppr||0,
+        stats:hasStats?stats:null, adp, src:"sleeper live",
+        note:"added by live refresh — value not yet priced"});
+      S.players.push(np);
+      idx.set(normName(name)+"|"+pos, np);
+      added++;
+    }
+  }
+  return {updated, added};
+}
+// Fantasy Football Calculator: ADP from actual mock drafts, an independent
+// read on Sleeper's. Blend the two rather than trusting either alone.
+async function refreshFFC(){
+  const r = await fetch(FFC_ADP_URL);
+  if(!r.ok) throw new Error("FFC "+r.status);
+  const j = await r.json();
+  const idx = buildNameIndex();
+  let blended=0, byes=0;
+  for(const row of (j && j.players) || []){
+    const pos = normPos(row.position);
+    const adp = row.adp!=null ? +row.adp : null;
+    if(!pos || adp==null) continue;
+    const team = String(row.team||"").toUpperCase();
+    const p = pos==="DST" ? dstFor(team) : matchPlayer(idx, row.name, pos, team);
+    if(!p) continue;
+    p.adp = p.adp!=null ? +((p.adp + adp)/2).toFixed(1) : +adp.toFixed(1);
+    if(row.bye){ p.bye = +row.bye; byes++; }
+    blended++;
+  }
+  return {blended, byes};
+}
+// ↻ Refresh data — pulls everything that can be pulled without a login. Each
+// source is independent: one being down must not cost you the others, so the
+// toast reports per-source rather than one blanket success or failure.
 async function refreshData(){
   const b = $("#refreshBtn");
   if(b.disabled) return;
   const label = b.textContent;
   b.disabled = true; b.textContent = "↻ Refreshing…";
+  const wins = [], fails = [];
   try{
-    const summary = await sleeperRefreshRanks();   // recomputes + saves internally
-    toast(summary);
+    const ranks = await sleeperRefreshRanks();     // recomputes + saves internally
+    if(/^Refreshed/.test(ranks)) wins.push(ranks.replace(/^Refreshed ✓ /,""));
+    else fails.push("Sleeper players");
+    try{
+      const pr = await refreshProjections();
+      wins.push(`${pr.updated} projections/ADP`+(pr.added?` · ${pr.added} players added`:""));
+    }catch(e){ fails.push("Sleeper projections"); }
+    try{
+      const ff = await refreshFFC();
+      wins.push(`${ff.blended} ADP blended with FFC`);
+    }catch(e){ fails.push("FFC ADP"); }
+
+    const pm = S.poolMeta || (S.poolMeta = defaultPoolMeta());
+    if(wins.length){ pm.ranksAsOf = todayISO(); pm.liveRefreshedAsOf = todayISO(); }
+    recompute();
+    toast(wins.length
+      ? `Refreshed ✓ ${wins.join(" · ")}`+(fails.length?` — ${fails.join(", ")} unavailable`:"")
+      : `Refresh failed — ${fails.join(", ")} unreachable. On the claude.ai artifact the `+
+        `sandbox blocks outside requests; use the public site or a local copy.`);
   }catch(e){
     toast("Refresh failed: "+e.message);
   }finally{
@@ -3382,6 +3589,26 @@ function bind(){
     recompute();
     toast(`Draft cleared${keepers?` — ${keepers} keeper${keepers===1?"":"s"} kept (remove them in Data & News)`:""}.`);
   });
+  // same two-click confirm: this throws away imported values, so it must not
+  // be a single stray click, and modal dialogs are not available to us
+  let bundleArmed=null;
+  const bundleBtn=()=>$("#reloadBundleBtn");
+  const disarmBundle=()=>{ clearTimeout(bundleArmed); bundleArmed=null;
+    bundleBtn().textContent="Reload bundled data"; bundleBtn().classList.remove("danger"); };
+  bundleBtn().addEventListener("click",()=>{
+    if(!bundleArmed){
+      bundleBtn().textContent="Sure? Replaces the pool — click again";
+      bundleBtn().classList.add("danger");
+      bundleArmed=setTimeout(disarmBundle, 5000);
+      return;
+    }
+    disarmBundle();
+    const r = adoptBundle();
+    recompute();
+    toast(`Bundled data reloaded — ${r.size} players`+
+      (r.carried?`, ${r.carried} of your marked players carried over`:``)+
+      `. Draft, keepers and marks are intact.`);
+  });
   $("#slFind").addEventListener("click",sleeperFind);
   $("#slLoad").addEventListener("click",sleeperLoad);
   $("#slSyncNow").addEventListener("click",sleeperSync);
@@ -3480,8 +3707,15 @@ settingsToForm();
 renderLeagueSel();
 recompute();
 
+// If the saved pool was reconciled against a newer bundle on load, say so —
+// silently swapping someone's player pool out from under them is not okay.
+if(S.migration) setTimeout(()=>toast(migrationSummary(S.migration)), 600);
+
 // expose for headless tests
 window.APP={get S(){return S},get M(){return M},get R(){return R},
+  migrateBundle,adoptBundle,enrichFromBundle,migrationSummary,bundleIsNewer,
+  refreshProjections,refreshFFC,captureMarks,applyMarks,freshPlayer,
+  get BUNDLED(){return BUNDLED},
   recompute,draftPlayer,undo,importCSV,importRows,importXLSX,parseXLSX,
   solveCompletion,posTable,combine,playerId,normPos,parseCSV,mapHeaders,
   SYNC,applyExternalPicks,sleeperFind,sleeperLoad,sleeperSync,sleeperRefreshRanks,
