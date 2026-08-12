@@ -52,11 +52,14 @@ const newPlayers = OLD.players
     ecr: i + 2,
     bye: 5 + (i % 9),
   }));
-newPlayers.push({
-  name: 'Michael Wilson', team: 'ARI', pos: 'WR', aav: 2, pts: 159.4,
-  src: 'sleeper+espn+ffc', note: '', stats: { rec: 58, rec_yd: 720, rec_td: 5 },
-  adp: 140.2, ecr: 155, bye: 8,
-});
+// the repo bundle predating the data pipeline lacked Michael Wilson; the real
+// builds carry him — either way the synthetic bundle must have exactly one
+if (!newPlayers.some(p => p.name === 'Michael Wilson'))
+  newPlayers.push({
+    name: 'Michael Wilson', team: 'ARI', pos: 'WR', aav: 2, pts: 159.4,
+    src: 'sleeper+espn+ffc', note: '', stats: { rec: 58, rec_yd: 720, rec_td: 5 },
+    adp: 140.2, ecr: 155, bye: 8,
+  });
 for (let i = 0; newPlayers.length < 480; i++) {
   newPlayers.push({
     name: 'Depth Guy ' + i, team: FILLER_TEAMS[i % FILLER_TEAMS.length],
@@ -387,6 +390,51 @@ function savedState(poolMeta, poolTransform) {
     ok('partial failure reported per-source', /unavailable/.test(partial) && /Refreshed/.test(partial), partial);
     ok('button re-enabled after partial failure', await page.locator('#refreshBtn').isEnabled());
 
+    ok('no page errors', errs.length === 0, errs);
+    await ctx.close();
+  }
+
+  // ====================================================== (5) suffix renames
+  // The data builds carry Sleeper-canonical names, which drop Jr./III/'
+  // suffixes the old curated pool kept. A drafted "Marvin Harrison Jr." must
+  // become the bundle's "Marvin Harrison" — mark, log entry and all — not a
+  // duplicate row sitting next to him.
+  console.log('\n--- scenario 5: marks and logs follow a suffix rename ---');
+  {
+    const renamedOld = 'Michael Wilson Jr.';           // old pool spelling
+    const state = savedState(
+      { valuesAsOf: OLD.meta.asOf, valuesSrc: 'bundled snapshot', ranksAsOf: null },
+      p => p.name === 'Michael Wilson' ? Object.assign({}, p, { name: renamedOld }) : p);
+    // …but our synthetic saved pool may not contain Michael Wilson (old bundles
+    // predate him) — ensure the old row exists, marked and drafted
+    if (!state.pool.some(p => p.name === renamedOld))
+      state.pool.push({ name: renamedOld, team: 'ARI', pos: 'WR', aav: 2, pts: 140,
+        src: 'est', note: '', stats: null, floor: null, ceil: null, adp: null,
+        ecr: null, bye: null, dnd: false, star: false, nom: false });
+    state.leagues[0].marks[renamedOld.toLowerCase() + '|wr'] =
+      { drafted: { price: 7, mine: true }, boost: 5, out: false, dnd: false, star: true, nom: false };
+    state.leagues[0].log.push({ id: renamedOld.toLowerCase() + '|wr', name: renamedOld,
+      pos: 'WR', price: 7, mine: true, n: 4 });
+
+    const { ctx, page, errs } = await boot(state);
+    const r = await page.evaluate(() => {
+      const A = window.APP, S = A.S;
+      return {
+        renamedCount: S.migration && S.migration.renamed,
+        dupes: S.players.filter(p => /michael wilson/i.test(p.name)).map(p => p.name),
+        mw: S.players.find(p => A.playerId(p) === 'michael wilson|wr') || null,
+        logIds: S.log.map(l => l.id),
+        logResolves: S.log.every(l => S.players.some(p => A.playerId(p) === l.id)),
+      };
+    });
+    ok('rename detected and counted', r.renamedCount >= 1, r.renamedCount);
+    ok('no duplicate row for the renamed player', r.dupes.length === 1, r.dupes);
+    ok('drafted state followed the rename', r.mw && r.mw.drafted && r.mw.drafted.price === 7,
+      r.mw && r.mw.drafted);
+    ok('boost + star followed the rename', r.mw && r.mw.boost === 5 && r.mw.star === true,
+      r.mw && { boost: r.mw.boost, star: r.mw.star });
+    ok('log id remapped to the new spelling', r.logIds.includes('michael wilson|wr'), r.logIds);
+    ok('every log entry resolves after remap', r.logResolves, r.logIds);
     ok('no page errors', errs.length === 0, errs);
     await ctx.close();
   }

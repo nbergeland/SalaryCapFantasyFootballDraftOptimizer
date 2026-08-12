@@ -779,33 +779,77 @@ function bundleIsNewer(pm){
 // retirement, a keeper from an old sheet) is carried over rather than dropped
 // — losing a keeper or breaking a draft-log link would be far worse than
 // carrying one stale row.
+// Data builds carry Sleeper-canonical names, which drop suffixes the old
+// curated pool kept ("Marvin Harrison Jr." → "Marvin Harrison"). An exact
+// playerId miss is therefore usually the same player under a trimmed name —
+// match those softly so marks and logs follow the rename instead of the old
+// row being duplicated alongside the new one.
+function softIndex(players){
+  const m = new Map();
+  for(const p of players){
+    const k = normName(p.name)+"|"+p.pos;
+    if(!m.has(k)) m.set(k, playerId(p));
+  }
+  return m;
+}
+function remapLeagues(renamed){
+  if(!renamed.size) return;
+  for(const lg of ((LEAGUES&&LEAGUES.list)||[])){
+    if(lg.marks) for(const [oid,nid] of renamed){
+      if(lg.marks[oid] && !lg.marks[nid]) lg.marks[nid] = lg.marks[oid];
+      delete lg.marks[oid];
+    }
+    for(const e of (lg.log||[])) if(renamed.has(e.id)) e.id = renamed.get(e.id);
+  }
+  for(const e of (S.log||[])) if(renamed.has(e.id)) e.id = renamed.get(e.id);
+}
 function adoptBundle(){
   const marks = captureMarks();
   const before = S.players.length;
   const next = BUNDLED.players.map(freshPlayer);
   const have = new Set(next.map(playerId));
+  const soft = softIndex(next);
+  const renamed = new Map();               // old playerId -> new playerId
+  for(const p of S.players){
+    const id = playerId(p);
+    if(have.has(id)) continue;
+    const nid = soft.get(normName(p.name)+"|"+p.pos);
+    if(nid && nid!==id) renamed.set(id, nid);
+  }
   let carried = 0;
   for(const p of S.players){
     const id = playerId(p);
-    if(have.has(id) || !marks[id]) continue;
+    if(have.has(id) || renamed.has(id) || !marks[id]) continue;
     next.push(p); have.add(id); carried++;
+  }
+  for(const [oid,nid] of renamed){
+    if(marks[oid] && !marks[nid]) marks[nid] = marks[oid];
+    delete marks[oid];
   }
   S.players = next;
   applyMarks(marks);
+  remapLeagues(renamed);
   const pm = S.poolMeta || (S.poolMeta = defaultPoolMeta());
   pm.valuesAsOf = BUNDLED.meta.asOf;
   pm.valuesSrc = "bundled snapshot";
   pm.bundleMergedAsOf = BUNDLED.meta.asOf;
-  return {mode:"adopt", size:S.players.length, before, carried};
+  return {mode:"adopt", size:S.players.length, before, carried, renamed:renamed.size};
 }
 // Imported values are the user's own work — never overwrite aav or pts, and
 // only set stats where there were none (their sheet's stats rescore under
 // their scoring settings; ours would silently replace that).
 function enrichFromBundle(){
   const idx = new Map(S.players.map(p=>[playerId(p),p]));
+  // soft second pass so an imported "Marvin Harrison Jr." row is enriched by
+  // the bundle's "Marvin Harrison" instead of gaining a duplicate neighbor
+  const bySoft = new Map();
+  for(const p of S.players){
+    const k = normName(p.name)+"|"+p.pos;
+    if(!bySoft.has(k)) bySoft.set(k, p);
+  }
   let enriched=0, added=0;
   for(const b of BUNDLED.players){
-    const ex = idx.get(playerId(b));
+    const ex = idx.get(playerId(b)) || bySoft.get(normName(b.name)+"|"+b.pos);
     if(ex){
       if(b.team) ex.team = b.team;
       if(b.bye!=null && ex.bye==null) ex.bye = b.bye;

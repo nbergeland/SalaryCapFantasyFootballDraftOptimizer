@@ -8,11 +8,6 @@ on:
   schedule:
     - cron: "20 9 * * *"      # 09:20 UTC daily, after overnight projection updates
   workflow_dispatch:
-  # TEMPORARY (remove before merge): dispatch-only workflows aren't registered
-  # until they reach the default branch, so run the first real build via push.
-  push:
-    branches: [claude/analytics-modeling-evaluation-dz5iic]
-    paths: [".github/workflows/data-refresh.yml", "scripts/build_data.py"]
 
 permissions:
   contents: write
