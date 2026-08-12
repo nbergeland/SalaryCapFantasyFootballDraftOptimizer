@@ -78,6 +78,14 @@ class NormalizationParity(unittest.TestCase):
         for raw, want in self.JS_TABLE:
             self.assertEqual(bd.norm_name(raw), want, raw)
 
+    def test_norm_name_folds_diacritics(self):
+        # FFC writes accented names Sleeper spells plain; a bare non-[a-z]
+        # strip made "Piñeiro" into "pieiro" and the match missed (seen on
+        # the first live build). The JS never sees both spellings at once,
+        # so the fold is Python-only and deliberately beyond parity.
+        self.assertEqual(bd.norm_name("Eddy Piñeiro"), "eddypineiro")
+        self.assertEqual(bd.norm_name("Eddy Pineiro"), "eddypineiro")
+
     def test_norm_pos(self):
         cases = {"QB": "QB", "qb": "QB", "RB": "RB", "WR": "WR", "TE": "TE",
                  "K": "K", "PK": "K", "DEF": "DST", "DST": "DST", "D/ST": "DST",
@@ -253,6 +261,39 @@ class Cutoff(unittest.TestCase):
         self.assertEqual(len(kept), 600)
         # everyone with an ADP survives regardless of the top-N line
         self.assertTrue(all(r["adp"] is not None for r in kept[:500]))
+
+    def test_placeholder_adp_and_deep_espn_ranks_do_not_defeat_the_cutoff(self):
+        # The first live build kept all 3219 rows: Sleeper stamps 999-style
+        # adp defaults on nearly every projection row, and ESPN ranks ~1000
+        # players. Neither is a reason to keep someone.
+        recs = {}
+        for i in range(1000):
+            r = bd.new_record(f"Player {i}", "WR", "SF")
+            r["pts"] = 300 - i * 0.1
+            r["adp"] = 999.0            # placeholder ADP for everyone
+            r["ecr"] = None
+            r["espn_rank"] = i + 1 if i < 900 else None   # deep ESPN ranks
+            r["aav"] = 1
+            recs[f"k{i}"] = r
+        kept = bd.apply_cutoff(recs, {}, top_n=600, top_k=24)
+        self.assertEqual(len(kept), 600)
+
+    def test_ingest_nulls_out_placeholder_sleeper_adp(self):
+        raw = {
+            "sleeper_players": {"1": {"full_name": "Deep Guy", "position": "WR",
+                                       "team": "SF", "search_rank": 2500}},
+            "sleeper_projections": [
+                {"player_id": "1",
+                 "player": {"player_id": "1", "full_name": "Deep Guy",
+                            "position": "WR", "team": "SF"},
+                 "team": "SF",
+                 "stats": {"rec": 5.0, "rec_yd": 40.0, "pts_ppr": 9.0,
+                           "adp_ppr": 999.0}},
+            ],
+        }
+        recs, _ = bd.ingest_sleeper(raw, {})
+        rec = next(r for r in recs.values() if r["name"] == "Deep Guy")
+        self.assertIsNone(rec["sleeper_adp"])
 
     def test_all_dsts_and_top_kickers_survive_a_tiny_top_n(self):
         data, _s, _r = build_fixture()

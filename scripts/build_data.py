@@ -41,6 +41,7 @@ import re
 import statistics
 import sys
 import time
+import unicodedata
 from datetime import date, datetime, timezone
 
 # --------------------------------------------------------------------------
@@ -51,6 +52,10 @@ DATA_START = "/*__DATA__*/"
 DATA_END = "/*__END_DATA__*/"
 
 POSITIONS = ["QB", "RB", "WR", "TE", "K", "DST"]
+
+# ADP values at/after this pick are placeholder defaults, not draft signal
+# (29 rounds × 12 teams ≈ 350; Sleeper pads the deep pool with 999s).
+MAX_REAL_ADP = 350.0
 
 # stat keys consumed by scorePlayer() in index.html — do not rename without
 # changing the app.  Sleeper calls interceptions ``pass_int``; the app calls
@@ -144,8 +149,12 @@ _NON_ALPHA_RE = re.compile(r"[^a-z]")
 
 
 def norm_name(s) -> str:
-    """Mirror of normName() in index.html (~line 2555)."""
-    return _NON_ALPHA_RE.sub("", _SUFFIX_RE.sub("", str(s).lower()))
+    """Mirror of normName() in index.html (~line 2555), plus a diacritic fold
+    the JS never needs (its sources agree on spelling; ours don't - FFC writes
+    "Eddy Piñeiro" where Sleeper has "Eddy Pineiro", and a bare strip would
+    turn ñ into nothing instead of n)."""
+    s = unicodedata.normalize("NFKD", str(s)).encode("ascii", "ignore").decode()
+    return _NON_ALPHA_RE.sub("", _SUFFIX_RE.sub("", s.lower()))
 
 
 def norm_pos(raw):
@@ -252,7 +261,7 @@ def load_sources(season, fixtures_dir=None):
         ("espn_kona", "espn_kona.json",
          lambda: get_json(
              "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/"
-             f"{season}/segments/0/leagues/leaguedefaults/3?view=kona_player_info",
+             f"{season}/segments/0/leaguedefaults/3?view=kona_player_info",
              headers=espn_filter_header()), False),
         ("espn_byes", "espn_byes.json",
          lambda: get_json(
@@ -356,6 +365,13 @@ def ingest_sleeper(raw, report):
                 stats[k] = round(float(v), 1)
         pts = st_raw.get("pts_ppr")
         adp = st_raw.get("adp_ppr")
+        # Sleeper stamps an adp_ppr on nearly every projection row, with
+        # 999-style defaults deep in the pool. An "ADP" beyond pick ~350
+        # (29 rounds, 12 teams) is a placeholder, not a draft signal — treating
+        # it as real kept all 3219 rows at the cutoff and would feed junk
+        # ranks into snake mode.
+        if adp is not None and float(adp) >= MAX_REAL_ADP:
+            adp = None
 
         if not stats and adp is None and pos not in ("K", "DST"):
             dropped += 1                            # no signal at all — skip
@@ -599,7 +615,11 @@ def apply_cutoff(recs, report, top_n=600, top_k=24):
     for rec in ordered:
         if rec["pos"] == "DST":
             keep.add(id(rec))
-        elif rec["espn_rank"] is not None or rec["adp"] is not None:
+        # a rank someone would actually draft at — ESPN's kona feed carries
+        # ~1000 ranked rows and would otherwise defeat the cutoff entirely
+        elif rec["espn_rank"] is not None and rec["espn_rank"] <= 300:
+            keep.add(id(rec))
+        elif rec["adp"] is not None and rec["adp"] < MAX_REAL_ADP:
             keep.add(id(rec))
     kept = [r for r in ordered if id(r) in keep]
     report["cutoff_pool"] = len(recs)
