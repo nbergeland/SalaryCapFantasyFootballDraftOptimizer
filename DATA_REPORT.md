@@ -1,8 +1,8 @@
 # Data build report
 
-- Built: 2026-08-13T10:28:55+00:00
+- Built: 2026-08-14T10:17:47+00:00
 - Season: 2026
-- Players in bundle: **600**
+- Players in bundle: **603**
 - News lines: 25
 
 ## Source status
@@ -19,26 +19,26 @@
 
 - Sleeper players DB entries: 4385
 - Sleeper projection rows: 3300
-- Dropped (no stats, no ADP): 2482
-- ESPN matched / added: 619 / 0
-- FFC matched / added: 254 / 2
-- Pool before cutoff: 745 → kept 600
+- Dropped (no stats, no ADP): 2407
+- ESPN matched / added: 625 / 0
+- FFC matched / added: 258 / 1
+- Pool before cutoff: 819 → kept 603
 
 ### Position breakdown
 
-- QB: 65
-- RB: 115
-- WR: 195
-- TE: 104
-- K: 89
+- QB: 60
+- RB: 121
+- WR: 202
+- TE: 91
+- K: 97
 - DST: 32
 
 ## Auction values
 
-- Replacement points: {'DST': 91.9, 'QB': 291.1, 'WR': 170.4, 'RB': 168.8, 'TE': 156.0, 'K': 116.2}
-- $/VORP scale: 0.4046 (calibration factor 0.9311)
+- Replacement points: {'DST': 91.9, 'QB': 291.1, 'WR': 174.7, 'RB': 168.8, 'TE': 156.0, 'K': 116.2}
+- $/VORP scale: 0.4183 (calibration factor 0.9336)
 - ESPN-priced players: 100
-- Mean abs error of the VORP model vs ESPN prices: 5.62
+- Mean abs error of the VORP model vs ESPN prices: 5.61
 
 ## Team disagreements (0)
 
@@ -88,7 +88,7 @@ _none_
 - Darnell Mooney (WR): sleeper=58.6 espn=160.8
 - …and 145 more
 
-## ESPN rows not matched and not added (381)
+## ESPN rows not matched and not added (375)
 
 - Kene Nwangwu (NYJ RB) rank=432
 - Bam Knight (ARI RB) rank=436
@@ -97,45 +97,44 @@ _none_
 - Josh Williams (TB RB) rank=458
 - Jake Browning (TB QB) rank=482
 - Sam Howell (DAL QB) rank=486
-- Hollywood Brown (PHI WR) rank=984
-- Kyle Juszczyk (SF RB) rank=997
+- Kyle Juszczyk (SF RB) rank=995
+- Hollywood Brown (PHI WR) rank=1011
 - Erick All Jr. (CIN TE) rank=1017
 - Hunter Luepke (DAL RB) rank=1095
-- Mitchell Tinsley (CIN WR) rank=1132
 - Alec Ingold (LAC RB) rank=1159
 - Malik Benson (LV WR) rank=1166
 - Ben Sims (MIA TE) rank=1169
-- Adam Prentice (DEN RB) rank=1211
-- Connor Heyward (LV RB) rank=1214
-- Michael Burton (CLE RB) rank=1215
-- Max Bredeson (MIN RB) rank=1223
-- CJ Dippre (NE TE) rank=1238
-- Kenny Pickett (CAR QB) rank=1243
-- Matthew Hibner (BAL TE) rank=1255
-- Justin Watson (HOU WR) rank=1260
-- Jonathan Mingo (DAL WR) rank=1265
-- Andrew Beck (NYJ RB) rank=1266
-- Laquon Treadwell (IND WR) rank=1268
-- Johnny Mundt (PHI TE) rank=1273
-- Brycen Tremayne (CAR WR) rank=1275
-- Riley Nowakowski (PIT RB) rank=1278
-- Drew Lock (SEA QB) rank=1281
-- Reggie Gilliam (NE RB) rank=1282
-- Patrick Ricard (NYG RB) rank=1291
+- Adam Prentice (DEN RB) rank=1208
+- Connor Heyward (LV RB) rank=1211
+- Michael Burton (CLE RB) rank=1212
+- Mitchell Tinsley (CIN WR) rank=1217
+- Max Bredeson (MIN RB) rank=1220
+- CJ Dippre (NE TE) rank=1235
+- Kenny Pickett (CAR QB) rank=1240
+- Matthew Hibner (BAL TE) rank=1253
+- Justin Watson (HOU WR) rank=1258
+- Jonathan Mingo (DAL WR) rank=1263
+- Andrew Beck (NYJ RB) rank=1264
+- Laquon Treadwell (IND WR) rank=1266
+- Johnny Mundt (PHI TE) rank=1271
+- Riley Nowakowski (PIT RB) rank=1273
+- Brycen Tremayne (CAR WR) rank=1276
+- Drew Lock (SEA QB) rank=1277
+- Reggie Gilliam (NE RB) rank=1278
+- Patrick Ricard (NYG RB) rank=1287
 - Braxton Berrios (NYG WR) rank=1335
 - Charlie Jones (CIN WR) rank=1336
-- British Brooks (HOU RB) rank=1338
-- Myles Price (MIN WR) rank=1342
-- Britain Covey (PHI WR) rank=1344
-- Colton Dowell ( WR) rank=1347
-- Ke'Shawn Williams (CIN WR) rank=1348
-- Mason Tipton (NO WR) rank=1351
-- …and 341 more
+- British Brooks (HOU RB) rank=1337
+- Myles Price (MIN WR) rank=1341
+- Britain Covey (PHI WR) rank=1343
+- Ke'Shawn Williams (CIN WR) rank=1346
+- Mason Tipton (NO WR) rank=1349
+- Michael Bandy (DEN WR) rank=1356
+- …and 335 more
 
-## FFC rows with no Sleeper match (2)
+## FFC rows with no Sleeper match (1)
 
-- Ricky Pearsall (SF WR) adp=112.6
-- AJ Dillon (CAR RB) adp=164.1
+- AJ Dillon (CAR RB) adp=165.0
 
 ---
 
