@@ -26,8 +26,8 @@ INDEX = os.path.join(REPO, "index.html")
 SMALL = dict(min_players=5)
 
 
-def build_fixture(fixtures_dir=FIXTURES, as_of="2026-08-12"):
-    return bd.build(2026, fixtures_dir=fixtures_dir, as_of=as_of)
+def build_fixture(fixtures_dir=FIXTURES, as_of="2026-08-12", fp_key=None):
+    return bd.build(2026, fixtures_dir=fixtures_dir, as_of=as_of, fp_key=fp_key)
 
 
 def read(path):
@@ -117,7 +117,11 @@ class FixtureBuild(unittest.TestCase):
         cls.players = cls.data["players"]
 
     def test_all_sources_ok(self):
-        self.assertEqual(set(self.status.values()), {"ok"})
+        # FantasyPros is optional and no key is set in the test environment,
+        # so it reports "skipped" — which is explicitly not a degradation
+        self.assertEqual(self.status["fantasypros"], "skipped (no key)")
+        others = {k: v for k, v in self.status.items() if k != "fantasypros"}
+        self.assertEqual(set(others.values()), {"ok"})
         self.assertEqual(self.data["meta"]["degraded"], [])
 
     def test_michael_wilson_present(self):
@@ -147,9 +151,20 @@ class FixtureBuild(unittest.TestCase):
                      bd.norm_name(name) and q["pos"] == p["pos"]]
             self.assertEqual(len(dupes), 1, f"{name} duplicated: {dupes}")
 
-    def test_no_signal_row_is_dropped(self):
-        self.assertIsNone(by_name(self.players, "Ricky Pearsall"))
+    def test_no_signal_projection_row_is_dropped(self):
+        """The Sleeper *projection* row still carries no signal and is dropped.
+
+        This test used to assert Ricky Pearsall was absent from the pool
+        entirely. That premise was the bug: FFC lists him at ADP 112, so he
+        re-enters through the FFC path anyway — and used to arrive with no
+        injury data at all because only the projection path consulted the
+        Sleeper players DB. He is now in the pool *and* marked OUT (see
+        InjuryClassification), which is the whole point of this feature."""
         self.assertEqual(self.report["sleeper_dropped_no_signal"], 1)
+        rp = by_name(self.players, "Ricky Pearsall")
+        self.assertIsNotNone(rp)
+        self.assertEqual(rp["pts"], 0.0)
+        self.assertEqual(rp["src"], "ffc (aav est)")
 
     def test_espn_only_player_inside_rank_300_is_added(self):
         tw = by_name(self.players, "Tyler Warren")
@@ -207,7 +222,9 @@ class FixtureBuild(unittest.TestCase):
         self.assertEqual(by_name(self.players, "Jake Bates")["ecr"], 190)
 
     def test_injury_status_lands_in_note(self):
-        self.assertIn("Sleeper: Questionable", by_name(self.players, "Puka Nacua")["note"])
+        note = by_name(self.players, "Puka Nacua")["note"]
+        self.assertIn("Sleeper: Questionable", note)
+        self.assertIn("(Ankle)", note)                    # body part rides along
 
     def test_byes_applied_from_espn(self):
         self.assertEqual(by_name(self.players, "Michael Wilson")["bye"], 8)   # ARI
@@ -244,6 +261,252 @@ class FixtureBuild(unittest.TestCase):
 
     def test_bundle_passes_its_own_validation(self):
         bd.validate(self.data, 5, ["Michael Wilson|WR", "Seahawks D/ST|DST"])
+
+
+class InjuryClassification(unittest.TestCase):
+    """The feature this pipeline exists for: nobody should ever be recommended
+    a player who is out for the season."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.data, cls.status, cls.report = build_fixture()
+        cls.players = cls.data["players"]
+
+    def out_names(self):
+        return {p["name"] for p in self.players if p.get("out")}
+
+    # ---- the matrix -------------------------------------------------------
+    def test_classify_matrix(self):
+        cases = [
+            ({"injury": "Out"}, True),
+            ({"injury": "IR"}, True),
+            ({"injury": "ir"}, True),                   # case-insensitive
+            ({"injury": "DNR"}, True),
+            ({"injury": "Sus"}, True),
+            ({"sleeper_status": "Injured Reserve"}, True),
+            ({"espn_injury": "INJURY_RESERVE"}, True),
+            ({"espn_injury": "OUT"}, True),
+            ({"espn_injury": "SUSPENSION"}, True),
+            ({"fp_out": True}, True),
+            # explicitly NOT out — these players still practice or return
+            ({"injury": "PUP"}, False),
+            ({"injury": "Questionable"}, False),
+            ({"injury": "Doubtful"}, False),
+            ({"injury": "COV"}, False),
+            ({"injury": "NA"}, False),
+            ({"injury": None}, False),
+            ({"sleeper_status": "Active"}, False),
+            ({"sleeper_status": "Inactive"}, False),
+            ({"espn_injury": "DAY_TO_DAY"}, False),
+            ({"espn_injury": "QUESTIONABLE"}, False),
+            ({"espn_injured": True}, False),             # the report ≠ ruled out
+            ({}, False),
+        ]
+        for patch, want in cases:
+            rec = bd.new_record("X", "WR", "SF")
+            rec.update(patch)
+            self.assertEqual(bd.classify_out(rec), want, patch)
+
+    # ---- the canary -------------------------------------------------------
+    def test_pearsall_enters_via_ffc_and_is_marked_out(self):
+        """No Sleeper projection, in the pool through FFC's ADP, ruled out."""
+        rp = by_name(self.players, "Ricky Pearsall")
+        self.assertIsNotNone(rp)
+        self.assertIs(rp["out"], True)
+        self.assertEqual(rp["adp"], 112.0)
+        self.assertIn("Sleeper: Out (PCL)", rp["note"])
+        self.assertIn("PCL reconstruction", rp["note"])
+
+    def test_backfill_joins_added_rows_to_the_sleeper_players_db(self):
+        # Pearsall arrived with injury/search_rank unset until the backfill
+        self.assertGreaterEqual(self.report["sleeper_backfilled"], 1)
+        self.assertEqual(by_name(self.players, "Ricky Pearsall")["ecr"], 240)
+
+    # ---- the rest of the pool --------------------------------------------
+    def test_ir_player_with_a_healthy_projection_is_out(self):
+        ap = by_name(self.players, "Alec Pierce")
+        self.assertIs(ap["out"], True)
+        self.assertGreater(ap["pts"], 100)        # the projection is fine; he is not
+        self.assertIn("Sleeper: IR (Ankle)", ap["note"])
+
+    def test_roster_status_injured_reserve_alone_is_enough(self):
+        td = by_name(self.players, "Tank Dell")
+        self.assertIs(td["out"], True)            # injury_status is null for him
+        self.assertIn("Sleeper: Injured Reserve", td["note"])
+
+    def test_espn_injury_status_can_rule_a_player_out(self):
+        tw = by_name(self.players, "Tyler Warren")
+        self.assertIs(tw["out"], True)
+        self.assertIn("ESPN: Injured Reserve", tw["note"])
+
+    def test_pup_and_questionable_are_never_auto_out(self):
+        cw = by_name(self.players, "Christian Watson")
+        self.assertIsNone(cw.get("out"))
+        self.assertIn("Sleeper: PUP (Knee)", cw["note"])
+        for name in ("Puka Nacua", "Kenneth Walker III"):
+            self.assertIsNone(by_name(self.players, name).get("out"), name)
+
+    def test_healthy_players_carry_no_out_key(self):
+        chase = by_name(self.players, "Ja'Marr Chase")
+        self.assertNotIn("out", chase)            # absent, not false — smaller bundle
+
+    def test_out_is_a_real_bool_and_survives_validation(self):
+        for p in self.players:
+            if "out" in p:
+                self.assertIsInstance(p["out"], bool)
+        bd.validate(self.data, 5, ["Ricky Pearsall|WR"])
+        bad = {"meta": {"asOf": "2026-08-12"}, "news": [], "players": [
+            {"name": "A B", "team": "SF", "pos": "WR", "aav": 3, "pts": 1.0,
+             "src": "sleeper", "note": "", "out": 1}]}
+        with self.assertRaises(bd.ValidationError):
+            bd.validate(bad, 1, [])
+
+    def test_disagreement_between_sources_is_reported(self):
+        lines = self.report["injury_disagreements"]
+        self.assertTrue(any("Tyler Warren" in s and "INJURY_RESERVE" in s
+                            for s in lines), lines)
+
+    def test_report_lists_every_out_player_with_a_reason(self):
+        self.assertEqual(self.report["out_count"], len(self.out_names()))
+        joined = "\n".join(self.report["out_players"])
+        self.assertIn("Ricky Pearsall", joined)
+        self.assertIn("sleeper injury_status=Out", joined)
+
+    # ---- notes ------------------------------------------------------------
+    def test_injury_notes_are_single_line_and_separator_free(self):
+        rp = by_name(self.players, "Ricky Pearsall")
+        self.assertNotIn("\n", rp["note"])
+        pn = by_name(self.players, "Puka Nacua")          # fixture note has a "·"
+        self.assertNotIn("·", pn["note"].split(" · ")[-1])
+        bd.encode(self.data)                              # would reject a newline
+
+    def test_note_has_exactly_one_sleeper_segment(self):
+        """The app replaces that segment on a live refresh — two would rot."""
+        for p in self.players:
+            segs = [s for s in p["note"].split(" · ") if s.startswith("Sleeper: ")]
+            self.assertLessEqual(len(segs), 1, p["name"])
+
+    def test_clean_text_caps_and_flattens(self):
+        self.assertEqual(bd.clean_text("a\nb  c"), "a b c")
+        self.assertEqual(bd.clean_text("x · y"), "x - y")
+        self.assertLessEqual(len(bd.clean_text("z" * 300)), 90)
+
+
+class NewsOrdering(unittest.TestCase):
+    """65 undifferentiated injury lines was the first build's failure mode."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.data, _s, _r = build_fixture()
+        cls.news = cls.data["news"]
+
+    def test_season_enders_come_first(self):
+        first = self.news[0]
+        self.assertIn("out for the season", first)
+        idx_out = max(i for i, n in enumerate(self.news) if "out for the season" in n)
+        idx_day = min(i for i, n in enumerate(self.news)
+                      if "Sleeper injury status" in n)
+        self.assertLess(idx_out, idx_day)
+
+    def test_season_ender_lines_name_the_body_part(self):
+        line = next(n for n in self.news if "Ricky Pearsall" in n)
+        self.assertIn("PCL", line)
+        self.assertIn("marked OUT", line)
+
+    def test_week_to_week_lines_say_they_are_not_out(self):
+        line = next(n for n in self.news if "Puka Nacua" in n)
+        self.assertIn("not auto-marked OUT", line)
+
+    def test_out_players_are_not_recycled_as_risers(self):
+        risers = [n for n in self.news if "paying up for him" in n]
+        self.assertTrue(all("Pearsall" not in n and "Tank Dell" not in n
+                            for n in risers), risers)
+
+    def test_tiers_are_capped_so_one_kind_cannot_crowd_out_the_rest(self):
+        kept = []
+        for i in range(40):
+            r = bd.new_record(f"Hurt Guy {i}", "WR", "SF")
+            r.update({"injury": "IR", "out": True, "adp": float(i + 1),
+                      "ecr": i + 1, "pts": 100.0})
+            kept.append(r)
+        for i in range(40):
+            r = bd.new_record(f"Iffy Guy {i}", "WR", "SF")
+            r.update({"injury": "Questionable", "adp": float(i + 60),
+                      "ecr": i + 60, "pts": 100.0})
+            kept.append(r)
+        lines = bd.build_news(kept)
+        self.assertEqual(len([n for n in lines if "out for the season" in n]), 10)
+        self.assertEqual(len([n for n in lines if "Sleeper injury status" in n]), 8)
+        self.assertLessEqual(len(lines), 25)
+
+
+class FantasyProsLeg(unittest.TestCase):
+    """Optional source: silent when unconfigured, degraded when it breaks."""
+
+    def test_absent_key_skips_silently(self):
+        data, status, report = build_fixture()
+        self.assertEqual(status["fantasypros"], "skipped (no key)")
+        self.assertNotIn("fantasypros", data["meta"]["degraded"])
+        self.assertNotIn(bd.FP_SOURCE_LINK, data["meta"]["sources"])
+        self.assertFalse(any(n.startswith("FP:") for n in data["news"]))
+
+    def test_key_plus_fixture_activates_the_leg(self):
+        data, status, report = build_fixture(fp_key="test-key")
+        self.assertEqual(status["fantasypros"], "ok")
+        self.assertEqual(data["meta"]["degraded"], [])
+        self.assertIn(bd.FP_SOURCE_LINK, data["meta"]["sources"])
+        self.assertEqual(report["fp_items"], 4)
+        self.assertTrue(any(n.startswith("FP:") for n in data["news"]))
+
+    def test_season_ending_headline_corroborates_out(self):
+        data, _s, report = build_fixture(fp_key="test-key")
+        eg = by_name(data["players"], "Emeka Egbuka")
+        self.assertIs(eg["out"], True)            # no injury status anywhere else
+        self.assertIn("FP: Emeka Egbuka tore his ACL", eg["note"])
+        self.assertTrue(any("Emeka Egbuka" in s for s in report["fp_out_flagged"]))
+
+    def test_a_non_season_ending_headline_does_not_out_anyone(self):
+        data, _s, _r = build_fixture(fp_key="test-key")
+        self.assertIsNone(by_name(data["players"], "Puka Nacua").get("out"))
+
+    def test_unknown_player_in_a_headline_is_ignored(self):
+        _d, _s, report = build_fixture(fp_key="test-key")
+        self.assertFalse(any("Nobody Atall" in s for s in report["fp_out_flagged"]))
+
+    def test_error_with_a_key_set_is_degraded(self):
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        for f in os.listdir(FIXTURES):
+            if f != "fantasypros_news.json":
+                shutil.copy(os.path.join(FIXTURES, f), os.path.join(tmp, f))
+        data, status, _r = build_fixture(tmp, fp_key="test-key")
+        self.assertTrue(status["fantasypros"].startswith("FAILED"))
+        self.assertIn("fantasypros", data["meta"]["degraded"])
+
+    def test_parser_tolerates_the_shapes_the_api_has_used(self):
+        shapes = [
+            {"news": [{"title": "A", "description": "b"}]},
+            [{"headline": "A", "text": "b"}],
+            {"items": [{"title": "A"}]},
+            {"data": [{"name": "A", "analysis": "b"}]},
+            ["A plain string headline"],
+        ]
+        for payload in shapes:
+            items = bd.parse_fantasypros(payload)
+            self.assertEqual(len(items), 1, payload)
+            self.assertTrue(items[0]["headline"], payload)
+        for junk in (None, {}, [], {"news": None}, 7, "nope"):
+            self.assertEqual(bd.parse_fantasypros(junk), [], junk)
+
+    def test_player_names_are_read_from_several_key_shapes(self):
+        payload = {"news": [
+            {"title": "T1", "description": "torn ACL", "players": ["Bijan Robinson"]},
+            {"title": "T2", "description": "torn ACL",
+             "player": [{"name": "Josh Allen"}]},
+        ]}
+        items = bd.parse_fantasypros(payload)
+        self.assertEqual(items[0]["players"], ["Bijan Robinson"])
+        self.assertEqual(items[1]["players"], ["Josh Allen"])
 
 
 class Cutoff(unittest.TestCase):
@@ -470,9 +733,30 @@ class FixtureIntegrity(unittest.TestCase):
 
     def test_fixture_files_exist_and_parse(self):
         for f in ("sleeper_players.json", "sleeper_projections.json",
-                  "ffc_adp.json", "espn_kona.json", "espn_byes.json"):
+                  "ffc_adp.json", "espn_kona.json", "espn_byes.json",
+                  "fantasypros_news.json"):
             with open(os.path.join(FIXTURES, f), encoding="utf-8") as fh:
                 json.load(fh)
+
+    def test_sleeper_fixture_carries_the_injury_fields_the_api_sends(self):
+        players = json.loads(read(os.path.join(FIXTURES, "sleeper_players.json")))
+        for want in ("injury_status", "injury_body_part", "injury_notes",
+                     "injury_start_date", "status"):
+            self.assertTrue(all(want in v for v in players.values()), want)
+        statuses = {v.get("injury_status") for v in players.values()}
+        for want in ("Out", "IR", "PUP", "Questionable"):
+            self.assertIn(want, statuses)
+        self.assertIn("Injured Reserve",
+                      {v.get("status") for v in players.values()})
+        # a hand-typed note with a newline in it, exactly like the real feed
+        self.assertTrue(any("\n" in (v.get("injury_notes") or "")
+                            for v in players.values()))
+
+    def test_espn_fixture_carries_injury_status(self):
+        payload = json.loads(read(os.path.join(FIXTURES, "espn_kona.json")))
+        pls = [r["player"] for r in payload["players"]]
+        self.assertTrue(all("injuryStatus" in p for p in pls))
+        self.assertIn("INJURY_RESERVE", {p["injuryStatus"] for p in pls})
 
     def test_fixtures_cover_the_awkward_cases(self):
         players = json.loads(read(os.path.join(FIXTURES, "sleeper_players.json")))

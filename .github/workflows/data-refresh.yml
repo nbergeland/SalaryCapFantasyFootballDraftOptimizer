@@ -40,6 +40,12 @@ jobs:
         # A failure here means a required source was down or the validation
         # gate rejected the result. index.html is left untouched, the run goes
         # red, and yesterday's data stays live.
+        #
+        # FANTASYPROS_API_KEY is optional: with the secret unset the builder
+        # skips that leg silently (it is not treated as a degraded source), so
+        # this works whether or not anyone has requested a free key yet.
+        env:
+          FANTASYPROS_API_KEY: ${{ secrets.FANTASYPROS_API_KEY }}
         run: python3 scripts/build_data.py
 
       - name: Commit and push if the data changed
