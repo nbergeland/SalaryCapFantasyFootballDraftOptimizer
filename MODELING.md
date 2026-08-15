@@ -213,6 +213,52 @@ you to make.
   effectively a marginal-value curve). That number — not the AAV — is what should
   discipline your bidding in the room.
 
+### 2.5b The injury layer (auto-OUT)
+
+An injury designation was decorative until this layer existed: it landed in the note
+text and nothing read it, so a player with a season-ending injury kept his projection,
+his ADP and his place in the recommendations. The failure was not subtle — a receiver
+who had already been ruled out for the year was being suggested at his pre-injury draft
+position, because his projection row had been dropped and he re-entered the pool through
+ADP alone, on a path that never consulted the injury data at all.
+
+**Sources.** Sleeper's player database (`injury_status`, `injury_body_part`,
+`injury_notes`, roster `status`), ESPN's `kona_player_info` (`injuryStatus`, `injured`),
+and optionally FantasyPros news headlines when a `FANTASYPROS_API_KEY` is configured.
+Rows that entered the pool from ESPN or FFC are joined back to Sleeper's player database
+by normalized name + position before anything is classified, so an added row carries the
+same injury data a projected row does.
+
+**Classification.** One boolean, deliberately conservative — a player is OUT when any
+source says the season is over for him:
+
+| Ruled OUT | Not ruled OUT (note only) |
+|---|---|
+| Sleeper `IR`, `Out`, `DNR`, `Sus` | Sleeper `PUP`, `Questionable`, `Doubtful`, `COV`, `NA` |
+| Sleeper roster status `Injured Reserve` | ESPN `DAY_TO_DAY`, `QUESTIONABLE`, `DOUBTFUL` |
+| ESPN `INJURY_RESERVE`, `OUT`, `SUSPENSION` | ESPN `injured: true` on its own |
+| FantasyPros season-ending headline matched to a pool name | any other headline |
+
+PUP is the interesting exclusion: a PUP player is expected back, often by week 5, and
+auto-benching him would cost more than the injury does. The asymmetry is the point — a
+missed OUT costs one bad recommendation the user can see and reject; a false OUT silently
+removes a draftable player from every calculation. Where Sleeper and ESPN disagree, the
+disagreement is recorded in `DATA_REPORT.md` rather than resolved silently.
+
+**Effect.** Classified players ship as `out: true` in the bundle and are excluded from
+the optimizer, max bids, snake plans, nomination ideas and keeper verdicts (a keeper who
+is out is a toss-back at any price, not a surplus calculation). The generated briefing is
+tiered by severity — season-enders with body part first, then optional FantasyPros
+headlines, then week-to-week statuses, then team disagreements and ADP risers — because a
+flat list put "Questionable" and "torn ACL" in the same undifferentiated pile.
+
+**Override semantics.** The data's flag is a *default*, not a verdict. Each pool row
+carries `outData` (what the data says) alongside `out` (what the app acts on). They move
+together until the user disagrees; from then on the user's choice is stored as an explicit
+override and re-applied over every later build and live refresh, in both directions — so
+un-checking a player you have reason to believe will play sticks, and so does marking
+someone out that no feed has caught up to yet.
+
 ## 3. Alternatives considered (and why they weren't chosen)
 
 - **Full stochastic programming / Monte Carlo roster simulation.** The theoretically
@@ -267,6 +313,13 @@ Stated plainly, because they bound how much weight the outputs deserve:
   without them and says so in `meta.degraded`, which the Data tab surfaces. In that state
   auction values lean harder on the VORP model. Only a Sleeper outage aborts the build
   outright and leaves the previous day's data live.
+- **The injury layer is only as current as the feeds, and only handles "out for the
+  season."** It reads designations, not reporting: a player whose injury broke after the
+  last nightly build is not marked until the next one (the in-app ↻ refresh pulls the
+  same statuses on demand). PUP and week-to-week designations are deliberately left to
+  you (§2.5b), and nothing here estimates *how much* an injury lowers a projection —
+  a player is either out for the season or priced as if healthy, with the boost/fade
+  slider as the manual middle ground.
 - **Simulation inputs are position-level, not player-level.** Floor/ceiling numbers
   inherit those assumptions; treat them as shape, not precision.
 - **Snake availability is a rank model with a buffer**, not a probabilistic ADP

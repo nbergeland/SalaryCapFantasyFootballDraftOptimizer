@@ -95,11 +95,12 @@ auction model tracks ESPN's prices.
 
 | Source | Contributes |
 |---|---|
-| Sleeper players | roster, teams, injury flags, search rank |
+| Sleeper players | roster, teams, injury status + body part + notes, search rank |
 | Sleeper projections | stat-level season projections, PPR points, ADP |
 | Fantasy Football Calculator | ADP from real mock drafts |
-| ESPN (`kona_player_info`) | auction values, PPR ranks, a second projection |
+| ESPN (`kona_player_info`) | auction values, PPR ranks, a second projection, injury status |
 | ESPN pro teams | bye weeks |
+| FantasyPros news *(optional)* | headlines, and corroboration for season-ending injuries |
 
 Sleeper is required: if either Sleeper call fails the build aborts and yesterday's data
 stays live. ESPN and FFC are degradable — the build proceeds and flags itself in the app.
@@ -108,13 +109,50 @@ per-record schema, no duplicate IDs, a sanity list of consensus stars).
 
 *ADP data courtesy of [Fantasy Football Calculator](https://fantasyfootballcalculator.com).*
 
+### Injuries: who gets marked OUT, and who doesn't
+
+Every build classifies each player and ships `out: true` for anyone who is done for the
+season, so they never reach a recommendation, a max bid, a snake plan or a keeper verdict.
+A player is auto-marked OUT when **Sleeper** reports `IR`, `Out`, `DNR` or `Sus` (or a
+roster status of *Injured Reserve*), when **ESPN** reports `INJURY_RESERVE`, `OUT` or
+`SUSPENSION`, or when an active FantasyPros headline reports a season-ending injury for
+someone in the pool.
+
+**PUP, Questionable and Doubtful are deliberately never auto-marked.** Those players come
+back, and a false OUT costs you a draftable player. They get a note (with body part and
+Sleeper's own injury note) and a line in the briefing instead.
+
+You always have the last word: un-check **OUT** on the Data tab, or hit **🚑 OUT** on the
+block bar, and that override survives every later build and live refresh — in both
+directions. Rows that entered the pool from ESPN or FFC are joined back to Sleeper's
+player database first, which is what fixes the case that motivated this: a player whose
+projection was dropped, who re-entered on ADP alone, and who was recommended at his
+pre-injury draft position because nothing in the pipeline knew he was hurt.
+
+The generated briefing is ordered by severity rather than by ADP: season-enders first
+(with body part), then FantasyPros headlines, then week-to-week statuses, then
+cross-source team disagreements and ADP risers — each tier capped so one kind of news
+cannot crowd out the rest.
+
+### Optional: FantasyPros
+
+FantasyPros' free personal API tier needs a key you request from them. It is entirely
+optional — with no key the leg is skipped silently and is *not* counted as a degraded
+source. To turn it on: request a key, then add it as the repository secret
+`FANTASYPROS_API_KEY` (Settings → Secrets and variables → Actions). The next nightly
+build picks it up automatically — no code change — and starts adding `FP:` headlines to
+the briefing plus a second opinion on season-ending injuries. Locally:
+`FANTASYPROS_API_KEY=... python3 scripts/build_data.py` (or `--fp-key`).
+
 In the app itself:
 
 - **↻ Refresh data** — a live pull from the two CORS-open sources: Sleeper's player feed
-  (ranks, team changes, injury flags), Sleeper's season projections (points, stat lines,
+  (ranks, team changes, injuries), Sleeper's season projections (points, stat lines,
   ADP), and Fantasy Football Calculator's ADP, blended with Sleeper's. Draftable players
   your pool is missing are appended at $1; the nightly build is what prices them properly.
-  Each source is independent, so one being down costs you only that source.
+  Each source is independent, so one being down costs you only that source. Season-ending
+  statuses are auto-marked OUT here too (and the count is reported), stale injury notes
+  are replaced rather than piled up, and your own OUT decisions are left alone.
 - **Reload bundled data** (Data & News) — force the pool back to the dataset built into
   the page. Your draft, keepers, boosts and OUT/DND/★ marks are re-applied afterwards.
 - **Import CSV or Excel** — FantasyPros cheat-sheet exports (100+ expert ECR) drop in
@@ -123,7 +161,9 @@ In the app itself:
   weight, and stat columns enable exact rescoring under your league's settings. Imported
   values are treated as yours: later nightly builds fill in ADP, bye and ranks around
   them but never overwrite your dollar values or projections.
-- **Boost/fade and OUT toggles** for news the projections haven't caught up to.
+- **Boost/fade and OUT toggles** for news the projections haven't caught up to. OUT
+  arrives pre-checked for season-ending injuries; un-checking one is an override that
+  sticks.
 
 The header still warns when values go stale, and importing a fresh sheet the week of your
 draft is still the surest thing you can do.
@@ -183,8 +223,8 @@ live re-optimization and instant max-bid advice possible. Monte Carlo sits on to
 | `.github/workflows/pages.yml` | Auto-deploys the app to GitHub Pages on every push to `main` |
 | `DATA_REPORT.md` | Written by each data build — source status, disagreements, calibration |
 | `tests/test_build_data.py` | Builder unit tests (stdlib `unittest`, offline via fixtures) |
-| `tests/fixtures/` | Schema-faithful slices of the five upstream payloads |
-| `tests/test_migration.js` | Playwright suite for bundle migration and the live refresh |
+| `tests/fixtures/` | Schema-faithful slices of the six upstream payloads (injury cases included) |
+| `tests/test_migration.js` | Playwright suite for bundle migration, injuries and the live refresh |
 | `.nojekyll` | Lets Pages serve straight from a branch — see below |
 | `optimizer.py` | Python optimization engine (PuLP) |
 | `DraftOptimizer.ipynb` | Executed reference notebook |
