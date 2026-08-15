@@ -95,6 +95,8 @@ tr.star td{background:color-mix(in srgb,var(--good) 10%,transparent)}
 tr.star td.l{font-weight:600}
 tr.dnd td{opacity:.55}
 tr.dnd td.l{text-decoration:line-through solid var(--bad) 1px}
+tr.outrow td{opacity:.5}
+tr.outrow td.l{text-decoration:line-through solid var(--muted) 1px}
 tr.mine td{color:var(--good);font-weight:600}
 tr.sel td{outline:2px solid var(--accent);outline-offset:-2px}
 .pos{display:inline-block;min-width:30px;text-align:center;border-radius:6px;
@@ -285,6 +287,7 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
     <button id="blockStar" title="Target: highlight this player on my board">☆ Target</button>
     <button id="blockNom" title="Nominate: someone I don't want — throw him out early to drain rival budgets">📣 Nominate</button>
     <button id="blockDnd" title="Do Not Draft: never recommend this player to me (he stays on the board for everyone else)">⊘ DND</button>
+    <button id="blockOut" title="OUT: hurt, suspended or otherwise not playing — drop him from every recommendation. Season-ending injuries are marked here automatically; this button overrides that either way.">🚑 OUT</button>
     <label class="note" title="Record as a pre-draft keeper: fills a roster and consumes budget without advancing the pick counter"><input type="checkbox" id="blockKeeper"> keeper</label>
     <label id="blockPriceWrap">$ <input type="number" id="blockPrice" min="1" value="1" style="width:64px"></label>
     <button class="primary" id="blockMine">I won it</button>
@@ -308,12 +311,15 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
           re-applied afterwards; values you imported yourself are not kept.</span></p>
         <p class="note">Fine-tune any player for your season: <b>boost/fade</b> (%) folds in
           news the projections haven't caught up to; <b>OUT</b> removes a player from the
-          market entirely (injured, not playing); <b>DND</b> is your Do Not Draft list —
+          market entirely (injured, not playing) — season-ending injuries (IR, Out,
+          suspended) arrive <b>already checked</b> from the nightly build and the ↻ refresh,
+          and un-checking one is an override that sticks through later builds;
+          <b>DND</b> is your Do Not Draft list —
           he stays on the board and still counts toward market prices and scarcity, but
           the model will never recommend him to you.</p>
         <div class="tblwrap" style="max-height:480px"><table id="editTable">
           <thead><tr><th class="l">Player</th><th>Pos</th><th>AAV</th><th>Proj</th>
-          <th>Boost %</th><th title="Injured / not playing — removed from the market entirely">OUT</th>
+          <th>Boost %</th><th title="Injured / not playing — removed from the market entirely. Season-ending injuries are checked automatically; un-check to overrule the data.">OUT</th>
           <th title="Do Not Draft — never recommended to you, but still on the board for everyone else">DND</th>
           <th title="Target — highlight this player on my board">★</th>
           <th title="Nominate — someone I don't want; throw him out to drain rival budgets">📣</th></tr></thead><tbody></tbody>
@@ -665,11 +671,67 @@ function normPos(raw){
   for(const q of POSITIONS) if(p.startsWith(q)) return q;
   return null;
 }
+/* ---------- injuries ---------------------------------------------------
+   The nightly build ships out:true for anyone ruled out for the season, and
+   the live ↻ refresh classifies the same thing from Sleeper's injury_status.
+   That is the *data default*, kept on the row as p.outData; p.out is the
+   effective flag every consumer reads. The two stay equal until the user
+   disagrees, and after that the user wins — in both directions. Without the
+   split, a data OUT would be indistinguishable from a hand-marked one and
+   there would be nowhere to record "no, I know he's playing". */
+const SLEEPER_OUT_STATUS = new Set(["IR","OUT","DNR","SUS"]);   // not PUP, not Q/D
+function sleeperSaysOut(pl){
+  if(!pl) return false;
+  if(SLEEPER_OUT_STATUS.has(String(pl.injury_status||"").trim().toUpperCase()))
+    return true;
+  return String(pl.status||"").trim().toLowerCase()==="injured reserve";
+}
+function sleeperInjuryNote(pl){
+  if(!pl) return "";
+  let st = pl.injury_status || "";
+  if(!st && String(pl.status||"").trim().toLowerCase()==="injured reserve")
+    st = "Injured Reserve";
+  if(!st) return "";
+  let seg = "Sleeper: "+st;
+  if(pl.injury_body_part) seg += " ("+pl.injury_body_part+")";
+  // injury_notes are hand-typed: they carry newlines and sometimes the very
+  // separator we join note segments with
+  const n = String(pl.injury_notes||"").replace(/·/g,"-").replace(/\s+/g," ").trim();
+  if(n) seg += " — "+(n.length>90? n.slice(0,89).trim()+"…" : n);
+  return seg;
+}
+// Notes are " · "-joined segments. Replace the one that starts with `prefix`
+// rather than appending: the old refresh only ever appended, so a player who
+// got better still carried "Sleeper: Questionable" from three weeks ago.
+function setNoteSegment(note, prefix, seg){
+  const parts = String(note||"").split(" · ").map(s=>s.trim())
+    .filter(s=>s && !s.startsWith(prefix));
+  if(seg) parts.push(seg);
+  return parts.join(" · ");
+}
+function mergeNote(existing, incoming){
+  const segs = String(incoming||"").split(" · ").map(s=>s.trim()).filter(Boolean);
+  let note = setNoteSegment(existing, "Sleeper: ",
+    segs.find(s=>s.startsWith("Sleeper: ")) || "");
+  for(const s of segs){
+    if(s.startsWith("Sleeper: ")) continue;
+    if(!note.split(" · ").some(x=>x.trim()===s)) note = note? note+" · "+s : s;
+  }
+  return note;
+}
+// Data said something new about this player. Follow it if he was still on the
+// default; leave him alone if the user has taken a position either way.
+function applyOutDefault(p, next){
+  const prev = !!p.outData;
+  if(p.out===prev) p.out = !!next;
+  p.outData = !!next;
+}
 function freshPlayer(o){
+  const outData = !!(o.out || o.outData);
   return {name:o.name, team:o.team||"", pos:o.pos, aav:Math.max(1,Math.round(o.aav||1)),
     pts:+o.pts||0, stats:o.stats||null, floor:o.floor??null, ceil:o.ceil??null,
     adp:o.adp??null, ecr:o.ecr??null, bye:o.bye??null, note:o.note||"", src:o.src||"",
-    boost:0, out:false, dnd:false, star:false, nom:false, drafted:null};
+    boost:0, out:outData, outData, dnd:false, star:false, nom:false, drafted:null};
 }
 /* =====================================================================
    LEAGUES — the player pool (projections, values, news) is shared, so you
@@ -685,19 +747,30 @@ function blankLeague(name){
 function captureMarks(){          // only players that differ from the pool default
   const m={};
   for(const p of S.players){
-    if(p.drafted || p.boost || p.out || p.dnd || p.star || p.nom)
-      m[playerId(p)] = {drafted:p.drafted||null, boost:p.boost||0, out:!!p.out,
+    // OUT is tri-state: the data supplies a default, the user may override it
+    // either way. Only a disagreement is worth storing — and it is worth
+    // storing on its own, so "he's actually playing" survives a reload.
+    const outOverride = !!p.out !== !!p.outData;
+    if(p.drafted || p.boost || p.dnd || p.star || p.nom || outOverride){
+      const rec = {drafted:p.drafted||null, boost:p.boost||0,
         dnd:!!p.dnd, star:!!p.star, nom:!!p.nom};
+      if(outOverride) rec.out = !!p.out;
+      m[playerId(p)] = rec;
+    }
   }
   return m;
 }
 function applyMarks(marks){
-  for(const p of S.players){ p.drafted=null; p.boost=0; p.out=false; p.dnd=false;
-    p.star=false; p.nom=false; }
+  for(const p of S.players){ p.drafted=null; p.boost=0; p.out=!!p.outData;
+    p.dnd=false; p.star=false; p.nom=false; }
   for(const p of S.players){
     const m = marks && marks[playerId(p)];
     if(!m) continue;
-    p.drafted = m.drafted||null; p.boost = m.boost||0; p.out = !!m.out;
+    p.drafted = m.drafted||null; p.boost = m.boost||0;
+    // only an owned key overrides the data default. Marks saved by older
+    // builds always carry out (usually false); those do override once, and
+    // the next captureMarks() rewrites them in the new shape.
+    if(Object.prototype.hasOwnProperty.call(m,"out")) p.out = !!m.out;
     p.dnd = !!m.dnd; p.star = !!m.star; p.nom = !!m.nom;
   }
 }
@@ -729,9 +802,11 @@ function loadState(){
     if(legacy){
       const s = JSON.parse(legacy);
       if(s && s.players && s.players.length){
+        // a v1 save predates any bundle OUT flag, so every out:true in one is
+        // the user's own mark — outData:false makes it an explicit override
         S.players = s.players.map(p=>Object.assign(freshPlayer(p),
-          {drafted:p.drafted||null, boost:p.boost||0, out:!!p.out, dnd:!!p.dnd,
-           star:!!p.star, nom:!!p.nom}));
+          {drafted:p.drafted||null, boost:p.boost||0, out:!!p.out, outData:false,
+           dnd:!!p.dnd, star:!!p.star, nom:!!p.nom}));
         const lg = blankLeague("My league");
         lg.settings = Object.assign(defaultSettings(), s.settings);
         lg.log = s.log||[]; lg.kpCands = s.kpCands||[]; lg.marks = {};
@@ -856,8 +931,11 @@ function enrichFromBundle(){
       if(b.adp!=null) ex.adp = b.adp;
       if(b.ecr!=null) ex.ecr = b.ecr;
       if(b.stats && !ex.stats) ex.stats = b.stats;
-      if(b.note && !(ex.note||"").includes(b.note))
-        ex.note = ex.note ? ex.note+" · "+b.note : b.note;
+      // injuries are news, not values: an imported sheet's dollar figures are
+      // the user's own work, but a torn ACL is a fact the bundle knows and the
+      // sheet does not. The Sleeper segment is replaced rather than stacked.
+      ex.note = mergeNote(ex.note, b.note);
+      applyOutDefault(ex, b.out);
       enriched++;
     }else{
       const np = freshPlayer(b);
@@ -2222,8 +2300,9 @@ function renderPool(){
     const availCell = ()=>{ if(r.p.drafted) return "—";
       const [cls,txt]=availClass(r); return `<span class="${cls}">${txt}</span>`; };
     if(r.p.dnd) tr.classList.add("dnd");
+    if(r.p.out) tr.classList.add("outrow");
     if(r.p.star) tr.classList.add("star");
-    tr.innerHTML = `<td class="l">${esc(r.p.name)}${r.p.out?' <span class="pill">OUT</span>':""}${r.p.star?' <span class="pill up" title="One of your targets">★</span>':""}${r.p.nom?' <span class="pill" title="On your nomination list — throw him out to drain rival budgets">📣</span>':""}${r.p.dnd?' <span class="pill down" title="On your Do Not Draft list — never recommended to you">DND</span>':""}${r.p.note?` <span class="pill" title="${esc(r.p.note)}">ⓘ</span>`:""}</td>
+    tr.innerHTML = `<td class="l">${esc(r.p.name)}${r.p.out?` <span class="pill down" title="${r.p.outData?"Ruled out for the season by the data build — un-check him on the Data tab if you disagree":"You marked him OUT"}">OUT</span>`:""}${r.p.star?' <span class="pill up" title="One of your targets">★</span>':""}${r.p.nom?' <span class="pill" title="On your nomination list — throw him out to drain rival budgets">📣</span>':""}${r.p.dnd?' <span class="pill down" title="On your Do Not Draft list — never recommended to you">DND</span>':""}${r.p.note?` <span class="pill" title="${esc(r.p.note)}">ⓘ</span>`:""}</td>
       <td>${esc(r.p.team)}</td><td><span class="pos ${r.p.pos}">${r.p.pos}</span></td>
       <td>${snake? "#"+r.mrank : fmt$(r.p.aav)}</td>
       <td>${snake? roundDotPick(Math.min(r.mrank, S.settings.teams*rosterSizeTotal())).split(".")[0] : "<b>"+fmt$(r.adj)+"</b>"}</td>
@@ -2592,7 +2671,9 @@ function renderData(){
       <td><span class="pos ${r.p.pos}">${r.p.pos}</span></td>
       <td>${fmt$(r.p.aav)}</td><td>${r.pts0.toFixed(0)}</td>
       <td><input type="number" step="5" min="-90" max="90" value="${r.p.boost||0}" style="width:64px"></td>
-      <td><input type="checkbox" data-k="out" ${r.p.out?"checked":""}></td>
+      <td><input type="checkbox" data-k="out" ${r.p.out?"checked":""} title="${
+        r.p.outData? "Ruled out for the season by the data build — un-check to overrule it; your choice survives the next build"
+                   : "Mark unavailable: drops him from every recommendation"}"></td>
       <td><input type="checkbox" data-k="dnd" ${r.p.dnd?"checked":""}></td>
       <td><input type="checkbox" data-k="star" ${r.p.star?"checked":""}></td>
       <td><input type="checkbox" data-k="nom" ${r.p.nom?"checked":""}></td>`;
@@ -2629,6 +2710,9 @@ function selectPlayer(id){
   const dndBtn=$("#blockDnd");
   dndBtn.textContent = r.p.dnd? "✓ on DND list" : "⊘ DND";
   dndBtn.classList.toggle("danger", !!r.p.dnd);
+  const outBtn=$("#blockOut");
+  outBtn.textContent = r.p.out? "✓ marked OUT" : "🚑 OUT";
+  outBtn.classList.toggle("danger", !!r.p.out);
   const starBtn=$("#blockStar");
   starBtn.textContent = r.p.star? "★ Targeted" : "☆ Target";
   starBtn.classList.toggle("primary", !!r.p.star);
@@ -2636,6 +2720,19 @@ function selectPlayer(id){
   nomBtn.textContent = r.p.nom? "📣 On nom list" : "📣 Nominate";
   nomBtn.classList.toggle("primary", !!r.p.nom);
   const v=$("#blockVerdict");
+  if(r.p.out){
+    $("#blockAav").textContent = `${r.p.pos} · ${r.rpts.toFixed(0)} pts · market ${fmt$(r.adj)}`;
+    v.textContent = r.p.outData
+      ? "OUT — ruled out for the season by the data build; not recommended"
+      : "OUT — you marked him unavailable; not recommended";
+    v.className="verdict down";
+    $("#blockPriceWrap").classList.toggle("hidden", isSnake());
+    $("#blockMine").textContent = isSnake()? "My pick" : "I won it";
+    $("#blockGone").textContent = isSnake()? "Taken" : "Someone else";
+    $("#blockSim").textContent="";
+    renderPool();
+    return;
+  }
   if(r.p.dnd){
     $("#blockAav").textContent = `${r.p.pos} · ${r.rpts.toFixed(0)} pts · market ${fmt$(r.adj)}`;
     v.textContent="DO NOT DRAFT — on your no-list"; v.className="verdict down";
@@ -2868,7 +2965,7 @@ async function sleeperRefreshRanks(){
       if(!pos) continue;
       idx.set(normName(pl.full_name)+"|"+pos, pl);
     }
-    let ranked=0, teams=0, injured=0;
+    let ranked=0, teams=0, injured=0, nowOut=0, backIn=0;
     for(const p of S.players){
       const pl=idx.get(normName(p.name)+"|"+p.pos);
       if(!pl) continue;
@@ -2876,19 +2973,30 @@ async function sleeperRefreshRanks(){
         p.ecr=pl.search_rank; ranked++;
       }
       if(pl.team && pl.team!==p.team){ p.team=pl.team; teams++; }
-      if(pl.injury_status){
-        injured++;
-        const tag=`Sleeper: ${pl.injury_status}`;
-        if(!(p.note||"").includes(tag)) p.note=(p.note? p.note+" · ":"")+tag;
-      }
+      const seg = sleeperInjuryNote(pl);
+      if(seg) injured++;
+      // replace, don't append — and clear the segment entirely when Sleeper no
+      // longer reports anything, so a healed player stops reading as hurt
+      p.note = setNoteSegment(p.note, "Sleeper: ", seg);
+      const was = !!p.out;
+      applyOutDefault(p, sleeperSaysOut(pl));
+      if(p.out && !was) nowOut++;
+      else if(!p.out && was) backIn++;
     }
     (S.poolMeta || (S.poolMeta=defaultPoolMeta())).ranksAsOf = todayISO();
     recompute();
+    if(nowOut) toast(`${nowOut} player${nowOut===1?"":"s"} auto-marked OUT — `+
+      `ruled out for the season, so they're off your recommendations`);
+    const outBit = nowOut? ` ${nowOut} player${nowOut===1?"":"s"} auto-marked OUT `+
+      `(IR / Out / suspended) and dropped from recommendations` : ``;
     slStatus(`Sleeper refresh ✓ — ${ranked} ranks updated, ${teams} team changes, `+
-      `${injured} injury flags noted (ⓘ on the player). Ranks feed snake availability; `+
-      `set OUT manually for anyone ruled out. Dollar values and projections are not `+
+      `${injured} injury flags noted (ⓘ on the player).${outBit}`+
+      (backIn? ` ${backIn} cleared and back on the board.` : ``)+
+      ` Questionable and PUP are never auto-marked — check the OUT box yourself `+
+      `if you want them off your board. Dollar values and projections are not `+
       `part of this pull — import a fresh CSV/xlsx for those.`);
-    return `Refreshed ✓ ${ranked} ranks · ${teams} team changes · ${injured} injury flags`;
+    return `Refreshed ✓ ${ranked} ranks · ${teams} team changes · ${injured} injury flags`+
+      (nowOut? ` · ${nowOut} auto-marked OUT` : ``);
   }catch(e){
     const msg = "Couldn't reach Sleeper ("+e.message+"). If you're on the claude.ai "+
       "artifact, its sandbox blocks outside requests — use the public site or a local copy.";
@@ -3130,6 +3238,10 @@ function keeperAdvice(){
     const r=p? M.rows.find(r=>r.p===p):null;
     if(!p||!r) return null;
     if(p.drafted) return {c,p,r,gone:true};
+    // a keeper who will not play is worth nothing at any price — rank him last
+    // and say why, instead of quietly pricing his projection like everyone's
+    if(p.out) return {c,p,r,out:true, surplus:-9999, unit:snake?"rd":"$",
+      label:"ruled out for the season — keeping him spends a pick on nobody"};
     if(snake){
       const expRound=Math.ceil(r.mrank/S.settings.teams);
       const costR=Math.max(1,Math.round(c.cost));
@@ -3160,9 +3272,10 @@ function renderKeeperAdvice(){
   for(const a of advice){
     const d=document.createElement("div"); d.className="roster-slot";
     const verdict = a.gone? '<span class="pill">off the board</span>'
+      : a.out? '<span class="pill down" style="font-weight:700">TOSS BACK — OUT</span>'
       : a.keep? '<span class="pill up" style="font-weight:700">KEEP</span>'
       : `<span class="pill ${a.surplus<0?"down":""}">${a.surplus<0?"toss back":"bubble"}</span>`;
-    const surplusTxt = a.gone? "" :
+    const surplusTxt = a.gone? "" : a.out? "out for the season" :
       (a.unit==="$"? `${a.surplus>=0?"+":"−"}$${Math.abs(a.surplus)}`
                    : `${a.surplus>=0?"+":"−"}${Math.abs(a.surplus)} rd`);
     d.innerHTML=`<span class="nm"><span class="pos ${a.p.pos}">${a.p.pos}</span>
@@ -3569,6 +3682,19 @@ function bind(){
     toast(r.p.dnd
       ? `${r.p.name} added to Do Not Draft — he'll never be recommended to you`
       : `${r.p.name} is back on your board`);
+    recompute();
+    if(S.sel) selectPlayer(S.sel);
+  });
+  $("#blockOut").addEventListener("click",()=>{
+    const r=M.rows.find(r=>playerId(r.p)===S.sel);
+    if(!r) return;
+    r.p.out=!r.p.out;
+    toast(r.p.out
+      ? `${r.p.name} marked OUT — he's out of every recommendation`
+      : (r.p.outData
+        ? `${r.p.name} back on your board — the data build has him out for the `+
+          `season, your override sticks through future builds`
+        : `${r.p.name} is back on your board`));
     recompute();
     if(S.sel) selectPlayer(S.sel);
   });
