@@ -1,8 +1,8 @@
 # Data build report
 
-- Built: 2026-08-14T10:17:47+00:00
+- Built: 2026-08-15T09:42:13+00:00
 - Season: 2026
-- Players in bundle: **603**
+- Players in bundle: **607**
 - News lines: 25
 
 ## Source status
@@ -19,24 +19,24 @@
 
 - Sleeper players DB entries: 4385
 - Sleeper projection rows: 3300
-- Dropped (no stats, no ADP): 2407
-- ESPN matched / added: 625 / 0
-- FFC matched / added: 258 / 1
-- Pool before cutoff: 819 → kept 603
+- Dropped (no stats, no ADP): 2392
+- ESPN matched / added: 629 / 0
+- FFC matched / added: 259 / 1
+- Pool before cutoff: 834 → kept 607
 
 ### Position breakdown
 
 - QB: 60
-- RB: 121
-- WR: 202
-- TE: 91
-- K: 97
+- RB: 127
+- WR: 196
+- TE: 97
+- K: 95
 - DST: 32
 
 ## Auction values
 
-- Replacement points: {'DST': 91.9, 'QB': 291.1, 'WR': 174.7, 'RB': 168.8, 'TE': 156.0, 'K': 116.2}
-- $/VORP scale: 0.4183 (calibration factor 0.9336)
+- Replacement points: {'DST': 91.9, 'QB': 291.1, 'WR': 173.4, 'RB': 168.8, 'TE': 156.0, 'K': 116.2}
+- $/VORP scale: 0.4143 (calibration factor 0.9338)
 - ESPN-priced players: 100
 - Mean abs error of the VORP model vs ESPN prices: 5.61
 
@@ -88,7 +88,7 @@ _none_
 - Darnell Mooney (WR): sleeper=58.6 espn=160.8
 - …and 145 more
 
-## ESPN rows not matched and not added (375)
+## ESPN rows not matched and not added (371)
 
 - Kene Nwangwu (NYJ RB) rank=432
 - Bam Knight (ARI RB) rank=436
@@ -130,11 +130,11 @@ _none_
 - Ke'Shawn Williams (CIN WR) rank=1346
 - Mason Tipton (NO WR) rank=1349
 - Michael Bandy (DEN WR) rank=1356
-- …and 335 more
+- …and 331 more
 
 ## FFC rows with no Sleeper match (1)
 
-- AJ Dillon (CAR RB) adp=165.0
+- AJ Dillon (CAR RB) adp=170.3
 
 ---
 
