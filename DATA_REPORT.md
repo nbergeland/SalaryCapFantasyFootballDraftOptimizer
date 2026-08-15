@@ -1,6 +1,6 @@
 # Data build report
 
-- Built: 2026-08-15T17:34:31+00:00
+- Built: 2026-08-15T17:43:36+00:00
 - Season: 2026
 - Players in bundle: **607**
 - News lines: 25
@@ -24,17 +24,17 @@
 - ESPN matched / added: 629 / 0
 - FFC matched / added: 259 / 1
 - Backfilled from the Sleeper players DB: 41 (0 team corrections)
-- Players marked OUT: 17
+- Players marked OUT: 6
 - FantasyPros headlines parsed: 0
-- Pool before cutoff: 834 → kept 607
+- Pool before cutoff: 831 → kept 607
 
 ### Position breakdown
 
 - QB: 60
 - RB: 127
-- WR: 196
+- WR: 198
 - TE: 97
-- K: 95
+- K: 93
 - DST: 32
 
 ## Auction values
@@ -44,25 +44,20 @@
 - ESPN-priced players: 100
 - Mean abs error of the VORP model vs ESPN prices: 5.6
 
-## Marked OUT (excluded from recommendations) (17)
+## Marked OUT (excluded from recommendations) (6)
 
-- Adam Vinatieri (FA K): sleeper status=Injured Reserve
-- Alec Pierce (IND WR): espn injuryStatus=OUT
 - Brandon Aiyuk (SF WR): sleeper injury_status=DNR, espn injuryStatus=OUT
-- Chris Bell (MIA WR): espn injuryStatus=OUT
-- George Kittle (SF TE): espn injuryStatus=OUT
-- Isaac Guerendo (SF RB): espn injuryStatus=OUT
 - John Michael Gyllenborg (KC TE): sleeper injury_status=IR
 - Julian Hill (NE TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- Luke Musgrave (GB TE): espn injuryStatus=OUT
 - Ricky Pearsall (SF WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- Stephen Hauschka (FA K): sleeper status=Injured Reserve
 - Tanner McLachlan (SF TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- Tip Reiman (ARI TE): espn injuryStatus=OUT
-- Tyrell Shavers (BUF WR): espn injuryStatus=OUT
-- Vance McDonald (FA TE): sleeper status=Injured Reserve
-- Zach Charbonnet (SEA RB): espn injuryStatus=OUT
 - Zane Gonzalez (MIA K): sleeper injury_status=IR
+
+## Teamless season-enders dropped (retired-player DB residue) (3)
+
+- Adam Vinatieri (K)
+- Stephen Hauschka (K)
+- Vance McDonald (TE)
 
 ## Injury disagreements (Sleeper vs ESPN) (8)
 
