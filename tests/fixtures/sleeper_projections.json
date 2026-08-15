@@ -669,5 +669,88 @@
    "position": "DEF",
    "team": "PHI"
   }
+ },
+ {
+  "player_id": "8148",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "IND",
+  "company": "rotowire",
+  "stats": {
+   "rec": 52.0,
+   "rec_yd": 810.0,
+   "rec_td": 6.0,
+   "pts_ppr": 169.0,
+   "adp_ppr": 73.2
+  },
+  "player": {
+   "player_id": "8148",
+   "first_name": "Alec",
+   "last_name": "Pierce",
+   "position": "WR",
+   "team": "IND",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "8125",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "GB",
+  "company": "rotowire",
+  "stats": {
+   "rec": 48.0,
+   "rec_yd": 690.0,
+   "rec_td": 5.0,
+   "pts_ppr": 147.0,
+   "adp_ppr": 129.6
+  },
+  "player": {
+   "player_id": "8125",
+   "first_name": "Christian",
+   "last_name": "Watson",
+   "position": "WR",
+   "team": "GB",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "7561",
+  "season": "2026",
+  "season_type": "regular",
+  "week": null,
+  "team": "HOU",
+  "company": "rotowire",
+  "stats": {
+   "rec": 44.0,
+   "rec_yd": 560.0,
+   "rec_td": 4.0,
+   "pts_ppr": 124.0,
+   "adp_ppr": 148.1
+  },
+  "player": {
+   "player_id": "7561",
+   "first_name": "Tank",
+   "last_name": "Dell",
+   "position": "WR",
+   "team": "HOU",
+   "years_exp": 4
+  }
+ },
+ {
+  "player_id": "99880",
+  "team": null,
+  "player": {
+   "player_id": "99880",
+   "first_name": "Retired",
+   "last_name": "Ghost",
+   "position": "K",
+   "team": null
+  },
+  "stats": {
+   "pts_ppr": 88.0
+  }
  }
 ]

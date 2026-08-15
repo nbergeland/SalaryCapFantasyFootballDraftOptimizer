@@ -15,10 +15,18 @@ Sleeper projections api.sleeper.com/projections/nfl/YYYY season stat projections
 FFC ADP            fantasyfootballcalculator.com        real-draft ADP (attribution requested)
 ESPN kona          lm-api-reads.fantasy.espn.com        auction values, PPR ranks, 2nd projection
 ESPN pro teams     lm-api-reads.fantasy.espn.com        bye weeks
+FantasyPros news   api.fantasypros.com                  optional, needs FANTASYPROS_API_KEY
 
 Outage policy: if either Sleeper source fails the build aborts and nothing is
 written (yesterday's data stays live).  ESPN/FFC are degradable — the build
 proceeds and records the loss in ``meta.degraded`` and in DATA_REPORT.md.
+FantasyPros is *optional*: with no ``FANTASYPROS_API_KEY`` in the environment
+the leg is skipped silently (that is not a degradation); with a key set, a
+failure is reported as degraded like any other soft source.
+
+Injuries: every player is classified out / not out (see ``classify_out``) and
+players ruled out for the season ship with ``out: true`` so the app can drop
+them from recommendations without the user hand-marking anyone.
 
 Offline use: ``--fixtures-dir DIR`` reads ``sleeper_players.json``,
 ``sleeper_projections.json``, ``ffc_adp.json``, ``espn_kona.json`` and
@@ -137,7 +145,34 @@ SOURCE_LINKS = [
     "https://lm-api-reads.fantasy.espn.com (kona_player_info)",
 ]
 
+FP_SOURCE_LINK = "https://api.fantasypros.com/v2/json/nfl/news (FantasyPros)"
+
 FFC_ATTRIBUTION = "ADP data courtesy of Fantasy Football Calculator (fantasyfootballcalculator.com)."
+
+# --------------------------------------------------------------------------
+# injury classification
+# --------------------------------------------------------------------------
+# Sleeper's injury_status vocabulary is
+#   Questionable / Doubtful / Out / IR / PUP / Sus / DNR / COV / NA
+# Only the ones below mean "he will not play, plan without him".  PUP is
+# deliberately absent: a PUP player is expected back (often by week 5), and
+# auto-benching him would be worse than the disease.  Questionable/Doubtful are
+# week-to-week and get a note, never an OUT.
+SLEEPER_OUT_STATUSES = {"IR", "OUT", "DNR", "SUS"}
+SLEEPER_OUT_ROSTER_STATUS = "injured reserve"        # players DB `status` field
+ESPN_OUT_STATUSES = {"INJURY_RESERVE", "OUT", "SUSPENSION"}
+ESPN_STATUS_LABEL = {"INJURY_RESERVE": "Injured Reserve", "OUT": "Out",
+                     "SUSPENSION": "Suspended"}
+# a headline containing one of these plus a pool player's name is treated as
+# season-ending corroboration (FantasyPros leg only)
+FP_OUT_KEYWORDS = [
+    "out for the season", "out for season", "season-ending", "season ending",
+    "miss the season", "misses the season", "done for the season",
+    "torn acl", "tore his acl", "torn achilles", "ruptured achilles",
+    "tore his achilles", "torn pcl", "tore his pcl", "torn patellar",
+    "placed on injured reserve", "placed on ir", "moved to injured reserve",
+    "suspended for the season", "season-long suspension",
+]
 
 
 # --------------------------------------------------------------------------
@@ -292,8 +327,25 @@ def _sleeper_name(pl):
     return " ".join(p for p in parts if p).strip()
 
 
+def clean_text(text, limit=90):
+    """One-line, ``·``-free, length-capped copy of free text.
+
+    Sleeper's injury_notes are hand-typed and routinely carry newlines; the
+    bundle is spliced into a single-line JSON blob (``encode`` rejects
+    newlines outright) and notes are ``" · "``-joined segments the app splits
+    on, so both characters have to go before the text is stored."""
+    s = re.sub(r"\s+", " ", str(text or "").replace("·", "-")).strip()
+    if len(s) > limit:
+        s = s[:limit - 1].rstrip() + "…"
+    return s
+
+
 def index_sleeper_players(players_db):
-    """id -> record, plus a key -> record index."""
+    """id -> record, plus a key -> record index.
+
+    The key index is what lets rows that entered through ESPN/FFC find their
+    Sleeper injury data later (``backfill_from_sleeper``) — for everyone but
+    D/ST ``pkey`` is name+position, so it doubles as a name index."""
     by_id, by_key = {}, {}
     for pid, pl in (players_db or {}).items():
         if not isinstance(pl, dict):
@@ -311,7 +363,11 @@ def index_sleeper_players(players_db):
         if not name:
             continue
         rec = {"id": str(pid), "name": name, "pos": pos, "team": team,
-               "search_rank": pl.get("search_rank"), "injury": pl.get("injury_status")}
+               "search_rank": pl.get("search_rank"),
+               "injury": pl.get("injury_status"),
+               "injury_body": pl.get("injury_body_part") or None,
+               "injury_notes": clean_text(pl.get("injury_notes")) or None,
+               "sleeper_status": pl.get("status") or None}
         by_id[str(pid)] = rec
         by_key.setdefault(pkey(name, pos, team), rec)
     return by_id, by_key
@@ -321,11 +377,22 @@ def new_record(name, pos, team):
     return {
         "name": name, "pos": pos, "team": team,
         "stats": None, "sleeper_pts": None, "sleeper_adp": None,
-        "search_rank": None, "injury": None,
+        "search_rank": None, "injury": None, "injury_body": None,
+        "injury_notes": None, "sleeper_status": None,
         "espn_rank": None, "espn_aav": None, "espn_pts": None, "espn_team": "",
+        "espn_injury": None, "espn_injured": None,
+        "fp_out": False, "fp_note": None,
         "ffc_adp": None, "ffc_team": "",
         "bye": None, "sources": set(), "flags": [],
     }
+
+
+def copy_sleeper_injury(rec, db):
+    """Move the players-DB injury fields onto a pool record."""
+    rec["injury"] = db.get("injury")
+    rec["injury_body"] = db.get("injury_body")
+    rec["injury_notes"] = db.get("injury_notes")
+    rec["sleeper_status"] = db.get("sleeper_status")
 
 
 def ingest_sleeper(raw, report):
@@ -385,7 +452,7 @@ def ingest_sleeper(raw, report):
         rec["sources"].add("sleeper")
         if db:
             rec["search_rank"] = db.get("search_rank")
-            rec["injury"] = db.get("injury")
+            copy_sleeper_injury(rec, db)
             if db.get("team"):
                 rec["team"] = db["team"]
         recs[key] = rec
@@ -445,6 +512,11 @@ def ingest_espn(raw, recs, report):
         rec["espn_aav"] = round(float(aav), 1) if aav else None
         rec["espn_pts"] = round(float(pts), 1) if pts else None
         rec["espn_team"] = team
+        # ESPN's own injury read — a second opinion on Sleeper's. `injured` is
+        # true for anyone on the report (questionable included), so only
+        # injuryStatus decides OUT; `injured` is kept for the disagreement log.
+        rec["espn_injury"] = pl.get("injuryStatus")
+        rec["espn_injured"] = pl.get("injured")
         rec["sources"].add("espn")
     report["espn_matched"] = matched
     report["espn_added"] = added
@@ -484,6 +556,37 @@ def ingest_ffc(raw, recs, report):
     report["ffc_matched"] = matched
     report["ffc_added"] = added
     report["ffc_unmatched"] = unmatched
+
+
+def backfill_from_sleeper(recs, by_key, report):
+    """Join ESPN/FFC-added rows back to the Sleeper players DB.
+
+    A player whose Sleeper projection was dropped for having no signal at all
+    (no stat line, no ADP) can still re-enter the pool through FFC's ADP or
+    ESPN's ranks — and used to arrive with ``injury`` and ``search_rank``
+    unset, because only the projection path ever consulted the players DB.
+    Ricky Pearsall was the canary: out for the season after PCL surgery,
+    recommended at ADP 112 because nothing in the pipeline knew he was hurt.
+    """
+    filled, teams = 0, 0
+    for rec in recs.values():
+        if rec["injury"] is not None or rec["search_rank"] is not None:
+            continue
+        db = by_key.get(pkey(rec["name"], rec["pos"], rec["team"]))
+        if db is None and rec["pos"] != "DST":
+            # the row may carry ESPN/FFC's team while Sleeper has him elsewhere;
+            # for everyone but D/ST pkey ignores team, so one lookup is enough
+            db = by_key.get(pkey(rec["name"], rec["pos"], ""))
+        if db is None:
+            continue
+        rec["search_rank"] = db.get("search_rank")
+        copy_sleeper_injury(rec, db)
+        if db.get("team") and db["team"] != rec["team"]:
+            rec["team"] = db["team"]            # Sleeper is canon for teams
+            teams += 1
+        filled += 1
+    report["sleeper_backfilled"] = filled
+    report["sleeper_backfilled_teams"] = teams
 
 
 def ingest_byes(raw, recs):
@@ -627,16 +730,111 @@ def apply_cutoff(recs, report, top_n=600, top_k=24):
     return kept
 
 
+def _sleeper_says_comeback(rec):
+    """Sleeper carries a designation that means "expected back" — PUP or a
+    week-to-week grade.  When it does, ESPN's bare OUT must not override it."""
+    return str(rec.get("injury") or "").strip().upper() in \
+        {"PUP", "QUESTIONABLE", "DOUBTFUL"}
+
+
+def classify_out(rec):
+    """True when the player will not play this season — the flag the app reads.
+
+    Deliberately conservative: only statuses that mean "gone", never the
+    week-to-week ones.  A false OUT costs the user a draftable player, so the
+    bar is a season-ending status from a source, not an inference.
+
+    ESPN's OUT needs special care: in preseason it is a *this-week* grade, not
+    a season verdict — the first live build marked George Kittle (PUP, back by
+    September) OUT because ESPN graded him Out for a week nobody plays.  So
+    ESPN OUT counts only when Sleeper does not carry a comeback-grade
+    designation; ESPN INJURY_RESERVE and SUSPENSION are season-scoped and
+    always count."""
+    if str(rec.get("injury") or "").strip().upper() in SLEEPER_OUT_STATUSES:
+        return True
+    if str(rec.get("sleeper_status") or "").strip().lower() == SLEEPER_OUT_ROSTER_STATUS:
+        return True
+    espn = str(rec.get("espn_injury") or "").strip().upper()
+    if espn in ("INJURY_RESERVE", "SUSPENSION"):
+        return True
+    if espn == "OUT" and not _sleeper_says_comeback(rec):
+        return True
+    return bool(rec.get("fp_out"))
+
+
+def out_reasons(rec):
+    """Human-readable list of why ``classify_out`` said yes."""
+    why = []
+    if str(rec.get("injury") or "").strip().upper() in SLEEPER_OUT_STATUSES:
+        why.append(f"sleeper injury_status={rec['injury']}")
+    if str(rec.get("sleeper_status") or "").strip().lower() == SLEEPER_OUT_ROSTER_STATUS:
+        why.append("sleeper status=Injured Reserve")
+    espn = str(rec.get("espn_injury") or "").strip().upper()
+    if espn in ("INJURY_RESERVE", "SUSPENSION") or \
+            (espn == "OUT" and not _sleeper_says_comeback(rec)):
+        why.append(f"espn injuryStatus={rec['espn_injury']}")
+    if rec.get("fp_out"):
+        why.append("fantasypros headline")
+    return why
+
+
+def flag_injuries(recs, report):
+    """Stamp the OUT flag and record what the sources disagreed about."""
+    out_lines, disagreements = [], []
+    for rec in recs.values():
+        rec["out"] = classify_out(rec)
+        if rec["out"]:
+            out_lines.append(
+                f"{rec['name']} ({rec['team'] or 'FA'} {rec['pos']}): "
+                + ", ".join(out_reasons(rec)))
+        sleeper_out = (str(rec.get("injury") or "").strip().upper() in SLEEPER_OUT_STATUSES
+                       or str(rec.get("sleeper_status") or "").strip().lower()
+                       == SLEEPER_OUT_ROSTER_STATUS)
+        espn_out = str(rec.get("espn_injury") or "").strip().upper() in ESPN_OUT_STATUSES
+        if "espn" in rec["sources"] and rec.get("espn_injury") and sleeper_out != espn_out:
+            disagreements.append(
+                f"{rec['name']} ({rec['pos']}): sleeper={rec.get('injury') or '—'}"
+                f"/{rec.get('sleeper_status') or '—'} espn={rec['espn_injury']}")
+    report["out_players"] = sorted(out_lines)
+    report["injury_disagreements"] = sorted(disagreements)
+    report["out_count"] = len(out_lines)
+
+
 def provenance(rec):
     order = [s for s in ("sleeper", "espn", "ffc") if s in rec["sources"]]
     base = "+".join(order) or "unknown"
     return base if rec["aav_src"] == "espn" else base + " (aav est)"
 
 
+def sleeper_note(rec):
+    """The single ``Sleeper: …`` note segment.
+
+    Exactly one per note, always last, so the app can replace it wholesale on
+    a live refresh instead of stacking a new status on top of a stale one."""
+    status = rec.get("injury")
+    if not status and str(rec.get("sleeper_status") or "").strip().lower() \
+            == SLEEPER_OUT_ROSTER_STATUS:
+        status = "Injured Reserve"
+    if not status:
+        return ""
+    seg = f"Sleeper: {status}"
+    if rec.get("injury_body"):
+        seg += f" ({rec['injury_body']})"
+    if rec.get("injury_notes"):
+        seg += f" — {rec['injury_notes']}"
+    return seg
+
+
 def build_note(rec):
     bits = list(rec["flags"])
-    if rec["injury"]:
-        bits.append(f"Sleeper: {rec['injury']}")
+    espn_status = str(rec.get("espn_injury") or "").strip().upper()
+    if espn_status in ESPN_OUT_STATUSES:
+        bits.append("ESPN: " + ESPN_STATUS_LABEL[espn_status])
+    if rec.get("fp_note"):
+        bits.append("FP: " + clean_text(rec["fp_note"], 110))
+    seg = sleeper_note(rec)
+    if seg:
+        bits.append(seg)
     return " · ".join(bits)
 
 
@@ -646,6 +844,10 @@ def to_player(rec):
         "aav": int(rec["aav"]), "pts": rec["pts"], "src": provenance(rec),
         "note": build_note(rec),
     }
+    if rec.get("out"):
+        # the app treats this as the *data default*; a user who disagrees can
+        # still un-check him and that override survives the next build
+        p["out"] = True
     if rec["stats"]:
         p["stats"] = rec["stats"]
     if rec["adp"] is not None:
@@ -657,20 +859,70 @@ def to_player(rec):
     return p
 
 
-def build_news(kept, limit=25):
+def build_news(kept, limit=25, fp_items=None, tier_caps=(10, 5, 8)):
     """The old hand-written prose rots within weeks; generate the briefing from
-    what Sleeper actually reports today instead."""
+    what Sleeper actually reports today instead.
+
+    Ordered by severity, because the first build put 65 undifferentiated
+    injury lines in the feed and "Questionable" read exactly like "torn ACL":
+
+      1. season-enders — the players this build auto-marked OUT (cap 10)
+      2. FantasyPros headlines, when that leg is active (cap 5)
+      3. week-to-week statuses: Questionable / Doubtful / PUP (cap 8)
+      4. team disagreements between sources
+      5. ADP risers
+    """
     lines = []
-    injured = sorted((r for r in kept if r["injury"]), key=consensus_key)
-    for rec in injured:
+    cap_out, cap_fp, cap_day = tier_caps
+
+    def why_out(rec):
+        bits = []
+        if rec.get("injury_body"):
+            bits.append(rec["injury_body"])
+        if rec.get("injury_notes"):
+            bits.append(rec["injury_notes"])
+        return f" ({'; '.join(bits)})" if bits else ""
+
+    def out_status(rec):
+        if rec.get("injury"):
+            return rec["injury"]
+        if str(rec.get("sleeper_status") or "").strip().lower() == SLEEPER_OUT_ROSTER_STATUS:
+            return "Injured Reserve"
+        espn = str(rec.get("espn_injury") or "").strip().upper()
+        if espn in ESPN_STATUS_LABEL:
+            return ESPN_STATUS_LABEL[espn]
+        return "reported out" if rec.get("fp_out") else "ruled out"
+
+    season_enders = sorted((r for r in kept if r.get("out")), key=consensus_key)
+    for rec in season_enders[:cap_out]:
+        status = out_status(rec)
+        lines.append(
+            f"{rec['name']} ({rec['team'] or 'FA'} {rec['pos']}) — out for the season"
+            f"{why_out(rec)}. Status {status}; he is marked OUT here and left out "
+            f"of every recommendation. Un-check him on the Data tab if you disagree.")
+        if len(lines) >= limit:
+            return lines[:limit]
+
+    for headline in (fp_items or [])[:cap_fp]:
+        lines.append("FP: " + headline)
+        if len(lines) >= limit:
+            return lines[:limit]
+
+    day_to_day = sorted(
+        (r for r in kept if r["injury"] and not r.get("out")), key=consensus_key)
+    for rec in day_to_day[:cap_day]:
         lines.append(
             f"{rec['name']} ({rec['team'] or 'FA'} {rec['pos']}) — Sleeper injury status: "
-            f"{rec['injury']}. Verify game-day status before you draft.")
+            f"{rec['injury']}{why_out(rec)}. Week-to-week, not auto-marked OUT — "
+            f"verify game-day status before you draft.")
         if len(lines) >= limit:
-            return lines
+            return lines[:limit]
+
+    # nobody needs "the room is paying up for him" about a player who is done
+    # for the year — the season-ender tier already said everything worth saying
     moved = sorted(
-        (r for r in kept
-         if r["espn_team"] and r["team"] and r["espn_team"] != r["team"]),
+        (r for r in kept if not r.get("out")
+         and r["espn_team"] and r["team"] and r["espn_team"] != r["team"]),
         key=consensus_key)
     for rec in moved:
         lines.append(
@@ -680,8 +932,9 @@ def build_news(kept, limit=25):
         if len(lines) >= limit:
             return lines
     risers = sorted(
-        (r for r in kept if r["adp"] is not None and r["ecr"] is not None
-         and r["ecr"] - r["adp"] >= 40), key=consensus_key)
+        (r for r in kept if not r.get("out") and r["adp"] is not None
+         and r["ecr"] is not None and r["ecr"] - r["adp"] >= 40),
+        key=consensus_key)
     for rec in risers:
         lines.append(
             f"{rec['name']} ({rec['team']} {rec['pos']}) — drafted well ahead of his "
@@ -690,6 +943,122 @@ def build_news(kept, limit=25):
         if len(lines) >= limit:
             break
     return lines[:limit]
+
+
+# --------------------------------------------------------------------------
+# FantasyPros — optional leg, only runs when FANTASYPROS_API_KEY is set
+# --------------------------------------------------------------------------
+
+FP_NEWS_URL = "https://api.fantasypros.com/v2/json/nfl/news?limit=50"
+
+
+def load_fantasypros(api_key, fixtures_dir=None):
+    """Return ``(payload, status)``.
+
+    No key is not a failure — the whole leg is optional and the vast majority
+    of builds run without it, so it reports ``skipped (no key)`` and never
+    lands in ``meta.degraded``.  With a key set, a failure *is* degradation:
+    the user asked for this source and did not get it."""
+    if not api_key:
+        return None, "skipped (no key)"
+    try:
+        if fixtures_dir:
+            path = os.path.join(fixtures_dir, "fantasypros_news.json")
+            with open(path, "r", encoding="utf-8") as fh:
+                return json.load(fh), "ok"
+        return get_json(FP_NEWS_URL, headers={
+            "x-api-key": api_key,
+            "accept": "application/json",
+            "user-agent": "berg-sheets-data-refresh/1.0",
+        }), "ok"
+    except Exception as e:                       # noqa: BLE001 — soft source
+        return None, f"FAILED: {e}"
+
+
+def parse_fantasypros(payload):
+    """Flatten whatever shape came back into ``[{headline, text, players}]``.
+
+    Their v2 responses have moved around between ``{"news": [...]}`` and a
+    bare list, and item keys differ per endpoint, so read defensively and
+    keep only what we can actually use."""
+    if isinstance(payload, dict):
+        rows = (payload.get("news") or payload.get("items")
+                or payload.get("data") or payload.get("players") or [])
+    elif isinstance(payload, list):
+        rows = payload
+    else:
+        rows = []
+    items = []
+    for row in rows if isinstance(rows, list) else []:
+        if isinstance(row, str):
+            items.append({"headline": clean_text(row, 160), "text": row, "players": []})
+            continue
+        if not isinstance(row, dict):
+            continue
+        headline = ""
+        for k in ("title", "headline", "name", "player_name"):
+            if row.get(k):
+                headline = str(row[k])
+                break
+        body = ""
+        for k in ("description", "text", "summary", "analysis", "body", "excerpt"):
+            if row.get(k):
+                body = str(row[k])
+                break
+        names = []
+        for k in ("player_name", "player", "players", "player_names", "playerName"):
+            v = row.get(k)
+            if isinstance(v, str):
+                names.append(v)
+            elif isinstance(v, list):
+                for entry in v:
+                    if isinstance(entry, str):
+                        names.append(entry)
+                    elif isinstance(entry, dict):
+                        for kk in ("name", "player_name", "full_name"):
+                            if entry.get(kk):
+                                names.append(str(entry[kk]))
+                                break
+        if not headline and not body:
+            continue
+        items.append({
+            "headline": clean_text(headline or body, 160),
+            "text": f"{headline} {body}".strip(),
+            "players": names,
+        })
+    return items
+
+
+def apply_fantasypros(recs, items, report):
+    """Corroborate OUT from FantasyPros headlines; return the headline list.
+
+    Only season-ending language counts (``FP_OUT_KEYWORDS``) and it has to
+    land on a name that is actually in the pool — a headline is a weaker
+    signal than an injury status, so it gets the strictest gate."""
+    by_norm = {}
+    for rec in recs.values():
+        by_norm.setdefault(norm_name(rec["name"]), []).append(rec)
+    flagged = []
+    for item in items:
+        low = item["text"].lower()
+        if not any(kw in low for kw in FP_OUT_KEYWORDS):
+            continue
+        hits = []
+        for name in item["players"]:
+            hits.extend(by_norm.get(norm_name(name), []))
+        if not hits:
+            for norm, group in by_norm.items():
+                for rec in group:
+                    if rec["pos"] != "DST" and rec["name"].lower() in low:
+                        hits.append(rec)
+        for rec in hits:
+            if not rec.get("fp_out"):
+                flagged.append(f"{rec['name']} ({rec['pos']}): {item['headline']}")
+            rec["fp_out"] = True
+            rec["fp_note"] = rec["fp_note"] or item["headline"]
+    report["fp_items"] = len(items)
+    report["fp_out_flagged"] = sorted(flagged)
+    return [it["headline"] for it in items if it["headline"]]
 
 
 # --------------------------------------------------------------------------
@@ -721,6 +1090,10 @@ def validate(data, min_players, sanity_names):
             for k in p["stats"]:
                 if k not in STAT_KEYS:
                     raise ValidationError(f"{p['name']!r}: unknown stat key {k!r}")
+        # the app reads `out` as a boolean data default; a stray string or 0/1
+        # would flow straight into freshPlayer() and mean something else there
+        if "out" in p and not isinstance(p["out"], bool):
+            raise ValidationError(f"{p['name']!r}: out must be a bool, got {p['out']!r}")
         pid = (p["name"] + "|" + p["pos"]).lower()
         if pid in seen:
             raise ValidationError(f"duplicate playerId {pid!r}")
@@ -801,6 +1174,10 @@ def render_report(data, status, report):
     A(f"- Dropped (no stats, no ADP): {report.get('sleeper_dropped_no_signal')}")
     A(f"- ESPN matched / added: {report.get('espn_matched')} / {report.get('espn_added')}")
     A(f"- FFC matched / added: {report.get('ffc_matched')} / {report.get('ffc_added')}")
+    A(f"- Backfilled from the Sleeper players DB: {report.get('sleeper_backfilled')} "
+      f"({report.get('sleeper_backfilled_teams')} team corrections)")
+    A(f"- Players marked OUT: {report.get('out_count')}")
+    A(f"- FantasyPros headlines parsed: {report.get('fp_items', 0)}")
     A(f"- Pool before cutoff: {report.get('cutoff_pool')} → kept {report.get('cutoff_kept')}")
     A("")
     A("### Position breakdown")
@@ -830,6 +1207,13 @@ def render_report(data, status, report):
             A(f"- …and {len(items) - cap} more")
         A("")
 
+    section("Marked OUT (excluded from recommendations)", report.get("out_players") or [])
+    section("Teamless season-enders dropped (retired-player DB residue)",
+            report.get("dropped_teamless_out") or [])
+    section("Injury disagreements (Sleeper vs ESPN)",
+            report.get("injury_disagreements") or [])
+    if report.get("fp_out_flagged"):
+        section("FantasyPros OUT corroboration", report["fp_out_flagged"])
     section("Team disagreements", report.get("team_mismatches") or [])
     section("Projection splits", report.get("projection_splits") or [])
     section("ESPN rows not matched and not added", report.get("espn_unmatched") or [])
@@ -845,32 +1229,59 @@ def render_report(data, status, report):
 # top level
 # --------------------------------------------------------------------------
 
-def build(season, fixtures_dir=None, as_of=None):
+def build(season, fixtures_dir=None, as_of=None, fp_key=None):
     report = {"season": season}
     raw, status = load_sources(season, fixtures_dir)
 
-    recs, _sleeper_by_key = ingest_sleeper(raw, report)
+    recs, sleeper_by_key = ingest_sleeper(raw, report)
     ingest_espn(raw, recs, report)
     ingest_ffc(raw, recs, report)
+    # ESPN/FFC-added rows never saw the players DB — join them back before
+    # anything reads injuries, or a dropped projection hides a torn ACL
+    backfill_from_sleeper(recs, sleeper_by_key, report)
     ingest_byes(raw, recs)
     resolve_teams(recs, report)
     blend_projections(recs, report)
     blend_ranks(recs)
     compute_aav(recs, report)
+
+    fp_payload, fp_status = load_fantasypros(fp_key, fixtures_dir)
+    status["fantasypros"] = fp_status
+    fp_headlines = []
+    if fp_payload is not None:
+        fp_headlines = apply_fantasypros(recs, parse_fantasypros(fp_payload), report)
+    # Sleeper's DB keeps long-retired players parked on "Injured Reserve"
+    # forever (Adam Vinatieri was 'out for the season' in the second live
+    # build's briefing). A season-ender with no team isn't a draftable player
+    # or news — he's database residue. Dropped before flag_injuries so the
+    # report's OUT count matches what actually ships.
+    ghosts = {k: r for k, r in recs.items() if classify_out(r) and not r["team"]}
+    for k in ghosts:
+        del recs[k]
+    report["dropped_teamless_out"] = sorted(
+        f"{r['name']} ({r['pos']})" for r in ghosts.values())
+
+    flag_injuries(recs, report)
+
     kept = apply_cutoff(recs, report)
     kept.sort(key=lambda r: (-r["aav"], consensus_key(r), r["name"]))
 
-    degraded = [k for k, v in status.items() if v != "ok"]
+    # "skipped" is not "degraded" — an optional leg nobody enabled is normal
+    degraded = [k for k, v in status.items()
+                if v != "ok" and not str(v).startswith("skipped")]
+    sources = list(SOURCE_LINKS)
+    if fp_status == "ok":
+        sources.append(FP_SOURCE_LINK)
     data = {
         "meta": {
             "asOf": as_of or date.today().isoformat(),
             "format": "PPR, 12-team, $200 budget",
             "built": "scripts/build_data.py",
-            "sources": list(SOURCE_LINKS),
+            "sources": sources,
             "attribution": FFC_ATTRIBUTION,
             "degraded": degraded,
         },
-        "news": build_news(kept),
+        "news": build_news(kept, fp_items=fp_headlines),
         "players": [to_player(r) for r in kept],
     }
     return data, status, report
@@ -894,13 +1305,18 @@ def main(argv=None):
                          "(default: a built-in list of consensus stars)")
     ap.add_argument("--dry-run", action="store_true",
                     help="build and validate but write nothing")
+    ap.add_argument("--fp-key", default=None,
+                    help="FantasyPros API key (defaults to $FANTASYPROS_API_KEY; "
+                         "with neither, the FantasyPros leg is skipped)")
     args = ap.parse_args(argv)
 
     sanity = ([s.strip() for s in args.sanity_names.split(",") if s.strip()]
               if args.sanity_names is not None else DEFAULT_SANITY_NAMES)
 
+    fp_key = args.fp_key or os.environ.get("FANTASYPROS_API_KEY") or None
+
     try:
-        data, status, report = build(args.season, args.fixtures_dir, args.as_of)
+        data, status, report = build(args.season, args.fixtures_dir, args.as_of, fp_key)
         validate(data, args.min_players, sanity)
         blob = encode(data)
         with open(args.index, "r", encoding="utf-8") as fh:

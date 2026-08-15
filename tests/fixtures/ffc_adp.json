@@ -307,6 +307,19 @@
    "low": 100,
    "stdev": 4.2,
    "bye": 9
+  },
+  {
+   "player_id": 1023,
+   "name": "Ricky Pearsall",
+   "position": "WR",
+   "team": "SF",
+   "adp": 112.0,
+   "adp_formatted": "10.04",
+   "times_drafted": 739,
+   "high": 106,
+   "low": 120,
+   "stdev": 4.2,
+   "bye": 8
   }
  ]
 }

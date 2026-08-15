@@ -1,6 +1,6 @@
 # Data build report
 
-- Built: 2026-08-15T09:42:13+00:00
+- Built: 2026-08-15T17:43:36+00:00
 - Season: 2026
 - Players in bundle: **607**
 - News lines: 25
@@ -14,6 +14,7 @@
 | ffc_adp | ok |
 | espn_kona | ok |
 | espn_byes | ok |
+| fantasypros | skipped (no key) |
 
 ## Counts
 
@@ -22,23 +23,52 @@
 - Dropped (no stats, no ADP): 2392
 - ESPN matched / added: 629 / 0
 - FFC matched / added: 259 / 1
-- Pool before cutoff: 834 → kept 607
+- Backfilled from the Sleeper players DB: 41 (0 team corrections)
+- Players marked OUT: 6
+- FantasyPros headlines parsed: 0
+- Pool before cutoff: 831 → kept 607
 
 ### Position breakdown
 
 - QB: 60
 - RB: 127
-- WR: 196
+- WR: 198
 - TE: 97
-- K: 95
+- K: 93
 - DST: 32
 
 ## Auction values
 
 - Replacement points: {'DST': 91.9, 'QB': 291.1, 'WR': 173.4, 'RB': 168.8, 'TE': 156.0, 'K': 116.2}
-- $/VORP scale: 0.4143 (calibration factor 0.9338)
+- $/VORP scale: 0.4144 (calibration factor 0.9338)
 - ESPN-priced players: 100
-- Mean abs error of the VORP model vs ESPN prices: 5.61
+- Mean abs error of the VORP model vs ESPN prices: 5.6
+
+## Marked OUT (excluded from recommendations) (6)
+
+- Brandon Aiyuk (SF WR): sleeper injury_status=DNR, espn injuryStatus=OUT
+- John Michael Gyllenborg (KC TE): sleeper injury_status=IR
+- Julian Hill (NE TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
+- Ricky Pearsall (SF WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
+- Tanner McLachlan (SF TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
+- Zane Gonzalez (MIA K): sleeper injury_status=IR
+
+## Teamless season-enders dropped (retired-player DB residue) (3)
+
+- Adam Vinatieri (K)
+- Stephen Hauschka (K)
+- Vance McDonald (TE)
+
+## Injury disagreements (Sleeper vs ESPN) (8)
+
+- Alec Pierce (WR): sleeper=PUP/Active espn=OUT
+- Chris Bell (WR): sleeper=PUP/Active espn=OUT
+- George Kittle (TE): sleeper=PUP/Active espn=OUT
+- Isaac Guerendo (RB): sleeper=PUP/Active espn=OUT
+- Luke Musgrave (TE): sleeper=PUP/Active espn=OUT
+- Tip Reiman (TE): sleeper=PUP/Active espn=OUT
+- Tyrell Shavers (WR): sleeper=PUP/Active espn=OUT
+- Zach Charbonnet (RB): sleeper=PUP/Active espn=OUT
 
 ## Team disagreements (0)
 

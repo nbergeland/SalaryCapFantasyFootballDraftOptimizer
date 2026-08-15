@@ -21,6 +21,7 @@ const REPO = process.env.INDEX_HTML ||
 const CHROMIUM = process.env.CHROMIUM ||
   '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const TMP = path.join(os.tmpdir(), 'berg-idx-newbundle.html');
+const TMP_INJ = path.join(os.tmpdir(), 'berg-idx-injury.html');
 const START = '/*__DATA__*/', END = '/*__END_DATA__*/';
 
 let pass = 0, fail = 0;
@@ -34,6 +35,18 @@ const html = fs.readFileSync(REPO, 'utf8');
 const a = html.indexOf(START) + START.length, b = html.indexOf(END);
 const OLD = JSON.parse(html.slice(a, b));
 
+// The repo bundle's asOf advances with every real data build, so synthetic
+// "newer" bundles must be dated relative to it — a hardcoded date silently
+// stops being newer the day a real build catches up to it (which is exactly
+// what happened when the first injury build landed with today's date).
+const dayAfter = (iso, n) => {
+  const d = new Date(iso + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+const ASOF_NEW = dayAfter(OLD.meta.asOf, 1);
+const ASOF_NEWER = dayAfter(OLD.meta.asOf, 2);
+
 // Two old players are deliberately absent from the new build: one the user has
 // marked (must be carried over) and one untouched (must simply disappear).
 const DROP_MARKED = OLD.players.find(p => p.name === 'Josh Allen');
@@ -42,6 +55,9 @@ const DROP_CLEAN = OLD.players.filter(p => p.pos === 'WR').slice(-1)[0];
 const FILLER_TEAMS = ['ARI', 'BUF', 'DAL', 'SEA', 'KC', 'PHI', 'DET', 'SF'];
 const newPlayers = OLD.players
   .filter(p => p.name !== DROP_MARKED.name && p.name !== DROP_CLEAN.name)
+  // strip the real bundle's own out flags — each scenario plants exactly the
+  // OUT population it wants to reason about
+  .map(({ out, outData, ...p }) => p)
   .map((p, i) => Object.assign({}, p, {
     aav: Math.max(1, p.aav + (i % 3) - 1),
     src: 'sleeper+espn+ffc',
@@ -70,7 +86,7 @@ for (let i = 0; newPlayers.length < 480; i++) {
 }
 const NEW = {
   meta: {
-    asOf: '2026-08-15', format: OLD.meta.format, built: 'scripts/build_data.py',
+    asOf: ASOF_NEW, format: OLD.meta.format, built: 'scripts/build_data.py',
     sources: ['https://api.sleeper.app/v1/players/nfl', 'https://fantasyfootballcalculator.com/adp'],
     attribution: 'ADP data courtesy of Fantasy Football Calculator (fantasyfootballcalculator.com).',
     degraded: [],
@@ -78,8 +94,39 @@ const NEW = {
   news: ['Puka Nacua (LAR WR) — Sleeper injury status: Questionable.'],
   players: newPlayers,
 };
-fs.writeFileSync(TMP, html.slice(0, a) + JSON.stringify(NEW) + html.slice(b), 'utf8');
+const writeBundle = (file, bundle) =>
+  fs.writeFileSync(file, html.slice(0, a) + JSON.stringify(bundle) + html.slice(b), 'utf8');
+writeBundle(TMP, NEW);
 console.log(`new bundle: ${NEW.players.length} players, asOf ${NEW.meta.asOf}`);
+
+// ---- the injury bundle: same build, plus players the data rules out --------
+// Both are cheap at their price and would otherwise be recommended, which is
+// exactly the Ricky Pearsall failure this feature exists to stop.
+const INJ_STAR = {
+  name: 'Injured Star', team: 'SF', pos: 'WR', aav: 55, pts: 305, out: true,
+  src: 'sleeper+espn+ffc', note: 'Sleeper: IR (Knee) — placed on IR in August',
+  stats: { rec: 92, rec_yd: 1240, rec_td: 9 }, adp: 12, ecr: 12, bye: 9,
+};
+const INJ_OVERRIDE = {
+  name: 'Override Guy', team: 'KC', pos: 'WR', aav: 30, pts: 250, out: true,
+  src: 'sleeper+espn+ffc', note: 'Sleeper: Out (Hamstring)',
+  stats: { rec: 78, rec_yd: 980, rec_td: 7 }, adp: 40, ecr: 40, bye: 6,
+};
+const INJ_FRESH = {
+  name: 'Fresh Casualty', team: 'DET', pos: 'RB', aav: 25, pts: 230, out: true,
+  src: 'sleeper+espn+ffc', note: 'Sleeper: Out (Achilles)',
+  stats: { rush_yd: 900, rush_td: 8, rec: 30, rec_yd: 250, rec_td: 1 },
+  adp: 44, ecr: 44, bye: 7,
+};
+const injuryBundle = (asOf, players) => ({
+  meta: Object.assign({}, NEW.meta, { asOf }),
+  news: [`Injured Star (SF WR) — out for the season (Knee). Status IR; he is marked OUT here.`],
+  players,
+});
+const INJ_FIRST = injuryBundle(ASOF_NEW,
+  NEW.players.concat([INJ_STAR, INJ_OVERRIDE]));
+const INJ_SECOND = injuryBundle(ASOF_NEWER,
+  NEW.players.concat([INJ_STAR, INJ_OVERRIDE, INJ_FRESH]));
 
 // a returning user: three drafted (one a keeper), a boost, a star, a DND
 const MARKS = {};
@@ -91,7 +138,7 @@ MARKS['puka nacua|wr'] = { drafted: null, boost: 15, out: false, dnd: false, sta
 MARKS['trey mcbride|te'] = { drafted: null, boost: 0, out: false, dnd: true, star: false, nom: true };
 
 function savedState(poolMeta, poolTransform) {
-  const pool = OLD.players.map(p => Object.assign({}, p, {
+  const pool = OLD.players.map(({ out, outData, ...p }) => Object.assign({}, p, {
     stats: null, floor: null, ceil: null, adp: null, ecr: null, bye: null,
     dnd: false, star: false, nom: false,
   })).map(poolTransform || (x => x));
@@ -114,7 +161,7 @@ function savedState(poolMeta, poolTransform) {
 (async () => {
   const browser = await chromium.launch({ executablePath: CHROMIUM });
 
-  async function boot(state) {
+  async function boot(state, file) {
     const ctx = await browser.newContext();
     const page = await ctx.newPage();
     const errs = [];
@@ -123,7 +170,7 @@ function savedState(poolMeta, poolTransform) {
       if (m.type() === 'error' && !/Failed to load resource/.test(m.text()))
         errs.push('CONSOLE: ' + m.text());
     });
-    await page.goto('file://' + TMP);
+    await page.goto('file://' + (file || TMP));
     await page.evaluate(s => {
       localStorage.clear();
       localStorage.setItem('sc-draft-companion-v2', JSON.stringify(s));
@@ -189,9 +236,9 @@ function savedState(poolMeta, poolTransform) {
       window.APP.S.log.every(l => window.APP.S.players.some(p => window.APP.playerId(p) === l.id))));
     ok('keeper candidates intact', r.kpCands.length === 1, r.kpCands);
 
-    ok('poolMeta.valuesAsOf advanced', r.poolMeta.valuesAsOf === '2026-08-15', r.poolMeta);
+    ok('poolMeta.valuesAsOf advanced', r.poolMeta.valuesAsOf === ASOF_NEW, r.poolMeta);
     ok('poolMeta.valuesSrc still bundled', r.poolMeta.valuesSrc === 'bundled snapshot');
-    ok('poolMeta.bundleMergedAsOf stamped', r.poolMeta.bundleMergedAsOf === '2026-08-15');
+    ok('poolMeta.bundleMergedAsOf stamped', r.poolMeta.bundleMergedAsOf === ASOF_NEW);
 
     // the migration must be persisted, and must not run a second time
     await page.reload();
@@ -255,7 +302,7 @@ function savedState(poolMeta, poolTransform) {
     ok('marks survived the enrich path', r.puka && r.puka.boost === 15 && r.puka.star === true);
     ok('valuesSrc still says imported', r.poolMeta.valuesSrc === 'imported file', r.poolMeta);
     ok('valuesAsOf not overwritten by the bundle', r.poolMeta.valuesAsOf === '2026-08-01', r.poolMeta);
-    ok('bundleMergedAsOf stamped', r.poolMeta.bundleMergedAsOf === '2026-08-15', r.poolMeta);
+    ok('bundleMergedAsOf stamped', r.poolMeta.bundleMergedAsOf === ASOF_NEW, r.poolMeta);
 
     await page.reload();
     await page.waitForTimeout(1200);
@@ -435,6 +482,277 @@ function savedState(poolMeta, poolTransform) {
       r.mw && { boost: r.mw.boost, star: r.mw.star });
     ok('log id remapped to the new spelling', r.logIds.includes('michael wilson|wr'), r.logIds);
     ok('every log entry resolves after remap', r.logResolves, r.logIds);
+    ok('no page errors', errs.length === 0, errs);
+    await ctx.close();
+  }
+
+  // ================================================ (6) data-supplied OUT
+  // The bundle now ships out:true for anyone ruled out for the season. It has
+  // to reach the recommendations, be visible on the board, and still lose to
+  // the user when the user disagrees — including across the next build.
+  console.log('\n--- scenario 6: bundled OUT flags, and the user overruling them ---');
+  {
+    writeBundle(TMP_INJ, INJ_FIRST);
+    const state = savedState({
+      valuesAsOf: OLD.meta.asOf, valuesSrc: 'bundled snapshot', ranksAsOf: null,
+    });
+    state.leagues[0].marks = JSON.parse(JSON.stringify(MARKS));
+    // a returning user who already overruled a previous build: his saved pool
+    // row carries the data default, his mark carries the disagreement
+    state.pool.push({
+      name: 'Override Guy', team: 'KC', pos: 'WR', aav: 30, pts: 250,
+      src: 'sleeper+espn+ffc', note: 'Sleeper: Out (Hamstring)', outData: true,
+      stats: null, floor: null, ceil: null, adp: null, ecr: null, bye: null,
+      dnd: false, star: false, nom: false,
+    });
+    state.leagues[0].marks['override guy|wr'] =
+      { drafted: null, boost: 0, out: false, dnd: false, star: false, nom: false };
+
+    const { ctx, page, errs } = await boot(state, TMP_INJ);
+    const r = await page.evaluate(() => {
+      const A = window.APP, S = A.S, R = A.R;
+      const byId = id => S.players.find(p => A.playerId(p) === id) || null;
+      const inOpt = id => !!(R.sol && R.sol.chosen.some(x => A.playerId(x.p) === id));
+      return {
+        star: byId('injured star|wr'), over: byId('override guy|wr'),
+        starInOpt: inOpt('injured star|wr'), overInOpt: inOpt('override guy|wr'),
+        starBid: R.bids.has('injured star|wr'), overBid: R.bids.has('override guy|wr'),
+        outCount: S.players.filter(p => p.out).length,
+      };
+    });
+    ok('bundled out:true reaches the pool', r.star && r.star.out === true, r.star);
+    ok('bundled OUT is recorded as the data default',
+      r.star && r.star.outData === true, r.star && r.star.outData);
+    ok('an OUT player is never in the optimal roster', r.starInOpt === false);
+    ok('an OUT player gets no max bid', r.starBid === false);
+    ok('a saved out:false overrules the bundle', r.over && r.over.out === false,
+      r.over && { out: r.over.out, outData: r.over.outData });
+    ok('the overruled player keeps the data default for later builds',
+      r.over && r.over.outData === true);
+    ok('the overruled player is back in the market', r.overBid === true);
+    ok('only the flagged player is out', r.outCount === 1, { outCount: r.outCount });
+
+    // the board has to show it, not just the model
+    await page.fill('#search', 'Injured Star');
+    await page.waitForTimeout(300);
+    const row = page.locator('#pool tbody tr').first();
+    ok('OUT row is dimmed/struck through',
+      ((await row.getAttribute('class')) || '').includes('outrow'),
+      await row.getAttribute('class'));
+    ok('OUT pill rendered on the row', /OUT/.test(await row.innerHTML()));
+
+    // snake mode plans around him too
+    const snakeHasStar = await page.evaluate(() => {
+      const A = window.APP;
+      A.S.settings.mode = 'snake'; A.recompute();
+      const has = !!(A.R.sol && A.R.sol.plan &&
+        A.R.sol.plan.some(s => A.playerId(s.r.p) === 'injured star|wr'));
+      A.S.settings.mode = 'auction'; A.recompute();
+      return has;
+    });
+    ok('an OUT player is never in the snake plan', snakeHasStar === false);
+
+    // …and the keeper advisor stops pricing him like a healthy player
+    const keeper = await page.evaluate(() => {
+      const A = window.APP;
+      A.S.kpCands = [{ id: 'injured star|wr', name: 'Injured Star', pos: 'WR', cost: 5 }];
+      A.recompute();
+      const row = A.keeperAdvice()[0];
+      return row && { out: !!row.out, keep: !!row.keep, label: row.label };
+    });
+    ok('keeper advisor calls an OUT keeper a toss-back',
+      keeper && keeper.out === true && keeper.keep === false, keeper);
+    await page.evaluate(() => { window.APP.S.kpCands = []; window.APP.recompute(); });
+
+    // the user overrules the data through the block bar
+    await page.fill('#search', 'Injured Star');
+    await page.waitForTimeout(300);
+    await page.locator('#pool tbody tr button[data-act="sel"]').first().click();
+    await page.waitForTimeout(300);
+    ok('block bar has an OUT toggle', await page.locator('#blockOut').count() === 1);
+    ok('block bar reports the OUT state',
+      /marked OUT/.test(await page.locator('#blockOut').textContent()));
+    await page.locator('#blockOut').click();
+    await page.waitForTimeout(400);
+    const afterClick = await page.evaluate(() => {
+      const A = window.APP;
+      const p = A.S.players.find(x => A.playerId(x) === 'injured star|wr');
+      return { out: p.out, outData: p.outData,
+        mark: A.captureMarks()['injured star|wr'],
+        bid: A.R.bids.has('injured star|wr') };
+    });
+    ok('block-bar toggle clears OUT', afterClick.out === false, afterClick);
+    ok('the override is stored as a mark',
+      afterClick.mark && afterClick.mark.out === false, afterClick.mark);
+    ok('un-marked player rejoins the market', afterClick.bid === true);
+
+    await page.reload();
+    await page.waitForTimeout(1200);
+    const afterReload = await page.evaluate(() => {
+      const A = window.APP;
+      const p = A.S.players.find(x => A.playerId(x) === 'injured star|wr');
+      return { out: p.out, outData: p.outData, migration: A.S.migration };
+    });
+    ok('override survives a reload', afterReload.out === false, afterReload);
+    ok('data default still remembered after reload', afterReload.outData === true);
+
+    // …and survives the *next* nightly build, which still says he is out
+    writeBundle(TMP_INJ, INJ_SECOND);
+    await page.reload();
+    await page.waitForTimeout(1400);
+    const afterBuild = await page.evaluate(() => {
+      const A = window.APP, S = A.S;
+      const byId = id => S.players.find(p => A.playerId(p) === id) || null;
+      return {
+        migration: S.migration && S.migration.mode,
+        star: byId('injured star|wr'), fresh: byId('fresh casualty|rb'),
+        over: byId('override guy|wr'),
+        asOf: S.poolMeta.valuesAsOf,
+      };
+    });
+    ok('the next build was adopted', afterBuild.migration === 'adopt', afterBuild.migration);
+    ok('poolMeta advanced to the new build', afterBuild.asOf === ASOF_NEWER, afterBuild.asOf);
+    ok('override survives re-migration', afterBuild.star && afterBuild.star.out === false,
+      afterBuild.star && { out: afterBuild.star.out, outData: afterBuild.star.outData });
+    ok('a newly ruled-out player arrives OUT',
+      afterBuild.fresh && afterBuild.fresh.out === true && afterBuild.fresh.outData === true,
+      afterBuild.fresh);
+    ok('the other override also survives', afterBuild.over && afterBuild.over.out === false);
+
+    ok('no page errors', errs.length === 0, errs);
+    await ctx.close();
+  }
+
+  // ======================================== (7) live refresh injury handling
+  console.log('\n--- scenario 7: ↻ refresh auto-marks OUT and replaces stale notes ---');
+  {
+    const state = savedState(
+      { valuesAsOf: OLD.meta.asOf, valuesSrc: 'bundled snapshot', ranksAsOf: null },
+      // a three-week-old status that the append-only refresh could never clear
+      p => p.name === 'Michael Wilson'
+        ? Object.assign({}, p, { note: 'projection split: Sleeper 180 vs ESPN 140 · Sleeper: Questionable (Ankle)' })
+        : p.name === 'Puka Nacua'
+          ? Object.assign({}, p, { note: 'Sleeper: Doubtful (Knee)' }) : p);
+    state.leagues[0].marks = JSON.parse(JSON.stringify(MARKS));
+    // the user says Trey McBride is unavailable; Sleeper will say he is fine
+    state.leagues[0].marks['trey mcbride|te'] =
+      { drafted: null, boost: 0, out: true, dnd: true, star: false, nom: true };
+
+    const { ctx, page, errs } = await boot(state);
+    await ctx.route('**/api.sleeper.app/v1/players/nfl', r => r.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({
+        1: {
+          full_name: 'Michael Wilson', position: 'WR', team: 'ARI', search_rank: 168,
+          injury_status: 'IR', injury_body_part: 'Knee', status: 'Injured Reserve',
+          injury_notes: 'Placed on IR after surgery.\nOut for the season.',
+        },
+        2: { full_name: 'Puka Nacua', position: 'WR', team: 'LAR', search_rank: 7 },
+        3: { full_name: 'Trey McBride', position: 'TE', team: 'ARI', search_rank: 14 },
+        4: {
+          full_name: 'Bijan Robinson', position: 'RB', team: 'ATL', search_rank: 1,
+          injury_status: 'PUP', injury_body_part: 'Hamstring',
+        },
+      }),
+    }));
+    await ctx.route('**/api.sleeper.com/projections/**',
+      r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+    await ctx.route('**/fantasyfootballcalculator.com/**', r => r.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({ players: [] }),
+    }));
+
+    await page.locator('#refreshBtn').click();
+    await page.waitForTimeout(2500);
+
+    const r = await page.evaluate(() => {
+      const A = window.APP, S = A.S;
+      const byId = id => S.players.find(p => A.playerId(p) === id) || null;
+      return {
+        mw: byId('michael wilson|wr'), puka: byId('puka nacua|wr'),
+        mcbride: byId('trey mcbride|te'), bijan: byId('bijan robinson|rb'),
+        mwBid: A.R.bids.has('michael wilson|wr'),
+        toast: (document.querySelector('#toast') || {}).textContent || '',
+        marks: A.captureMarks(),
+      };
+    });
+    ok('IR status auto-marks the player OUT', r.mw && r.mw.out === true && r.mw.outData === true,
+      r.mw && { out: r.mw.out, outData: r.mw.outData });
+    ok('auto-OUT player leaves the market', r.mwBid === false);
+    ok('the stale Sleeper note is replaced, not stacked',
+      r.mw && /Sleeper: IR \(Knee\)/.test(r.mw.note) && !/Questionable/.test(r.mw.note),
+      r.mw && r.mw.note);
+    ok('the note keeps its non-Sleeper segments',
+      r.mw && /projection split/.test(r.mw.note), r.mw && r.mw.note);
+    ok('injury notes are flattened to one line',
+      r.mw && !/\n/.test(r.mw.note) && /Out for the season/.test(r.mw.note), r.mw && r.mw.note);
+    ok('a cleared status removes the stale segment',
+      r.puka && !/Sleeper:/.test(r.puka.note || ''), r.puka && r.puka.note);
+    ok('PUP is never auto-marked OUT', r.bijan && r.bijan.out === false,
+      r.bijan && { out: r.bijan.out, note: r.bijan.note });
+    ok('PUP still shows up as a note', r.bijan && /Sleeper: PUP \(Hamstring\)/.test(r.bijan.note),
+      r.bijan && r.bijan.note);
+    ok("a user's own OUT is not cleared by a healthy report",
+      r.mcbride && r.mcbride.out === true && r.mcbride.outData === false, r.mcbride);
+    ok("the user's OUT stays stored as an override",
+      r.marks['trey mcbride|te'] && r.marks['trey mcbride|te'].out === true,
+      r.marks['trey mcbride|te']);
+    ok('an auto-OUT needs no mark of its own',
+      !r.marks['michael wilson|wr'] || !('out' in r.marks['michael wilson|wr']),
+      r.marks['michael wilson|wr']);
+    ok('the refresh says how many players it marked OUT',
+      /auto-marked OUT/.test(r.toast), r.toast);
+
+    await page.reload();
+    await page.waitForTimeout(1200);
+    const again = await page.evaluate(() => {
+      const A = window.APP;
+      const byId = id => A.S.players.find(p => A.playerId(p) === id) || null;
+      return { mw: byId('michael wilson|wr'), mcbride: byId('trey mcbride|te') };
+    });
+    // the live refresh writes outData onto the pool, which saveState keeps
+    ok('auto-OUT survives a reload', again.mw && again.mw.out === true, again.mw);
+    ok("the user's OUT survives a reload", again.mcbride && again.mcbride.out === true);
+
+    ok('no page errors', errs.length === 0, errs);
+    await ctx.close();
+  }
+
+  // ============================== (8) injuries reach an imported pool too
+  // An imported sheet's dollar values are the user's own work and stay put,
+  // but an injury is a fact his sheet does not have — the enrich path has to
+  // carry the OUT flag and the note across without touching his numbers.
+  console.log('\n--- scenario 8: the enrich path carries injuries into an imported pool ---');
+  {
+    writeBundle(TMP_INJ, INJ_SECOND);
+    const state = savedState(
+      { valuesAsOf: '2026-08-01', valuesSrc: 'imported file', ranksAsOf: null },
+      p => Object.assign({}, p, { aav: 99, pts: 111, src: 'my sheet' }));
+    state.pool.push({
+      name: 'Injured Star', team: 'SF', pos: 'WR', aav: 99, pts: 111,
+      src: 'my sheet', note: 'my own note', stats: null, floor: null, ceil: null,
+      adp: null, ecr: null, bye: null, dnd: false, star: false, nom: false,
+    });
+
+    const { ctx, page, errs } = await boot(state, TMP_INJ);
+    const r = await page.evaluate(() => {
+      const A = window.APP, S = A.S;
+      const byId = id => S.players.find(p => A.playerId(p) === id) || null;
+      return {
+        migration: S.migration && S.migration.mode,
+        star: byId('injured star|wr'), fresh: byId('fresh casualty|rb'),
+        bid: A.R.bids.has('injured star|wr'),
+      };
+    });
+    ok('enrich path taken', r.migration === 'enrich', r.migration);
+    ok('imported values still untouched', r.star && r.star.aav === 99 && r.star.pts === 111,
+      r.star && { aav: r.star.aav, pts: r.star.pts });
+    ok('the bundle OUT reaches an imported row',
+      r.star && r.star.out === true && r.star.outData === true, r.star);
+    ok('the imported row keeps its own note and gains the injury',
+      r.star && /my own note/.test(r.star.note) && /Sleeper: IR \(Knee\)/.test(r.star.note),
+      r.star && r.star.note);
+    ok('an OUT import is out of the market', r.bid === false);
+    ok('an appended OUT player arrives out', r.fresh && r.fresh.out === true, r.fresh);
     ok('no page errors', errs.length === 0, errs);
     await ctx.close();
   }
