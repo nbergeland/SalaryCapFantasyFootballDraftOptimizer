@@ -240,7 +240,7 @@
   "search_rank": 7,
   "injury_status": "Questionable",
   "injury_body_part": "Ankle",
-  "injury_notes": "Limited in practice Wednesday · considered day-to-day.",
+  "injury_notes": "Limited in practice Wednesday \u00b7 considered day-to-day.",
   "injury_start_date": "2026-08-06",
   "status": "Active",
   "age": 26,
@@ -581,5 +581,22 @@
   "status": "Injured Reserve",
   "age": 26,
   "years_exp": 4
+ },
+ "99880": {
+  "player_id": "99880",
+  "full_name": "Retired Ghost",
+  "first_name": "Retired",
+  "last_name": "Ghost",
+  "position": "K",
+  "fantasy_positions": [
+   "K"
+  ],
+  "team": null,
+  "search_rank": 9999999,
+  "injury_status": null,
+  "status": "Injured Reserve",
+  "injury_body_part": null,
+  "injury_notes": null,
+  "injury_start_date": null
  }
 }

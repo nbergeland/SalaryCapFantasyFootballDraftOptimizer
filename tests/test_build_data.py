@@ -288,6 +288,18 @@ class InjuryClassification(unittest.TestCase):
             ({"espn_injury": "OUT"}, True),
             ({"espn_injury": "SUSPENSION"}, True),
             ({"fp_out": True}, True),
+            # ESPN's OUT is a *weekly* grade in preseason. When Sleeper says
+            # the player is coming back (PUP / week-to-week), ESPN OUT must
+            # not override — the second live build marked George Kittle
+            # (PUP, September return) OUT this way.
+            ({"espn_injury": "OUT", "injury": "PUP"}, False),
+            ({"espn_injury": "OUT", "injury": "Questionable"}, False),
+            ({"espn_injury": "OUT", "injury": "Doubtful"}, False),
+            # ...but season-scoped ESPN designations always win
+            ({"espn_injury": "INJURY_RESERVE", "injury": "PUP"}, True),
+            ({"espn_injury": "SUSPENSION", "injury": "Questionable"}, True),
+            # and ESPN OUT still counts when Sleeper agrees or is silent
+            ({"espn_injury": "OUT", "injury": "IR"}, True),
             # explicitly NOT out — these players still practice or return
             ({"injury": "PUP"}, False),
             ({"injury": "Questionable"}, False),
@@ -338,6 +350,15 @@ class InjuryClassification(unittest.TestCase):
         tw = by_name(self.players, "Tyler Warren")
         self.assertIs(tw["out"], True)
         self.assertIn("ESPN: Injured Reserve", tw["note"])
+
+    def test_teamless_season_enders_are_dropped_not_shipped(self):
+        """Sleeper parks long-retired players on 'Injured Reserve' forever;
+        the second live build put Adam Vinatieri in the news briefing. A
+        season-ender with no team is database residue, not a player."""
+        self.assertIsNone(by_name(self.players, "Retired Ghost"))
+        self.assertIn("Retired Ghost (K)", self.report["dropped_teamless_out"])
+        self.assertNotIn("Retired Ghost",
+                         " ".join(self.data["news"]))
 
     def test_pup_and_questionable_are_never_auto_out(self):
         cw = by_name(self.players, "Christian Watson")

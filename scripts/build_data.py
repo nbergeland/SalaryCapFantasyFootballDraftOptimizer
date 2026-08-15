@@ -730,17 +730,34 @@ def apply_cutoff(recs, report, top_n=600, top_k=24):
     return kept
 
 
+def _sleeper_says_comeback(rec):
+    """Sleeper carries a designation that means "expected back" — PUP or a
+    week-to-week grade.  When it does, ESPN's bare OUT must not override it."""
+    return str(rec.get("injury") or "").strip().upper() in \
+        {"PUP", "QUESTIONABLE", "DOUBTFUL"}
+
+
 def classify_out(rec):
     """True when the player will not play this season — the flag the app reads.
 
     Deliberately conservative: only statuses that mean "gone", never the
     week-to-week ones.  A false OUT costs the user a draftable player, so the
-    bar is a season-ending status from a source, not an inference."""
+    bar is a season-ending status from a source, not an inference.
+
+    ESPN's OUT needs special care: in preseason it is a *this-week* grade, not
+    a season verdict — the first live build marked George Kittle (PUP, back by
+    September) OUT because ESPN graded him Out for a week nobody plays.  So
+    ESPN OUT counts only when Sleeper does not carry a comeback-grade
+    designation; ESPN INJURY_RESERVE and SUSPENSION are season-scoped and
+    always count."""
     if str(rec.get("injury") or "").strip().upper() in SLEEPER_OUT_STATUSES:
         return True
     if str(rec.get("sleeper_status") or "").strip().lower() == SLEEPER_OUT_ROSTER_STATUS:
         return True
-    if str(rec.get("espn_injury") or "").strip().upper() in ESPN_OUT_STATUSES:
+    espn = str(rec.get("espn_injury") or "").strip().upper()
+    if espn in ("INJURY_RESERVE", "SUSPENSION"):
+        return True
+    if espn == "OUT" and not _sleeper_says_comeback(rec):
         return True
     return bool(rec.get("fp_out"))
 
@@ -752,7 +769,9 @@ def out_reasons(rec):
         why.append(f"sleeper injury_status={rec['injury']}")
     if str(rec.get("sleeper_status") or "").strip().lower() == SLEEPER_OUT_ROSTER_STATUS:
         why.append("sleeper status=Injured Reserve")
-    if str(rec.get("espn_injury") or "").strip().upper() in ESPN_OUT_STATUSES:
+    espn = str(rec.get("espn_injury") or "").strip().upper()
+    if espn in ("INJURY_RESERVE", "SUSPENSION") or \
+            (espn == "OUT" and not _sleeper_says_comeback(rec)):
         why.append(f"espn injuryStatus={rec['espn_injury']}")
     if rec.get("fp_out"):
         why.append("fantasypros headline")
@@ -1189,6 +1208,8 @@ def render_report(data, status, report):
         A("")
 
     section("Marked OUT (excluded from recommendations)", report.get("out_players") or [])
+    section("Teamless season-enders dropped (retired-player DB residue)",
+            report.get("dropped_teamless_out") or [])
     section("Injury disagreements (Sleeper vs ESPN)",
             report.get("injury_disagreements") or [])
     if report.get("fp_out_flagged"):
@@ -1229,6 +1250,17 @@ def build(season, fixtures_dir=None, as_of=None, fp_key=None):
     fp_headlines = []
     if fp_payload is not None:
         fp_headlines = apply_fantasypros(recs, parse_fantasypros(fp_payload), report)
+    # Sleeper's DB keeps long-retired players parked on "Injured Reserve"
+    # forever (Adam Vinatieri was 'out for the season' in the second live
+    # build's briefing). A season-ender with no team isn't a draftable player
+    # or news — he's database residue. Dropped before flag_injuries so the
+    # report's OUT count matches what actually ships.
+    ghosts = {k: r for k, r in recs.items() if classify_out(r) and not r["team"]}
+    for k in ghosts:
+        del recs[k]
+    report["dropped_teamless_out"] = sorted(
+        f"{r['name']} ({r['pos']})" for r in ghosts.values())
+
     flag_injuries(recs, report)
 
     kept = apply_cutoff(recs, report)

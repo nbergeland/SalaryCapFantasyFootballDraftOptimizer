@@ -35,6 +35,18 @@ const html = fs.readFileSync(REPO, 'utf8');
 const a = html.indexOf(START) + START.length, b = html.indexOf(END);
 const OLD = JSON.parse(html.slice(a, b));
 
+// The repo bundle's asOf advances with every real data build, so synthetic
+// "newer" bundles must be dated relative to it — a hardcoded date silently
+// stops being newer the day a real build catches up to it (which is exactly
+// what happened when the first injury build landed with today's date).
+const dayAfter = (iso, n) => {
+  const d = new Date(iso + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+const ASOF_NEW = dayAfter(OLD.meta.asOf, 1);
+const ASOF_NEWER = dayAfter(OLD.meta.asOf, 2);
+
 // Two old players are deliberately absent from the new build: one the user has
 // marked (must be carried over) and one untouched (must simply disappear).
 const DROP_MARKED = OLD.players.find(p => p.name === 'Josh Allen');
@@ -43,6 +55,9 @@ const DROP_CLEAN = OLD.players.filter(p => p.pos === 'WR').slice(-1)[0];
 const FILLER_TEAMS = ['ARI', 'BUF', 'DAL', 'SEA', 'KC', 'PHI', 'DET', 'SF'];
 const newPlayers = OLD.players
   .filter(p => p.name !== DROP_MARKED.name && p.name !== DROP_CLEAN.name)
+  // strip the real bundle's own out flags — each scenario plants exactly the
+  // OUT population it wants to reason about
+  .map(({ out, outData, ...p }) => p)
   .map((p, i) => Object.assign({}, p, {
     aav: Math.max(1, p.aav + (i % 3) - 1),
     src: 'sleeper+espn+ffc',
@@ -71,7 +86,7 @@ for (let i = 0; newPlayers.length < 480; i++) {
 }
 const NEW = {
   meta: {
-    asOf: '2026-08-15', format: OLD.meta.format, built: 'scripts/build_data.py',
+    asOf: ASOF_NEW, format: OLD.meta.format, built: 'scripts/build_data.py',
     sources: ['https://api.sleeper.app/v1/players/nfl', 'https://fantasyfootballcalculator.com/adp'],
     attribution: 'ADP data courtesy of Fantasy Football Calculator (fantasyfootballcalculator.com).',
     degraded: [],
@@ -108,9 +123,9 @@ const injuryBundle = (asOf, players) => ({
   news: [`Injured Star (SF WR) — out for the season (Knee). Status IR; he is marked OUT here.`],
   players,
 });
-const INJ_FIRST = injuryBundle('2026-08-15',
+const INJ_FIRST = injuryBundle(ASOF_NEW,
   NEW.players.concat([INJ_STAR, INJ_OVERRIDE]));
-const INJ_SECOND = injuryBundle('2026-08-16',
+const INJ_SECOND = injuryBundle(ASOF_NEWER,
   NEW.players.concat([INJ_STAR, INJ_OVERRIDE, INJ_FRESH]));
 
 // a returning user: three drafted (one a keeper), a boost, a star, a DND
@@ -123,7 +138,7 @@ MARKS['puka nacua|wr'] = { drafted: null, boost: 15, out: false, dnd: false, sta
 MARKS['trey mcbride|te'] = { drafted: null, boost: 0, out: false, dnd: true, star: false, nom: true };
 
 function savedState(poolMeta, poolTransform) {
-  const pool = OLD.players.map(p => Object.assign({}, p, {
+  const pool = OLD.players.map(({ out, outData, ...p }) => Object.assign({}, p, {
     stats: null, floor: null, ceil: null, adp: null, ecr: null, bye: null,
     dnd: false, star: false, nom: false,
   })).map(poolTransform || (x => x));
@@ -221,9 +236,9 @@ function savedState(poolMeta, poolTransform) {
       window.APP.S.log.every(l => window.APP.S.players.some(p => window.APP.playerId(p) === l.id))));
     ok('keeper candidates intact', r.kpCands.length === 1, r.kpCands);
 
-    ok('poolMeta.valuesAsOf advanced', r.poolMeta.valuesAsOf === '2026-08-15', r.poolMeta);
+    ok('poolMeta.valuesAsOf advanced', r.poolMeta.valuesAsOf === ASOF_NEW, r.poolMeta);
     ok('poolMeta.valuesSrc still bundled', r.poolMeta.valuesSrc === 'bundled snapshot');
-    ok('poolMeta.bundleMergedAsOf stamped', r.poolMeta.bundleMergedAsOf === '2026-08-15');
+    ok('poolMeta.bundleMergedAsOf stamped', r.poolMeta.bundleMergedAsOf === ASOF_NEW);
 
     // the migration must be persisted, and must not run a second time
     await page.reload();
@@ -287,7 +302,7 @@ function savedState(poolMeta, poolTransform) {
     ok('marks survived the enrich path', r.puka && r.puka.boost === 15 && r.puka.star === true);
     ok('valuesSrc still says imported', r.poolMeta.valuesSrc === 'imported file', r.poolMeta);
     ok('valuesAsOf not overwritten by the bundle', r.poolMeta.valuesAsOf === '2026-08-01', r.poolMeta);
-    ok('bundleMergedAsOf stamped', r.poolMeta.bundleMergedAsOf === '2026-08-15', r.poolMeta);
+    ok('bundleMergedAsOf stamped', r.poolMeta.bundleMergedAsOf === ASOF_NEW, r.poolMeta);
 
     await page.reload();
     await page.waitForTimeout(1200);
@@ -596,7 +611,7 @@ function savedState(poolMeta, poolTransform) {
       };
     });
     ok('the next build was adopted', afterBuild.migration === 'adopt', afterBuild.migration);
-    ok('poolMeta advanced to the new build', afterBuild.asOf === '2026-08-16', afterBuild.asOf);
+    ok('poolMeta advanced to the new build', afterBuild.asOf === ASOF_NEWER, afterBuild.asOf);
     ok('override survives re-migration', afterBuild.star && afterBuild.star.out === false,
       afterBuild.star && { out: afterBuild.star.out, outData: afterBuild.star.outData });
     ok('a newly ruled-out player arrives OUT',

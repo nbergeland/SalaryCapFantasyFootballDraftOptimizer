@@ -738,5 +738,19 @@
    "team": "HOU",
    "years_exp": 4
   }
+ },
+ {
+  "player_id": "99880",
+  "team": null,
+  "player": {
+   "player_id": "99880",
+   "first_name": "Retired",
+   "last_name": "Ghost",
+   "position": "K",
+   "team": null
+  },
+  "stats": {
+   "pts_ppr": 88.0
+  }
  }
 ]
