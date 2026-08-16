@@ -1,8 +1,8 @@
 # Data build report
 
-- Built: 2026-08-15T17:43:36+00:00
+- Built: 2026-08-16T09:43:42+00:00
 - Season: 2026
-- Players in bundle: **607**
+- Players in bundle: **609**
 - News lines: 25
 
 ## Source status
@@ -20,51 +20,53 @@
 
 - Sleeper players DB entries: 4385
 - Sleeper projection rows: 3300
-- Dropped (no stats, no ADP): 2392
-- ESPN matched / added: 629 / 0
-- FFC matched / added: 259 / 1
-- Backfilled from the Sleeper players DB: 41 (0 team corrections)
+- Dropped (no stats, no ADP): 2385
+- ESPN matched / added: 631 / 0
+- FFC matched / added: 261 / 0
+- Backfilled from the Sleeper players DB: 39 (0 team corrections)
 - Players marked OUT: 6
 - FantasyPros headlines parsed: 0
-- Pool before cutoff: 831 → kept 607
+- Pool before cutoff: 836 → kept 609
 
 ### Position breakdown
 
-- QB: 60
-- RB: 127
-- WR: 198
-- TE: 97
-- K: 93
+- QB: 57
+- RB: 130
+- WR: 195
+- TE: 100
+- K: 95
 - DST: 32
 
 ## Auction values
 
 - Replacement points: {'DST': 91.9, 'QB': 291.1, 'WR': 173.4, 'RB': 168.8, 'TE': 156.0, 'K': 116.2}
-- $/VORP scale: 0.4144 (calibration factor 0.9338)
+- $/VORP scale: 0.4143 (calibration factor 0.9338)
 - ESPN-priced players: 100
 - Mean abs error of the VORP model vs ESPN prices: 5.6
 
 ## Marked OUT (excluded from recommendations) (6)
 
 - Brandon Aiyuk (SF WR): sleeper injury_status=DNR, espn injuryStatus=OUT
+- Jaren Kanak (TEN TE): sleeper injury_status=Out
 - John Michael Gyllenborg (KC TE): sleeper injury_status=IR
 - Julian Hill (NE TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Ricky Pearsall (SF WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- Tanner McLachlan (SF TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Zane Gonzalez (MIA K): sleeper injury_status=IR
 
-## Teamless season-enders dropped (retired-player DB residue) (3)
+## Teamless season-enders dropped (retired-player DB residue) (4)
 
 - Adam Vinatieri (K)
+- Garrett Celek (TE)
+- Rhett Ellison (TE)
 - Stephen Hauschka (K)
-- Vance McDonald (TE)
 
-## Injury disagreements (Sleeper vs ESPN) (8)
+## Injury disagreements (Sleeper vs ESPN) (9)
 
 - Alec Pierce (WR): sleeper=PUP/Active espn=OUT
 - Chris Bell (WR): sleeper=PUP/Active espn=OUT
 - George Kittle (TE): sleeper=PUP/Active espn=OUT
 - Isaac Guerendo (RB): sleeper=PUP/Active espn=OUT
+- Jaren Kanak (TE): sleeper=Out/Active espn=ACTIVE
 - Luke Musgrave (TE): sleeper=PUP/Active espn=OUT
 - Tip Reiman (TE): sleeper=PUP/Active espn=OUT
 - Tyrell Shavers (WR): sleeper=PUP/Active espn=OUT
@@ -118,7 +120,7 @@ _none_
 - Darnell Mooney (WR): sleeper=58.6 espn=160.8
 - …and 145 more
 
-## ESPN rows not matched and not added (371)
+## ESPN rows not matched and not added (369)
 
 - Kene Nwangwu (NYJ RB) rank=432
 - Bam Knight (ARI RB) rank=436
@@ -160,11 +162,11 @@ _none_
 - Ke'Shawn Williams (CIN WR) rank=1346
 - Mason Tipton (NO WR) rank=1349
 - Michael Bandy (DEN WR) rank=1356
-- …and 331 more
+- …and 329 more
 
-## FFC rows with no Sleeper match (1)
+## FFC rows with no Sleeper match (0)
 
-- AJ Dillon (CAR RB) adp=170.3
+_none_
 
 ---
 
