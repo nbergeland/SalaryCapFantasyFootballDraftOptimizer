@@ -304,6 +304,7 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         <h2>Player pool</h2>
         <p class="note" id="dataMeta"></p>
         <p class="note" id="dataSources"></p>
+        <p class="note" id="storageHealth"></p>
         <p><button id="reloadBundleBtn">Reload bundled data</button>
           <span class="note">Replaces the pool with the dataset built into this
           page — rebuilt nightly from Sleeper, ESPN and Fantasy Football
@@ -784,9 +785,82 @@ function adoptLeague(lg){
     SYNC.sl.applied = new Set(); SYNC.es.settingsApplied = false;
   }
 }
-function loadState(){
+/* =====================================================================
+   DURABLE STORAGE — localStorage is the primary store but browsers
+   genuinely delete it: Safari evicts all site data after 7 days without a
+   visit, "clear browsing data" wipes it, and storage pressure can too.
+   Losing a league's keeper setup to that is unacceptable, so every save is
+   mirrored to IndexedDB (a second, independently-evicted store) with a
+   small ring of hourly snapshots, and a boot that finds no saved state
+   auto-restores the newest mirror before giving up.
+   ===================================================================== */
+const IDB_NAME = "berg-sheets-backup", IDB_STORE = "snapshots";
+function idbOpen(){
+  return new Promise((res, rej)=>{
+    if(typeof indexedDB === "undefined") return rej(new Error("no indexedDB"));
+    const rq = indexedDB.open(IDB_NAME, 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore(IDB_STORE);
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+}
+function idbTx(mode, fn){
+  return idbOpen().then(db => new Promise((res, rej)=>{
+    const tx = db.transaction(IDB_STORE, mode);
+    const out = fn(tx.objectStore(IDB_STORE));
+    tx.oncomplete = () => { db.close(); res(out && out.result); };
+    tx.onerror = () => { db.close(); rej(tx.error); };
+  }));
+}
+const idbPut  = (k, v) => idbTx("readwrite", st => st.put(v, k));
+const idbGet  = k => idbTx("readonly", st => st.get(k));
+const idbKeys = () => idbTx("readonly", st => st.getAllKeys());
+const idbDel  = k => idbTx("readwrite", st => st.delete(k));
+
+let _mirrorTimer = null;
+function mirrorState(blob){
+  clearTimeout(_mirrorTimer);
+  _mirrorTimer = setTimeout(()=>{
+    const at = new Date().toISOString();
+    idbPut("latest", {at, blob})
+      .then(()=> idbPut("snap-" + at.slice(0, 13), {at, blob})) // one per hour
+      .then(idbKeys)
+      .then(keys=>{
+        const snaps = keys.filter(k => String(k).startsWith("snap-")).sort();
+        return Promise.all(snaps.slice(0, Math.max(0, snaps.length - 8)).map(idbDel));
+      })
+      .then(()=>{ S.backupAt = at; })
+      .catch(()=>{});                    // a failed mirror never blocks the app
+  }, 1200);
+}
+// One-shot recovery, called from boot when loadState found nothing usable.
+// Restores the mirror into localStorage and re-runs the whole init path.
+function restoreFromBackup(){
+  if(!S._fresh || S._restoreTried) return Promise.resolve(false);
+  S._restoreTried = true;
+  return idbGet("latest").then(rec=>{
+    if(!(rec && rec.blob)) return false;
+    localStorage.setItem(LS_MULTI, rec.blob);
+    loadState();
+    if(S._fresh) return false;           // mirror was unusable too
+    settingsToForm(); renderLeagueSel(); recompute();
+    toast(`Recovered your saved leagues from backup storage (last saved ${rec.at.slice(0,16).replace("T"," ")} UTC).`);
+    return true;
+  }).catch(()=>false);
+}
+// An unreadable blob is evidence, not trash: park it under a quarantine key
+// so the next auto-save can't pave over whatever it still contains.
+function quarantine(raw){
   try{
-    const raw = localStorage.getItem(LS_MULTI);
+    if(raw && !localStorage.getItem(LS_MULTI + "-quarantine"))
+      localStorage.setItem(LS_MULTI + "-quarantine", raw);
+  }catch(e){}
+}
+function loadState(){
+  S._fresh = false;
+  let raw = null;
+  try{
+    raw = localStorage.getItem(LS_MULTI);
     if(raw){
       const s = JSON.parse(raw);
       if(s && s.pool && s.pool.length && s.leagues && s.leagues.length){
@@ -797,6 +871,7 @@ function loadState(){
         S.migration = migrateBundle();   // pull in a newer bundle if there is one
         return;
       }
+      quarantine(raw);                   // parsed but wrong shape
     }
     const legacy = localStorage.getItem(LS_KEY);   // migrate single-league state
     if(legacy){
@@ -821,12 +896,13 @@ function loadState(){
         return;
       }
     }
-  }catch(e){ console.warn("state load failed", e); }
+  }catch(e){ console.warn("state load failed", e); quarantine(raw); }
   S.players = BUNDLED.players.map(freshPlayer);
   S.poolMeta = defaultPoolMeta();
   const lg = blankLeague("My league");
   LEAGUES = {activeId:lg.id, list:[lg]};
   S.settings = lg.settings; S.log = []; S.kpCands = [];
+  S._fresh = true;                       // boot will try the IndexedDB mirror
 }
 // freshness of the shared player pool. Values (projections + $) and ranks age
 // separately: a CSV import refreshes values, the Sleeper pull refreshes ranks.
@@ -964,17 +1040,32 @@ function migrationSummary(r){
     `${r.added} players added, ${r.enriched} enriched with ADP/rank/bye. `+
     `Your imported dollar values and projections were left alone.`;
 }
+function buildStateBlob(){
+  const lg = activeLeague();
+  if(lg){ lg.settings=S.settings; lg.log=S.log; lg.kpCands=S.kpCands||[];
+    lg.marks=captureMarks(); }
+  return JSON.stringify({
+    v:2, activeId:LEAGUES.activeId, leagues:LEAGUES.list,
+    poolMeta:S.poolMeta||defaultPoolMeta(),
+    pool:S.players.map(p=>{ const {drafted,boost,out,...pool}=p; return pool; }),
+  });
+}
 function saveState(){
+  let blob = null;
+  try{ blob = buildStateBlob(); }
+  catch(e){ console.warn("state serialize failed", e); return; }
   try{
-    const lg = activeLeague();
-    if(lg){ lg.settings=S.settings; lg.log=S.log; lg.kpCands=S.kpCands||[];
-      lg.marks=captureMarks(); }
-    localStorage.setItem(LS_MULTI, JSON.stringify({
-      v:2, activeId:LEAGUES.activeId, leagues:LEAGUES.list,
-      poolMeta:S.poolMeta||defaultPoolMeta(),
-      pool:S.players.map(p=>{ const {drafted,boost,out,...pool}=p; return pool; }),
-    }));
-  }catch(e){ console.warn("state save failed", e); }
+    localStorage.setItem(LS_MULTI, blob);
+    S.savedAt = Date.now();
+  }catch(e){
+    // a silent save failure is how keepers "just disappear" — say it out loud
+    console.warn("state save failed", e);
+    if(!S._saveWarned){
+      S._saveWarned = true;
+      toast("⚠ This browser refused to save your draft state (storage full or blocked). Export a backup file from the header now.");
+    }
+  }
+  mirrorState(blob);                     // IndexedDB copy survives either way
 }
 function switchLeague(id){
   if(id===LEAGUES.activeId) return;
@@ -2663,6 +2754,7 @@ function renderData(){
     (srcs.length? `Sources: ${srcs.slice(0,5).join(" · ")}`+
       (srcs.length>5? ` · +${srcs.length-5} more` : ``)+`. ` : ``)+
     (BUNDLED.meta.attribution || FFC_ATTRIBUTION);
+  renderStorageHealth();
   const tb=$("#editTable tbody"); tb.innerHTML="";
   const rows=M.rows.slice().sort((a,b)=>b.blended-a.blended).slice(0,400);
   for(const r of rows){
@@ -3565,6 +3657,28 @@ async function refreshData(){
   }
 }
 
+// Storage health — where the state lives and how safe it is there. Written
+// for the person who just lost keepers to browser eviction and wants to know
+// it can't happen again.
+function renderStorageHealth(){
+  const el = $("#storageHealth"); if(!el) return;
+  const saved = S.savedAt ? new Date(S.savedAt).toLocaleTimeString() : "not yet this session";
+  const durable = S.persisted===true ? "granted" :
+                  S.persisted===false ? "not granted" : "unknown";
+  const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent);
+  el.innerHTML =
+    `Draft state lives in <b>this browser on this device</b> (never uploaded) — `+
+    `last saved ${saved} · durable-storage ${durable} · backup mirror `+
+    `${S.backupAt? "✓ "+S.backupAt.slice(11,16)+" UTC" : "pending"}.`+
+    ` If localStorage is ever wiped, the mirror auto-restores on next visit.`+
+    (isSafari? ` <span class="down">Safari deletes site data after 7 days without a `+
+      `visit — open the app weekly, or use <b>Export draft</b> after entering `+
+      `keepers.</span>` :
+      ` For a second device (or true peace of mind), <b>Export draft</b> in the `+
+      `header saves everything — every league, keepers, candidates — to a file `+
+      `Import restores.`);
+}
+
 /* ---------- glue ---------- */
 function renderAll(){
   renderTiles(); renderScarcity(); renderPool(); renderRoster(); renderOptimal();
@@ -3726,17 +3840,35 @@ function bind(){
   });
   $("#csvExportBtn").addEventListener("click",exportCSV);
   $("#exportBtn").addEventListener("click",()=>{
-    const blob=new Blob([JSON.stringify({settings:S.settings,players:S.players,log:S.log},null,1)],
-      {type:"application/json"});
+    // the full v2 state — every league, its keepers, candidates, marks and
+    // logs. The old export dumped only the active league and quietly lost
+    // the rest, which defeats the point of a backup.
+    const blob=new Blob([buildStateBlob()],{type:"application/json"});
     const a=document.createElement("a");
-    a.href=URL.createObjectURL(blob); a.download="draft-state.json"; a.click();
+    a.href=URL.createObjectURL(blob);
+    a.download="berg-sheets-backup-"+todayISO()+".json"; a.click();
+    toast("Backup saved — keep it with your draft prep. Import restores everything.");
   });
   $("#importBtn").addEventListener("click",()=>$("#importFile").click());
   $("#importFile").addEventListener("change",async e=>{
     const f=e.target.files[0]; if(!f) return;
-    try{ const s=JSON.parse(await f.text());
-      if(s.players){ S={...S,...s,sel:null}; recompute(); } }
+    try{
+      const text = await f.text();
+      const s = JSON.parse(text);
+      if(s && s.v===2 && s.leagues && s.pool){
+        // full-state backup: restore it exactly as loadState would
+        localStorage.setItem(LS_MULTI, text);
+        loadState(); settingsToForm(); renderLeagueSel(); recompute();
+        toast(`Backup restored — ${s.leagues.length} league${s.leagues.length===1?"":"s"}, ${s.pool.length} players.`);
+      }else if(s && s.players){          // legacy single-league export
+        S={...S,...s,sel:null}; recompute();
+        toast("Legacy draft file imported.");
+      }else{
+        toast("That file doesn't look like a BERG SHEETS backup.");
+      }
+    }
     catch(err){ toast("Could not read that file: "+err.message); }
+    e.target.value="";
   });
   // two-click confirm: window.confirm() is silently blocked in sandboxed
   // embeds (e.g. the claude.ai artifact), so never gate on modal dialogs
@@ -3881,6 +4013,16 @@ recompute();
 // silently swapping someone's player pool out from under them is not okay.
 if(S.migration) setTimeout(()=>toast(migrationSummary(S.migration)), 600);
 
+// Nothing saved in localStorage? Before settling for a blank slate, try the
+// IndexedDB mirror — this is what brings keepers back after the browser
+// evicted site data (Safari does it after 7 days without a visit).
+if(S._fresh) restoreFromBackup();
+
+// Ask the browser to treat this origin's storage as durable (protects
+// against eviction under storage pressure; Chrome/Firefox honor it).
+if(navigator.storage && navigator.storage.persist)
+  navigator.storage.persist().then(g=>{ S.persisted=g; }).catch(()=>{});
+
 // expose for headless tests
 window.APP={get S(){return S},get M(){return M},get R(){return R},
   migrateBundle,adoptBundle,enrichFromBundle,migrationSummary,bundleIsNewer,
@@ -3890,6 +4032,7 @@ window.APP={get S(){return S},get M(){return M},get R(){return R},
   solveCompletion,posTable,combine,playerId,normPos,parseCSV,mapHeaders,
   SYNC,applyExternalPicks,sleeperFind,sleeperLoad,sleeperSync,sleeperRefreshRanks,
   refreshData,renderAsOf,defaultPoolMeta,todayISO,
+  buildStateBlob,restoreFromBackup,mirrorState,idbGet,idbPut,idbKeys,quarantine,
   espnRead,espnApply,espnIngest,bridgeHref,espnLeagueId,espnUrl,
   yahooParse,yahooApply,normName,matchPlayer,buildNameIndex,
   get LEAGUES(){return LEAGUES},switchLeague,addLeague,activeLeague,saveState,loadState,
