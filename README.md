@@ -13,6 +13,20 @@ Open the [live app](https://nbergeland.github.io/SalaryCapFantasyFootballDraftOp
 (or `index.html` from a clone). Everything runs locally in your browser; your draft state
 persists there and is never shared.
 
+### Where your state lives (and why it can't just vanish)
+
+Draft state — leagues, keepers, candidates, marks, logs — is saved in the browser on
+every change, **twice**: localStorage (primary) plus an IndexedDB mirror keeping the
+last 8 hourly snapshots. If the browser ever wipes localStorage (Safari deletes site
+data after 7 days without a visit; "clear browsing data" does too), the app
+auto-restores from the mirror on the next open. An unreadable save is quarantined for
+recovery, never overwritten. The Data & News tab shows storage health: last save time,
+durable-storage grant, and mirror status.
+
+State is still **per browser, per device**. To move it or keep an offline copy,
+**Export draft** in the header writes every league to a file that **Import** restores
+exactly. On Safari/iPhone, export after entering keepers — belt and suspenders.
+
 1. **Settings** — draft type (auction/snake), teams, budget, roster slots, scoring, and
    your snake draft slot.
 2. **Data & News** — import fresh projections/values, enter keepers, and connect your
