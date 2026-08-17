@@ -11,7 +11,7 @@ sandbox does not.
 Sources
 -------
 Sleeper players    api.sleeper.app/v1/players/nfl        roster, teams, injuries, search_rank
-Sleeper projections api.sleeper.com/projections/nfl/YYYY season stat projections, pts_ppr, adp_ppr
+Sleeper projections api.sleeper.com/projections/nfl/YYYY season stat projections, pts_ppr, adp_ppr, adp_2qb
 FFC ADP            fantasyfootballcalculator.com        real-draft ADP (attribution requested)
 ESPN kona          lm-api-reads.fantasy.espn.com        auction values, PPR ranks, 2nd projection
 ESPN pro teams     lm-api-reads.fantasy.espn.com        bye weeks
@@ -377,6 +377,7 @@ def new_record(name, pos, team):
     return {
         "name": name, "pos": pos, "team": team,
         "stats": None, "sleeper_pts": None, "sleeper_adp": None,
+        "sleeper_adp2": None,
         "search_rank": None, "injury": None, "injury_body": None,
         "injury_notes": None, "sleeper_status": None,
         "espn_rank": None, "espn_aav": None, "espn_pts": None, "espn_team": "",
@@ -439,6 +440,13 @@ def ingest_sleeper(raw, report):
         # ranks into snake mode.
         if adp is not None and float(adp) >= MAX_REAL_ADP:
             adp = None
+        # superflex/2QB ADP from the same feed: in an SF room the QBs go two
+        # rounds earlier than their 1QB ADP suggests, and the app's snake
+        # availability model is only as good as the ranks it reads. Same
+        # placeholder rule — Sleeper pads this field with 999s too.
+        adp2 = st_raw.get("adp_2qb")
+        if adp2 is not None and float(adp2) >= MAX_REAL_ADP:
+            adp2 = None
 
         if not stats and adp is None and pos not in ("K", "DST"):
             dropped += 1                            # no signal at all — skip
@@ -449,6 +457,7 @@ def ingest_sleeper(raw, report):
         rec["stats"] = stats or None
         rec["sleeper_pts"] = round(float(pts), 1) if pts is not None else None
         rec["sleeper_adp"] = round(float(adp), 1) if adp is not None else None
+        rec["sleeper_adp2"] = round(float(adp2), 1) if adp2 is not None else None
         rec["sources"].add("sleeper")
         if db:
             rec["search_rank"] = db.get("search_rank")
@@ -644,6 +653,12 @@ def blend_ranks(recs):
         rec["adp"] = median([rec["sleeper_adp"], rec["ffc_adp"]])
         if rec["adp"] is not None:
             rec["adp"] = round(rec["adp"], 1)
+        # 2QB/superflex ADP has one source today — FFC publishes 2QB boards
+        # but not through the ppr endpoint we pull, so there is nothing to
+        # blend against yet. Kept as a median so a second feed drops straight in.
+        rec["adp2"] = median([rec["sleeper_adp2"]])
+        if rec["adp2"] is not None:
+            rec["adp2"] = round(rec["adp2"], 1)
         ecr = rec["espn_rank"]
         if ecr is None:
             sr = rec["search_rank"]
@@ -852,6 +867,9 @@ def to_player(rec):
         p["stats"] = rec["stats"]
     if rec["adp"] is not None:
         p["adp"] = rec["adp"]
+    # optional: only superflex leagues read it, and only Sleeper supplies it
+    if rec.get("adp2") is not None:
+        p["adp2"] = rec["adp2"]
     if rec["ecr"] is not None:
         p["ecr"] = rec["ecr"]
     if rec["bye"]:
@@ -1094,6 +1112,13 @@ def validate(data, min_players, sanity_names):
         # would flow straight into freshPlayer() and mean something else there
         if "out" in p and not isinstance(p["out"], bool):
             raise ValidationError(f"{p['name']!r}: out must be a bool, got {p['out']!r}")
+        # adp2 (superflex ADP) is optional, but when present the app sorts on
+        # it — a string would sort lexicographically and scramble the board
+        if "adp2" in p:
+            if isinstance(p["adp2"], bool) or \
+                    not isinstance(p["adp2"], (int, float)) or p["adp2"] <= 0:
+                raise ValidationError(
+                    f"{p['name']!r}: adp2 must be a positive number, got {p['adp2']!r}")
         pid = (p["name"] + "|" + p["pos"]).lower()
         if pid in seen:
             raise ValidationError(f"duplicate playerId {pid!r}")
@@ -1177,6 +1202,8 @@ def render_report(data, status, report):
     A(f"- Backfilled from the Sleeper players DB: {report.get('sleeper_backfilled')} "
       f"({report.get('sleeper_backfilled_teams')} team corrections)")
     A(f"- Players marked OUT: {report.get('out_count')}")
+    A(f"- Carrying a superflex (2QB) ADP: {report.get('adp2_count')}"
+      f" (of which QB: {report.get('adp2_qb_count')})")
     A(f"- FantasyPros headlines parsed: {report.get('fp_items', 0)}")
     A(f"- Pool before cutoff: {report.get('cutoff_pool')} → kept {report.get('cutoff_kept')}")
     A("")
@@ -1284,6 +1311,9 @@ def build(season, fixtures_dir=None, as_of=None, fp_key=None):
         "news": build_news(kept, fp_items=fp_headlines),
         "players": [to_player(r) for r in kept],
     }
+    with_adp2 = [p for p in data["players"] if p.get("adp2") is not None]
+    report["adp2_count"] = len(with_adp2)
+    report["adp2_qb_count"] = len([p for p in with_adp2 if p["pos"] == "QB"])
     return data, status, report
 
 

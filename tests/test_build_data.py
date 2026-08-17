@@ -748,6 +748,79 @@ class Validation(unittest.TestCase):
         bd.validate(self.base(), 1, ["A B|WR"])
 
 
+class SuperflexAdp(unittest.TestCase):
+    """Sleeper's adp_2qb is the only 2QB/superflex draft signal in the
+    pipeline; the app's snake availability model reads it when the league has
+    a superflex slot, so it has to survive the build intact."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.data, _s, cls.report = build_fixture()
+        cls.players = cls.data["players"]
+
+    def test_quarterbacks_go_much_earlier_on_the_2qb_board(self):
+        allen = by_name(self.players, "Josh Allen")
+        self.assertEqual(allen["adp2"], 3.1)
+        # the whole point of the field: in a 1QB room he is a mid-round pick
+        self.assertLess(allen["adp2"], allen["adp"] - 15)
+
+    def test_skill_players_slide_slightly(self):
+        bijan = by_name(self.players, "Bijan Robinson")
+        self.assertEqual(bijan["adp2"], 2.2)
+        self.assertGreater(bijan["adp2"], bijan["adp"])
+
+    def test_placeholder_2qb_adp_is_nulled_like_adp_ppr(self):
+        # Sleeper pads adp_2qb with 999s exactly as it does adp_ppr
+        mw = by_name(self.players, "Michael Wilson")
+        self.assertIsNotNone(mw["adp"])
+        self.assertNotIn("adp2", mw)
+
+    def test_absent_2qb_adp_leaves_the_key_off(self):
+        # the field is optional — most rows never carry it, and the app falls
+        # back to ordinary ADP for those
+        nacua = by_name(self.players, "Puka Nacua")
+        self.assertIsNotNone(nacua["adp"])
+        self.assertNotIn("adp2", nacua)
+
+    def test_ingest_nulls_out_placeholder_2qb_adp(self):
+        raw = {
+            "sleeper_players": {"1": {"full_name": "Deep Guy", "position": "QB",
+                                      "team": "SF", "search_rank": 2500}},
+            "sleeper_projections": [
+                {"player_id": "1",
+                 "player": {"player_id": "1", "full_name": "Deep Guy",
+                            "position": "QB", "team": "SF"},
+                 "team": "SF",
+                 "stats": {"pass_yd": 3000.0, "pts_ppr": 190.0,
+                           "adp_ppr": 210.0, "adp_2qb": 999.0}},
+            ],
+        }
+        recs, _ = bd.ingest_sleeper(raw, {})
+        rec = next(r for r in recs.values() if r["name"] == "Deep Guy")
+        self.assertEqual(rec["sleeper_adp"], 210.0)
+        self.assertIsNone(rec["sleeper_adp2"])
+
+    def test_report_counts_the_2qb_board(self):
+        self.assertEqual(self.report["adp2_count"],
+                         len([p for p in self.players if "adp2" in p]))
+        self.assertEqual(self.report["adp2_qb_count"], 4)
+        md = bd.render_report(self.data, {"sleeper_players": "ok"}, self.report)
+        self.assertIn("Carrying a superflex (2QB) ADP", md)
+
+    def test_bundle_with_2qb_adp_passes_validation(self):
+        bd.validate(self.data, 5, ["Josh Allen|QB"])
+
+    def test_validate_rejects_a_non_numeric_adp2(self):
+        d = {"meta": {"asOf": "2026-08-12"}, "news": [],
+             "players": [{"name": "A B", "team": "SF", "pos": "QB", "aav": 3,
+                          "pts": 100.0, "src": "sleeper", "note": "",
+                          "adp2": "4.5"}]}
+        with self.assertRaises(bd.ValidationError):
+            bd.validate(d, 1, [])
+        d["players"][0]["adp2"] = 4.5
+        bd.validate(d, 1, [])
+
+
 class FixtureIntegrity(unittest.TestCase):
     """The fixtures are the only stand-in for the real APIs, so keep them
     honest about the shapes the builder depends on."""
@@ -778,6 +851,16 @@ class FixtureIntegrity(unittest.TestCase):
         pls = [r["player"] for r in payload["players"]]
         self.assertTrue(all("injuryStatus" in p for p in pls))
         self.assertIn("INJURY_RESERVE", {p["injuryStatus"] for p in pls})
+
+    def test_sleeper_projection_fixture_carries_2qb_adp(self):
+        rows = json.loads(read(os.path.join(FIXTURES, "sleeper_projections.json")))
+        adp2 = {(r["player"].get("first_name", "") + " "
+                 + r["player"].get("last_name", "")).strip():
+                (r.get("stats") or {}).get("adp_2qb") for r in rows}
+        self.assertEqual(adp2.get("Josh Allen"), 3.1)
+        self.assertEqual(adp2.get("Michael Wilson"), 999.0)   # placeholder
+        self.assertIsNone(adp2.get("Puka Nacua"))             # field absent
+        self.assertGreaterEqual(len([v for v in adp2.values() if v]), 8)
 
     def test_fixtures_cover_the_awkward_cases(self):
         players = json.loads(read(os.path.join(FIXTURES, "sleeper_players.json")))
