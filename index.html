@@ -1546,9 +1546,21 @@ function solveSnakePlan(){
       }
       else continue;
       const t=top2[r.p.pos]||[];
-      const later=t[0]===r ? t[1] : t[0];
-      const score=r.rpts-(later? later.rpts:0)   // dropoff if I wait
-        + r.rpts*1e-4;                            // tiny tiebreak toward talent
+      // cost of waiting = me now vs the best at this position at my NEXT
+      // pick — and if the rank model says r himself survives to that pick,
+      // waiting on him is free (t[0] is then r and the dropoff is 0). The
+      // old "t[0]===r ? t[1] : t[0]" priced every player as if he'd be
+      // sniped, which overrated QBs most of all: they last the longest by
+      // ADP, so their real cost-of-waiting is usually nothing.
+      const later=t[0];
+      let score=r.rpts-(later? later.rpts:0)
+        // tiebreak by value over replacement, not raw points — raw points
+        // rank a mid QB above an elite WR
+        + Math.max(0, r.rpts-(M.repl[r.p.pos]||0))*1e-3;
+      // a backup QB is insurance, not weekly points — you start one QB, so
+      // his dropoff only pays off if the starter busts. Without this a
+      // round-6 pick went to a second QB over startable skill depth.
+      if(fit==="BN" && r.p.pos==="QB") score*=0.25;
       if(score>bestScore){ bestScore=score; take=r; role=fit; }
     }
     if(!take) continue;
@@ -1562,11 +1574,14 @@ function solveSnakePlan(){
     total:starters.reduce((a,p)=>a+p.r.rpts,0), B:0, snake:true};
 }
 // urgency: how much value at this player's position evaporates if I wait
-// for my next pick instead of taking him now
+// for my next pick instead of taking him now. r himself stays in the future
+// pool — if the rank model says he survives to my next pick, waiting costs
+// nothing, and pretending otherwise made every top QB look urgent for
+// months of draft rounds.
 function snakeUrgency(r, nextN){
-  const later=availableAt(nextN, new Set([playerId(r.p)]))
+  const later=availableAt(nextN, new Set())
     .filter(x=>x.p.pos===r.p.pos).sort((a,b)=>b.rpts-a.rpts)[0];
-  return {dropoff:+(r.rpts-(later? later.rpts:0)).toFixed(1), later};
+  return {dropoff:+Math.max(0, r.rpts-(later? later.rpts:0)).toFixed(1), later};
 }
 
 /* =====================================================================
@@ -1933,8 +1948,12 @@ function solveStrategySnake(key){
           fit="BN";
         } else continue;
         const t=top2[r.p.pos]||[];
-        const later=t[0]===r ? t[1] : t[0];
-        const score=r.rpts-(later? later.rpts:0)+r.rpts*1e-4;
+        // same scoring as solveSnakePlan: waiting is free when the rank
+        // model says r survives to my next pick; tiebreak by VORP not raw pts
+        const later=t[0];
+        let score=r.rpts-(later? later.rpts:0)
+          + Math.max(0, r.rpts-(M.repl[r.p.pos]||0))*1e-3;
+        if(fit==="BN" && r.p.pos==="QB") score*=0.25;   // insurance, not points
         if(score>bestScore){ bestScore=score; take=r; role=fit; }
       }
       return {take, role};
