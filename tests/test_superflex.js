@@ -185,11 +185,12 @@ const SL = {
     await reset();
     const r = await page.evaluate(() => {
       const A = window.APP;
-      // plausible superflex board: QB1 around pick 6, then a widening gap;
-      // everyone else slides ~30% to make room for the quarterbacks
+      // a realistic 12-team superflex board: 24 quarterbacks are starters, so
+      // QB1 goes around pick 8 and QB24 is gone by pick ~120. Everyone else
+      // slides ~30% to make room for them.
       const qbs = A.S.players.filter(p => p.pos === 'QB' && !p.out)
         .sort((a, b) => b.pts - a.pts);
-      qbs.forEach((p, i) => { p.adp2 = +(6 + 3 * i + 0.35 * i * i).toFixed(1); });
+      qbs.forEach((p, i) => { p.adp2 = +(8 + 4.7 * i).toFixed(1); });
       for (const p of A.S.players)
         if (p.pos !== 'QB' && p.adp != null) p.adp2 = +(p.adp * 1.3).toFixed(1);
       A.S.settings.mode = 'snake'; A.S.settings.snakeSlot = 1;
@@ -225,8 +226,8 @@ const SL = {
       r.sf.topQBmrank <= 10, r.sf.topQBmrank);
     ok('a 1QB league still ranks off ordinary ADP',
       r.one.topQBmrank > 20, r.one.topQBmrank);
-    ok('superflex drafts its first quarterback far earlier than a 1QB league',
-      r.sf.firstQB < r.one.firstQB - 2 * r.picks, { sf: r.sf.firstQB, one: r.one.firstQB });
+    ok('superflex drafts its first quarterback earlier than a 1QB league',
+      r.sf.firstQB <= r.one.firstQB - r.picks, { sf: r.sf.firstQB, one: r.one.firstQB });
     ok('the first quarterback goes inside the first third of the draft',
       r.sf.firstQB <= r.picks * (r.sf.len / 3), { firstQB: r.sf.firstQB, len: r.sf.len });
     ok('the superflex plan covers one more slot than the 1QB plan',

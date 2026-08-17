@@ -1270,6 +1270,10 @@ function rebuildModel(){
     return (b.p.aav-a.p.aav) || (b.rpts-a.rpts);
   });
   ranked.forEach((r,i)=>{ r.mrank = i+1; });
+  // projection order, cached: the snake planner asks "best player at each
+  // position still on the board" hundreds of times per solve, and scanning a
+  // pre-sorted list lets it stop at the first hit per position
+  M.byRpts = rows.slice().sort((a,b)=>b.rpts-a.rpts);
 }
 
 /* =====================================================================
@@ -1563,97 +1567,250 @@ function availableAt(n, used){
   return M.rows.filter(r=>!r.p.drafted && !r.p.out && !r.p.dnd
     && !(used&&used.has(playerId(r.p))) && r.mrank > n-buf);
 }
-// projected plan for my remaining picks. At each pick, take the player whose
-// position loses the most by waiting for my NEXT pick (marginal-value greedy).
-// This naturally spends early picks on cliff positions (RB/WR) and defers
-// flat-dropoff slots (K/DST, streamable QB tiers) to the end.
-function solveSnakePlan(){
+/* ---------------------------------------------------------------------
+   Snake planning. The base move is a marginal-value greedy: at each pick,
+   take the player whose SLOT loses the most by waiting for my next pick.
+   That naturally spends early picks on cliff positions and defers flat
+   ones (K/DST, streamable QB tiers) to the end.
+
+   Two corrections make it behave:
+
+   * The comparator for a pooled slot is pooled. A third TE's real
+     alternative is not the fourth TE — it is the best RB/WR/TE who could
+     take that same flex seat. Scoring pooled slots against the position's
+     own tier cliff is what stacked three tight ends on one roster, and in
+     a superflex league it would stack quarterbacks through SFLEX the same
+     way. Dedicated slots keep the within-position comparison, which is
+     what makes a tier cliff at a required position urgent.
+   * A one-step rollout wraps the greedy (below). One-pick dropoff still
+     overstates urgency for positions you would happily fill late: waiting
+     on a quarterback costs one round's dropoff at every single pick, but
+     the real cost is measured against the quarterback you would actually
+     end up with in round 9.
+   --------------------------------------------------------------------- */
+function snakePlanState(){
   const assign=myRosterAssignment();
-  const need={...assign.remaining};
-  let flexOpen=assign.flexOpen;
-  let sflexOpen=assign.sflexOpen;
-  let benchOpen=Math.max(0,S.settings.bench-assign.bench.length);
-  const cur=currentOverallPick();
-  const slotsLeft=POSITIONS.reduce((a,p)=>a+need[p],0)+flexOpen+sflexOpen+benchOpen;
-  const picks=myPickNumbers().filter(n=>n>=cur).slice(0, slotsLeft);
-  const used=new Set(); const plan=[];
-  for(let i=0;i<picks.length;i++){
-    const n=picks[i];
-    const nxt = i+1<picks.length ? picks[i+1] : n+2*S.settings.teams;
-    // at the CURRENT pick everyone undrafted is truly on the board (fallers
-    // included); the rank model only gates FUTURE picks
-    const avail = (n<=cur
-      ? M.rows.filter(r=>!r.p.drafted && !r.p.out && !r.p.dnd && !used.has(playerId(r.p)))
-      : availableAt(n, used));
-    // best two per position at my next pick (to price "waiting")
-    const top2={};
-    for(const r of availableAt(nxt, used)){
-      const t=top2[r.p.pos]||(top2[r.p.pos]=[]);
-      if(t.length<2){ t.push(r); t.sort((a,b)=>b.rpts-a.rpts); }
-      else if(r.rpts>t[1].rpts){ t[1]=r; t.sort((a,b)=>b.rpts-a.rpts); }
-    }
-    // the caps must count players already on my roster, not just planned
-    // picks — with two QBs rostered the plan was adding a third
-    const heldQB=assign.bench.filter(p=>p.pos==="QB").length;
-    const heldTE=assign.bench.filter(p=>p.pos==="TE").length;
-    const benchQB=heldQB+plan.filter(s=>s.role==="BN"&&s.r.p.pos==="QB").length;
-    const benchTE=heldTE+plan.filter(s=>s.role==="BN"&&s.r.p.pos==="TE").length;
-    // K/DST go with the LAST picks. Their projection dropoffs are noise, and
-    // scored as points they beat bench depth by mid-draft — plans were
-    // spending round-7 picks on a defense. Defer them while any other slot
-    // can still be filled and enough picks remain to grab them at the end.
-    const picksAfter=picks.length-1-i;
-    const kdNeed=need.K+need.DST;
-    const otherOpen=POSITIONS.reduce((a,p)=>a+(p==="K"||p==="DST"?0:need[p]),0)
-      +flexOpen+sflexOpen+benchOpen;
-    const deferKD = picksAfter>=kdNeed && otherOpen>0;
-    let take=null, role=null, bestScore=-1e9;
-    for(const r of avail){
-      let fit=null;
-      if(need[r.p.pos]>0){
-        if(deferKD && (r.p.pos==="K"||r.p.pos==="DST")) continue;
-        fit=r.p.pos;
-      }
-      else if(flexOpen>0 && FLEX_POS.includes(r.p.pos)) fit="FLEX";
-      // a superflex seat is a STARTER seat, so no insurance discount below —
-      // this is what puts a second QB in the plan in an SF league without
-      // opening the door to QB hoarding on the bench
-      else if(sflexOpen>0 && SFLEX_POS.includes(r.p.pos)) fit="SFLEX";
-      else if(benchOpen>0){
-        // bench = depth that actually rotates into lineups: RB/WR churn
-        // through flex, byes and injuries; single-starter positions are
-        // insurance at best — no K/DST, at most one backup QB, one bench TE
-        if(r.p.pos==="K"||r.p.pos==="DST") continue;
-        if(r.p.pos==="QB"&&benchQB>=1) continue;
-        if(r.p.pos==="TE"&&benchTE>=1) continue;
-        fit="BN";
-      }
-      else continue;
-      const t=top2[r.p.pos]||[];
-      // cost of waiting = me now vs the best at this position at my NEXT
-      // pick — and if the rank model says r himself survives to that pick,
-      // waiting on him is free (t[0] is then r and the dropoff is 0). The
-      // old "t[0]===r ? t[1] : t[0]" priced every player as if he'd be
-      // sniped, which overrated QBs most of all: they last the longest by
-      // ADP, so their real cost-of-waiting is usually nothing.
-      const later=t[0];
-      let score=r.rpts-(later? later.rpts:0)
-        // tiebreak by value over replacement, not raw points — raw points
-        // rank a mid QB above an elite WR
-        + Math.max(0, r.rpts-(M.repl[r.p.pos]||0))*1e-3;
-      // backups at single-starter positions are insurance, not weekly
-      // points — their dropoff only pays off if the starter busts. Without
-      // this a round-6 pick went to a second QB over startable skill depth.
-      if(fit==="BN" && (r.p.pos==="QB"||r.p.pos==="TE")) score*=0.25;
-      if(score>bestScore){ bestScore=score; take=r; role=fit; }
-    }
-    if(!take) continue;
-    used.add(playerId(take.p)); plan.push({r:take, n, role});
-    if(role==="FLEX") flexOpen--;
-    else if(role==="SFLEX") sflexOpen--;
-    else if(role==="BN") benchOpen--;
-    else need[role]--;
+  const counts={QB:0,RB:0,WR:0,TE:0,K:0,DST:0};
+  for(const p of S.players) if(p.drafted&&p.drafted.mine) counts[p.pos]++;
+  return {
+    need:{...assign.remaining},
+    flexOpen:assign.flexOpen, sflexOpen:assign.sflexOpen,
+    benchOpen:Math.max(0,S.settings.bench-assign.bench.length),
+    // the caps count players already on my roster, not just planned picks —
+    // with two QBs rostered the plan was adding a third. A tight end in a
+    // flex seat is already the second tight end, so he closes the bench
+    // slot too; a quarterback in a SUPERFLEX seat is a starter, not depth,
+    // so he does not.
+    benchQB:assign.bench.filter(p=>p.pos==="QB").length,
+    benchTE:[...assign.bench, ...assign.flex, ...assign.sflex]
+      .filter(p=>p.pos==="TE").length,
+    counts, used:new Set(), plan:[],
+  };
+}
+function snakeCloneState(st){
+  return {need:{...st.need}, flexOpen:st.flexOpen, sflexOpen:st.sflexOpen,
+    benchOpen:st.benchOpen, benchQB:st.benchQB, benchTE:st.benchTE,
+    counts:{...st.counts}, used:new Set(st.used), plan:st.plan.slice()};
+}
+function snakeTake(st, r, role, n){
+  st.used.add(playerId(r.p)); st.plan.push({r, n, role});
+  st.counts[r.p.pos]++;
+  if(role==="FLEX" || role==="SFLEX"){
+    if(role==="FLEX") st.flexOpen--; else st.sflexOpen--;
+    if(r.p.pos==="TE") st.benchTE++;   // a flexed TE is the depth TE
   }
+  else if(role==="BN"){
+    st.benchOpen--;
+    if(r.p.pos==="QB") st.benchQB++; else if(r.p.pos==="TE") st.benchTE++;
+  }
+  else st.need[role]--;
+}
+function snakeSlotsLeft(st){
+  return POSITIONS.reduce((a,p)=>a+st.need[p],0)
+    +st.flexOpen+st.sflexOpen+st.benchOpen;
+}
+// the plan's value: starters at full weight, bench at a quarter — bench
+// points only cash in through byes, busts and the weekly best-lineup choice
+const SNAKE_BENCH_WEIGHT=0.25;
+function snakePlanValue(plan){
+  let v=0;
+  for(const s of plan) v += s.role==="BN" ? SNAKE_BENCH_WEIGHT*s.r.rpts : s.r.rpts;
+  return v;
+}
+// best remaining player at each position, walking the projection-sorted
+// list so each position stops at its first hit. `minRank` applies the
+// availability model (null = everyone undrafted is really on the board,
+// which is the truth at the pick happening right now).
+function snakeTopByPos(used, minRank){
+  const top={}; let found=0;
+  for(const r of M.byRpts){
+    const pos=r.p.pos;
+    if(top[pos] || r.p.drafted || r.p.out || r.p.dnd) continue;
+    if(minRank!=null && !(r.mrank>minRank)) continue;
+    if(used.has(playerId(r.p))) continue;
+    top[pos]=r;
+    if(++found===POSITIONS.length) break;
+  }
+  return top;
+}
+// the best player for each open slot type at this pick, with its marginal
+// score. `rule` is the Strategy Lab's round rule (or null).
+//
+// Only the top player at each position can win a slot: within a position the
+// score is monotone in projected points, and which slot a player fits is a
+// property of his position, not of him. So six lookups replace a scan of the
+// whole board — which is what makes the rollout below affordable.
+function snakeCandidates(st, n, nxt, cur, picksAfter, rule, rd){
+  const buf=snakeBuffer();
+  const avail=snakeTopByPos(st.used, n<=cur ? null : n-buf);
+  const best1=snakeTopByPos(st.used, nxt-buf);   // the price of waiting
+  const poolBest=list=>{
+    let b=null;
+    for(const pos of list){ const c=best1[pos]; if(c && (!b||c.rpts>b.rpts)) b=c; }
+    return b;
+  };
+  // K/DST go with the LAST picks. Their projection dropoffs are noise, and
+  // scored as points they beat bench depth by mid-draft — plans were
+  // spending round-7 picks on a defense. Defer them while any other slot
+  // can still be filled and enough picks remain to grab them at the end.
+  const kdNeed=st.need.K+st.need.DST;
+  const otherOpen=POSITIONS.reduce((a,p)=>a+(p==="K"||p==="DST"?0:st.need[p]),0)
+    +st.flexOpen+st.sflexOpen+st.benchOpen;
+  const deferKD = picksAfter>=kdNeed && otherOpen>0;
+  const benchPos=["QB","RB","WR","TE"].filter(p=>
+    !(p==="QB"&&st.benchQB>=1) && !(p==="TE"&&st.benchTE>=1));
+  const laterFor={};
+  const later=fit=>{
+    if(!(fit in laterFor))
+      laterFor[fit] = fit==="FLEX" ? poolBest(FLEX_POS)
+        : fit==="SFLEX" ? poolBest(SFLEX_POS)
+        : fit==="BN" ? poolBest(benchPos)
+        : best1[fit] || null;
+    return laterFor[fit];
+  };
+  const byFit={};
+  for(const pos of POSITIONS){
+    const r=avail[pos];
+    if(!r) continue;
+    if(rule && !rule(r.p.pos, rd, st.counts)) continue;
+    let fit=null;
+    if(st.need[r.p.pos]>0){
+      if(deferKD && (r.p.pos==="K"||r.p.pos==="DST")) continue;
+      fit=r.p.pos;
+    }
+    else if(st.flexOpen>0 && FLEX_POS.includes(r.p.pos)) fit="FLEX";
+    // a superflex seat is a STARTER seat, so no insurance discount below —
+    // this is what puts a second QB in the plan in an SF league without
+    // opening the door to QB hoarding on the bench
+    else if(st.sflexOpen>0 && SFLEX_POS.includes(r.p.pos)) fit="SFLEX";
+    else if(st.benchOpen>0){
+      // bench = depth that actually rotates into lineups: RB/WR churn
+      // through flex, byes and injuries; single-starter positions are
+      // insurance at best — no K/DST, at most one backup QB, one bench TE
+      if(r.p.pos==="K"||r.p.pos==="DST") continue;
+      if(r.p.pos==="QB"&&st.benchQB>=1) continue;
+      if(r.p.pos==="TE"&&st.benchTE>=1) continue;
+      fit="BN";
+    }
+    else continue;
+    // cost of waiting = me now vs the best player who could take this slot
+    // at my NEXT pick. If the rank model says r himself survives to that
+    // pick, waiting on him is free (he IS the comparator, dropoff 0) —
+    // pricing every player as if he'd be sniped overrated the positions
+    // that last longest, quarterbacks above all.
+    const lat=later(fit);
+    let score=r.rpts-(lat? lat.rpts:0)
+      // tiebreak by value over replacement, not raw points — raw points
+      // rank a mid QB above an elite WR
+      + Math.max(0, r.rpts-(M.repl[r.p.pos]||0))*1e-3;
+    // backups at single-starter positions are insurance, not weekly
+    // points — their dropoff only pays off if the starter busts.
+    if(fit==="BN" && (r.p.pos==="QB"||r.p.pos==="TE")) score*=0.25;
+    const cur2=byFit[fit];
+    if(!cur2){ byFit[fit]={best:{r,role:fit,score}, top:{r,role:fit,score}}; continue; }
+    if(score>cur2.best.score) cur2.best={r,role:fit,score};
+    // the rollout also considers the best PLAYER for each slot, not only the
+    // best marginal score — they differ exactly where the greedy is myopic
+    if(r.rpts>cur2.top.r.rpts) cur2.top={r,role:fit,score};
+  }
+  const out=[], seen=new Set();
+  for(const k in byFit) for(const c of [byFit[k].best, byFit[k].top]){
+    const key=c.role+"|"+playerId(c.r.p);
+    if(seen.has(key)) continue;
+    seen.add(key); out.push(c);
+  }
+  return out;
+}
+// finish the plan from `st` with the plain greedy (highest marginal score at
+// every remaining pick). Mutates st; reports whether a Strategy Lab rule had
+// to be relaxed to fill a slot.
+function snakeGreedyFill(st, picks, from, cur, T, rule){
+  let relaxed=false;
+  for(let i=from;i<picks.length;i++){
+    const n=picks[i], rd=Math.ceil(n/T);
+    const nxt = i+1<picks.length ? picks[i+1] : n+2*T;
+    let cands=snakeCandidates(st, n, nxt, cur, picks.length-1-i, rule, rd);
+    if(!cands.length && rule){
+      cands=snakeCandidates(st, n, nxt, cur, picks.length-1-i, null, rd);
+      if(cands.length) relaxed=true;
+    }
+    if(!cands.length) continue;
+    let take=cands[0];
+    for(const c of cands) if(c.score>take.score) take=c;
+    snakeTake(st, take.r, take.role, n);
+  }
+  return relaxed;
+}
+// One-step rollout (policy improvement over the greedy): at each of my
+// picks, try the best candidate for every open slot type, finish the draft
+// with the greedy, and keep whichever opening produced the better plan.
+// The greedy's own pick is always among the candidates, so the rollout can
+// only match or beat it. This is what stops "take the elite QB now because
+// his position drops off a round from here" — rolled out, that line loses
+// to "take the elite RB and draft a quarterback in round 8", which is what
+// the greedy could not see one pick at a time.
+const SNAKE_ROLLOUT_PICKS=8;    // later picks are forced; rolling them adds cost, not insight
+function snakeRollout(picks, cur, T, rule){
+  const st=snakePlanState();
+  let relaxed=false;
+  for(let i=0;i<picks.length;i++){
+    const n=picks[i], rd=Math.ceil(n/T);
+    const nxt = i+1<picks.length ? picks[i+1] : n+2*T;
+    let cands=snakeCandidates(st, n, nxt, cur, picks.length-1-i, rule, rd);
+    if(!cands.length && rule){
+      cands=snakeCandidates(st, n, nxt, cur, picks.length-1-i, null, rd);
+      if(cands.length) relaxed=true;
+    }
+    if(!cands.length) continue;
+    let take=cands[0];
+    if(cands.length>1 && i<SNAKE_ROLLOUT_PICKS){
+      let bestVal=-Infinity; take=null;
+      for(const c of cands){
+        const probe=snakeCloneState(st);
+        snakeTake(probe, c.r, c.role, n);
+        snakeGreedyFill(probe, picks, i+1, cur, T, rule);
+        const val=snakePlanValue(probe.plan);
+        // Ties are the normal case, not the exception: two openings often
+        // end at the same roster in a different order. Break them on the
+        // greedy's urgency score — same roster, so take the player likelier
+        // to be gone by my next pick first.
+        if(!take || val>bestVal+1e-9
+           || (Math.abs(val-bestVal)<=1e-9 && c.score>take.score)){
+          if(val>bestVal) bestVal=val;
+          take=c;
+        }
+      }
+    }else{
+      for(const c of cands) if(c.score>take.score) take=c;
+    }
+    snakeTake(st, take.r, take.role, n);
+  }
+  return {plan:st.plan, relaxed};
+}
+function solveSnakePlan(){
+  const cur=currentOverallPick(), T=S.settings.teams;
+  const picks=myPickNumbers().filter(n=>n>=cur).slice(0, snakeSlotsLeft(snakePlanState()));
+  const {plan}=snakeRollout(picks, cur, T, null);
   const starters=plan.filter(p=>p.role!=="BN");
   return {plan, chosen:starters.map(p=>p.r),
     total:starters.reduce((a,p)=>a+p.r.rpts,0), B:0, snake:true};
@@ -2009,76 +2166,12 @@ const STRAT_SNAKE_RULES = {
 function solveStrategySnake(key){
   const rule=STRAT_SNAKE_RULES[key];
   if(!rule) return null;
-  const assign=myRosterAssignment();
-  const need={...assign.remaining};
-  let flexOpen=assign.flexOpen;
-  let sflexOpen=assign.sflexOpen;
-  let benchOpen=Math.max(0,S.settings.bench-assign.bench.length);
-  const counts={QB:0,RB:0,WR:0,TE:0,K:0,DST:0};
-  for(const p of S.players) if(p.drafted&&p.drafted.mine) counts[p.pos]++;
   const cur=currentOverallPick(), T=S.settings.teams;
-  const slotsLeft=POSITIONS.reduce((a,p)=>a+need[p],0)+flexOpen+sflexOpen+benchOpen;
-  const picks=myPickNumbers().filter(n=>n>=cur).slice(0, slotsLeft);
-  const used=new Set(); const plan=[]; let relaxed=false;
-  for(let i=0;i<picks.length;i++){
-    const n=picks[i], rd=Math.ceil(n/T);
-    const nxt=i+1<picks.length? picks[i+1] : n+2*T;
-    const avail=(n<=cur
-      ? M.rows.filter(r=>!r.p.drafted&&!r.p.out&&!r.p.dnd&&!used.has(playerId(r.p)))
-      : availableAt(n, used));
-    const top2={};
-    for(const r of availableAt(nxt, used)){
-      const t=top2[r.p.pos]||(top2[r.p.pos]=[]);
-      if(t.length<2){ t.push(r); t.sort((a,b)=>b.rpts-a.rpts); }
-      else if(r.rpts>t[1].rpts){ t[1]=r; t.sort((a,b)=>b.rpts-a.rpts); }
-    }
-    const benchQB=assign.bench.filter(p=>p.pos==="QB").length
-      +plan.filter(s=>s.role==="BN"&&s.r.p.pos==="QB").length;
-    const benchTE=assign.bench.filter(p=>p.pos==="TE").length
-      +plan.filter(s=>s.role==="BN"&&s.r.p.pos==="TE").length;
-    const picksAfter=picks.length-1-i;
-    const kdNeed=need.K+need.DST;
-    const otherOpen=POSITIONS.reduce((a,p)=>a+(p==="K"||p==="DST"?0:need[p]),0)
-      +flexOpen+sflexOpen+benchOpen;
-    const deferKD = picksAfter>=kdNeed && otherOpen>0;
-    const pickBest=useRule=>{
-      let take=null, role=null, bestScore=-1e9;
-      for(const r of avail){
-        if(useRule && !rule(r.p.pos, rd, counts)) continue;
-        let fit=null;
-        if(need[r.p.pos]>0){
-          if(deferKD && (r.p.pos==="K"||r.p.pos==="DST")) continue;
-          fit=r.p.pos;
-        }
-        else if(flexOpen>0 && FLEX_POS.includes(r.p.pos)) fit="FLEX";
-        else if(sflexOpen>0 && SFLEX_POS.includes(r.p.pos)) fit="SFLEX";  // starter
-        else if(benchOpen>0){
-          if(r.p.pos==="K"||r.p.pos==="DST") continue;
-          if(r.p.pos==="QB"&&benchQB>=1) continue;
-          if(r.p.pos==="TE"&&benchTE>=1) continue;
-          fit="BN";
-        } else continue;
-        const t=top2[r.p.pos]||[];
-        // same scoring as solveSnakePlan: waiting is free when the rank
-        // model says r survives to my next pick; tiebreak by VORP not raw pts
-        const later=t[0];
-        let score=r.rpts-(later? later.rpts:0)
-          + Math.max(0, r.rpts-(M.repl[r.p.pos]||0))*1e-3;
-        if(fit==="BN" && (r.p.pos==="QB"||r.p.pos==="TE")) score*=0.25;   // insurance, not points
-        if(score>bestScore){ bestScore=score; take=r; role=fit; }
-      }
-      return {take, role};
-    };
-    let {take, role}=pickBest(true);
-    if(!take){ ({take, role}=pickBest(false)); if(take) relaxed=true; }
-    if(!take) continue;
-    used.add(playerId(take.p)); plan.push({r:take, n, role});
-    counts[take.p.pos]++;
-    if(role==="FLEX") flexOpen--;
-    else if(role==="SFLEX") sflexOpen--;
-    else if(role==="BN") benchOpen--;
-    else need[role]--;
-  }
+  const picks=myPickNumbers().filter(n=>n>=cur).slice(0, snakeSlotsLeft(snakePlanState()));
+  // the same rollout the main plan uses, with this build's round rule
+  // applied to every candidate — so a strategy is measured by where it ends
+  // up, not by how tempting its first legal pick looked
+  const {plan, relaxed}=snakeRollout(picks, cur, T, rule);
   const starters=plan.filter(p=>p.role!=="BN");
   return {plan, chosen:starters.map(p=>p.r),
     total:starters.reduce((a,p)=>a+p.r.rpts,0), relaxed, snake:true};
@@ -4200,7 +4293,8 @@ window.APP={get S(){return S},get M(){return M},get R(){return R},
   recompute,draftPlayer,undo,importCSV,importRows,importXLSX,parseXLSX,
   solveCompletion,posTable,combine,playerId,normPos,parseCSV,mapHeaders,
   isSF,myRosterAssignment,starterCounts,slotVariants,solveSnakePlan,computeMaxBids,
-  settingsToForm,formToSettings,
+  settingsToForm,formToSettings,availableAt,myPickNumbers,currentOverallPick,
+  snakePlanState,snakeCandidates,snakeTake,snakeGreedyFill,snakePlanValue,snakeSlotsLeft,
   SYNC,applyExternalPicks,sleeperFind,sleeperLoad,sleeperSync,sleeperRefreshRanks,
   refreshData,renderAsOf,defaultPoolMeta,todayISO,
   buildStateBlob,restoreFromBackup,mirrorState,idbGet,idbPut,idbKeys,quarantine,

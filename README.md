@@ -66,7 +66,11 @@ before the real thing.**
   Reports floor (10th) / median / ceiling (90th). A **"sim if won"** line shows how
   winning the nominated player at the entered price moves your median and floor.
 - **Snake mode** — market/ADP rank, expected round, an availability call against your
-  next pick, take-now urgency (points lost by waiting), and a round-by-round plan.
+  next pick, take-now urgency (points lost by waiting), and a round-by-round plan. The
+  plan prices each pick against the player who would actually fill that *slot* later —
+  pooled across the positions the slot accepts — and rolls each candidate out to a
+  finished roster before committing, which is what keeps it from reaching for a
+  quarterback in round 2 or stacking tight ends it will never start.
 - **Superflex (SF / 2QB)** — set **Superflex** to 1 in Settings (Sleeper's `SUPER_FLEX`
   and ESPN's `OP` import it for you) and the whole quarterback market reprices. Four
   things change at once: replacement level drops from QB12 to QB24, so QB VORP, fair
@@ -248,6 +252,7 @@ live re-optimization and instant max-bid advice possible. Monte Carlo sits on to
 | `tests/test_migration.js` | Playwright suite for bundle migration, injuries and the live refresh |
 | `tests/test_persistence.js` | Playwright suite for keeper/draft state survival across storage eviction |
 | `tests/test_superflex.js` | Playwright suite for superflex leagues (optimizer, ranks, sync, sim) |
+| `tests/test_snake_plan.js` | Playwright suite for snake plan shape (QB timing, TE stacking, K/DST last) |
 | `.nojekyll` | Lets Pages serve straight from a branch — see below |
 | `optimizer.py` | Python optimization engine (PuLP) |
 | `DraftOptimizer.ipynb` | Executed reference notebook |

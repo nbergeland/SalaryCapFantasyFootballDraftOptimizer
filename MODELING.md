@@ -194,6 +194,45 @@ thresholds scale with league budget. Greasy Spoon additionally computes a live
 against value — because that classification is the first decision its own author asks
 you to make.
 
+### 2.4d The snake plan (marginal value, pooled slots, one-step rollout)
+
+Snake drafts have no prices, so the auction DP does not apply: the scarce resource is
+*your next pick*, and the question at every pick is which slot loses the most by waiting.
+The plan is therefore built by a **marginal-value greedy** — for each open slot, score the
+best player who can fill it as `(his points) − (the best player who could fill that same
+slot at my next pick)`, and take the highest score — with three corrections that matter
+more than the base rule does.
+
+**Pooled slots get pooled comparators.** A flex seat can be filled by any RB/WR/TE, so a
+flex tight end's real alternative is the best *flex-eligible* player left at the next
+pick, not the next tight end down the tier. Scoring pooled seats against a position's own
+tier cliff is what produced rosters with three tight ends: TE tiers break repeatedly, so
+every tight end looked urgent against the tight end behind him. Dedicated slots keep the
+within-position comparison, which is what correctly makes an elite tight end urgent when
+the TE *slot* is the one being filled. In a superflex league the SFLEX seat pools
+QB/RB/WR/TE the same way, which is what stops it from stacking quarterbacks.
+
+**A one-step rollout replaces one-pick lookahead.** One-round dropoff overstates urgency
+for any position you would happily fill late: waiting on a quarterback appears to cost a
+round's dropoff at *every* pick, when the real cost is measured against the quarterback
+you would actually end up with in round 8. So at each of my first picks the planner tries
+the best candidate for every open slot type, finishes the draft with the plain greedy, and
+keeps whichever opening produced the better plan — scoring a finished plan as
+`Σ starters + 0.25 × Σ bench`, since bench points only cash in through byes, busts and the
+weekly best-lineup choice. This is *policy improvement* in the reinforcement-learning
+sense: the greedy's own move is always among the candidates, so the rollout can only match
+or beat it, and no position-specific rule is needed for it to conclude "take the elite
+running back now, draft a quarterback in round 8". It costs about 3 ms because only the
+top player at each position can win a slot — within a position the score is monotone in
+projected points — so a pick evaluation is six lookups against a projection-sorted board
+rather than a scan of it.
+
+**Caps for depth that never plays.** No K/DST on the bench, at most one backup
+quarterback, at most one tight end beyond the starting one (a tight end already sitting in
+a flex seat *is* that extra tight end), and K/DST deferred to the final picks while any
+other slot can still be filled. These are hard rules rather than scores because a plan
+that spends a round-7 pick on a defense is wrong regardless of what the projections say.
+
 ### 2.5 Consensus, news, and season fine-tuning
 
 - **Custom scoring:** when stat-level projections are present (pass/rush/rec yards,
