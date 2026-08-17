@@ -1532,16 +1532,36 @@ function solveSnakePlan(){
       if(t.length<2){ t.push(r); t.sort((a,b)=>b.rpts-a.rpts); }
       else if(r.rpts>t[1].rpts){ t[1]=r; t.sort((a,b)=>b.rpts-a.rpts); }
     }
-    const benchQB=plan.filter(s=>s.role==="BN"&&s.r.p.pos==="QB").length;
+    // the caps must count players already on my roster, not just planned
+    // picks — with two QBs rostered the plan was adding a third
+    const heldQB=assign.bench.filter(p=>p.pos==="QB").length;
+    const heldTE=assign.bench.filter(p=>p.pos==="TE").length;
+    const benchQB=heldQB+plan.filter(s=>s.role==="BN"&&s.r.p.pos==="QB").length;
+    const benchTE=heldTE+plan.filter(s=>s.role==="BN"&&s.r.p.pos==="TE").length;
+    // K/DST go with the LAST picks. Their projection dropoffs are noise, and
+    // scored as points they beat bench depth by mid-draft — plans were
+    // spending round-7 picks on a defense. Defer them while any other slot
+    // can still be filled and enough picks remain to grab them at the end.
+    const picksAfter=picks.length-1-i;
+    const kdNeed=need.K+need.DST;
+    const otherOpen=POSITIONS.reduce((a,p)=>a+(p==="K"||p==="DST"?0:need[p]),0)
+      +flexOpen+benchOpen;
+    const deferKD = picksAfter>=kdNeed && otherOpen>0;
     let take=null, role=null, bestScore=-1e9;
     for(const r of avail){
       let fit=null;
-      if(need[r.p.pos]>0) fit=r.p.pos;
+      if(need[r.p.pos]>0){
+        if(deferKD && (r.p.pos==="K"||r.p.pos==="DST")) continue;
+        fit=r.p.pos;
+      }
       else if(flexOpen>0 && FLEX_POS.includes(r.p.pos)) fit="FLEX";
       else if(benchOpen>0){
-        // bench = skill depth: no K/DST stashing, at most one backup QB
+        // bench = depth that actually rotates into lineups: RB/WR churn
+        // through flex, byes and injuries; single-starter positions are
+        // insurance at best — no K/DST, at most one backup QB, one bench TE
         if(r.p.pos==="K"||r.p.pos==="DST") continue;
         if(r.p.pos==="QB"&&benchQB>=1) continue;
+        if(r.p.pos==="TE"&&benchTE>=1) continue;
         fit="BN";
       }
       else continue;
@@ -1557,10 +1577,10 @@ function solveSnakePlan(){
         // tiebreak by value over replacement, not raw points — raw points
         // rank a mid QB above an elite WR
         + Math.max(0, r.rpts-(M.repl[r.p.pos]||0))*1e-3;
-      // a backup QB is insurance, not weekly points — you start one QB, so
-      // his dropoff only pays off if the starter busts. Without this a
-      // round-6 pick went to a second QB over startable skill depth.
-      if(fit==="BN" && r.p.pos==="QB") score*=0.25;
+      // backups at single-starter positions are insurance, not weekly
+      // points — their dropoff only pays off if the starter busts. Without
+      // this a round-6 pick went to a second QB over startable skill depth.
+      if(fit==="BN" && (r.p.pos==="QB"||r.p.pos==="TE")) score*=0.25;
       if(score>bestScore){ bestScore=score; take=r; role=fit; }
     }
     if(!take) continue;
@@ -1934,17 +1954,29 @@ function solveStrategySnake(key){
       if(t.length<2){ t.push(r); t.sort((a,b)=>b.rpts-a.rpts); }
       else if(r.rpts>t[1].rpts){ t[1]=r; t.sort((a,b)=>b.rpts-a.rpts); }
     }
-    const benchQB=plan.filter(s=>s.role==="BN"&&s.r.p.pos==="QB").length;
+    const benchQB=assign.bench.filter(p=>p.pos==="QB").length
+      +plan.filter(s=>s.role==="BN"&&s.r.p.pos==="QB").length;
+    const benchTE=assign.bench.filter(p=>p.pos==="TE").length
+      +plan.filter(s=>s.role==="BN"&&s.r.p.pos==="TE").length;
+    const picksAfter=picks.length-1-i;
+    const kdNeed=need.K+need.DST;
+    const otherOpen=POSITIONS.reduce((a,p)=>a+(p==="K"||p==="DST"?0:need[p]),0)
+      +flexOpen+benchOpen;
+    const deferKD = picksAfter>=kdNeed && otherOpen>0;
     const pickBest=useRule=>{
       let take=null, role=null, bestScore=-1e9;
       for(const r of avail){
         if(useRule && !rule(r.p.pos, rd, counts)) continue;
         let fit=null;
-        if(need[r.p.pos]>0) fit=r.p.pos;
+        if(need[r.p.pos]>0){
+          if(deferKD && (r.p.pos==="K"||r.p.pos==="DST")) continue;
+          fit=r.p.pos;
+        }
         else if(flexOpen>0 && FLEX_POS.includes(r.p.pos)) fit="FLEX";
         else if(benchOpen>0){
           if(r.p.pos==="K"||r.p.pos==="DST") continue;
           if(r.p.pos==="QB"&&benchQB>=1) continue;
+          if(r.p.pos==="TE"&&benchTE>=1) continue;
           fit="BN";
         } else continue;
         const t=top2[r.p.pos]||[];
@@ -1953,7 +1985,7 @@ function solveStrategySnake(key){
         const later=t[0];
         let score=r.rpts-(later? later.rpts:0)
           + Math.max(0, r.rpts-(M.repl[r.p.pos]||0))*1e-3;
-        if(fit==="BN" && r.p.pos==="QB") score*=0.25;   // insurance, not points
+        if(fit==="BN" && (r.p.pos==="QB"||r.p.pos==="TE")) score*=0.25;   // insurance, not points
         if(score>bestScore){ bestScore=score; take=r; role=fit; }
       }
       return {take, role};
