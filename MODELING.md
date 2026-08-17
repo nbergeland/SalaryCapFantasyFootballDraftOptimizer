@@ -87,7 +87,9 @@ mathematically equivalent to the ILP** for this constraint structure:
 2. Combine position tables by convolution over the remaining budget:
    `C[c] = max over splits (C[c − c′] + T_p[n_p][c′])`.
 3. FLEX is handled exactly by enumerating which eligible position (RB/WR/TE)
-   receives the extra slot and taking the best variant.
+   receives the extra slot and taking the best variant. A superflex slot is
+   enumerated the same way, one level up: each open superflex seat goes to either
+   QB demand or the FLEX pool (§2.6).
 
 Because position groups are disjoint and constraints are "exactly n per group +
 shared budget," this DP explores the full feasible set — the result is provably
@@ -258,6 +260,52 @@ together until the user disagrees; from then on the user's choice is stored as a
 override and re-applied over every later build and live refresh, in both directions — so
 un-checking a player you have reason to believe will play sticks, and so does marking
 someone out that no feed has caught up to yet.
+
+### 2.6 Superflex (SF / 2QB) leagues
+
+A superflex slot may be filled by QB/RB/WR/TE. It is one line in a league's settings and
+it changes more of this model than any other single setting, so it is handled explicitly
+rather than approximated as an extra FLEX.
+
+**Exactness is preserved by enumeration, not by a new DP dimension.** A superflex seat is
+either a quarterback or an ordinary flex, so the solver enumerates the split: for
+`s_qb = 0 … S` (of `S` open superflex slots), it solves with QB demand raised by `s_qb`
+and the FLEX pool raised by `S − s_qb`, then takes the best total. Every variant is a
+problem the existing DP already solves exactly, so the result stays provably optimal;
+the cost is `S + 1` solver passes (two in the standard one-superflex league, ~300 ms
+worst case including max bids). The same enumeration runs inside the max-bid
+completions — if it did not, a quarterback's max bid would be computed against a roster
+shape the optimizer would never build, and the bid and the plan would contradict each
+other.
+
+**Replacement level counts superflex as QB demand.** This is the industry-standard
+assumption and it is what actually happens in these rooms: a superflex seat is filled by
+a quarterback whenever one is available. A 12-team league with QB + SFLEX therefore
+starts 24 quarterbacks, and replacement moves from ~QB13 to ~QB25 — a swing of 50-60
+projected points that flows straight into VORP, fair value and positional scarcity. The
+remaining flex slots keep their existing RB/WR/TE allocation.
+
+**Draft ranks switch to the 2QB board.** Superflex rooms take quarterbacks two to four
+rounds earlier than their 1QB ADP implies, so with a superflex slot the availability
+model reads `adp2` (Sleeper's `adp_2qb`, ingested by the nightly build) in preference to
+ordinary ADP, falling back for anyone the feed has no 2QB rank for. Without this the
+plan would confidently wait on quarterbacks who are already gone.
+
+**A deliberate asymmetry between the pipeline and the app.** The nightly build's
+replacement ranks — and therefore the bundled `aav` — stay 1QB-based, because one bundle
+serves every league and the majority are 1QB. The app re-derives replacement level, VORP
+and fair value from *your* settings on every recompute, which is where superflex belongs;
+the market half of the blended value (`aav`) simply remains a 1QB market read. In a
+superflex league, expect model value to sit above market value at quarterback — that gap
+is the edge the format offers, not an error.
+
+**Everything downstream follows.** Roster assignment fills dedicated slots, then FLEX,
+then superflex (most restrictive first, which is optimal because every FLEX-eligible
+position is also superflex-eligible); the snake planner gains a superflex *starter* tier,
+so a second quarterback competes at full value while the bench-QB cap still prevents
+hoarding a third; and the Monte Carlo lineup builder seats FLEX first and superflex from
+what remains, which is what lets QB2 contribute weekly points. With no superflex slot
+every one of these paths short-circuits to its previous behavior.
 
 ## 3. Alternatives considered (and why they weren't chosen)
 

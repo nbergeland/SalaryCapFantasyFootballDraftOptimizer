@@ -67,6 +67,13 @@ before the real thing.**
   winning the nominated player at the entered price moves your median and floor.
 - **Snake mode** — market/ADP rank, expected round, an availability call against your
   next pick, take-now urgency (points lost by waiting), and a round-by-round plan.
+- **Superflex (SF / 2QB)** — set **Superflex** to 1 in Settings (Sleeper's `SUPER_FLEX`
+  and ESPN's `OP` import it for you) and the whole quarterback market reprices. Four
+  things change at once: replacement level drops from QB12 to QB24, so QB VORP, fair
+  value and scarcity all shift; the draft board switches to 2QB ADP, because
+  quarterbacks leave two to four rounds earlier in SF; the optimizer starts seating a
+  second QB and prices a max bid for him; and the weekly lineup sim plays him. A league
+  without a superflex slot is untouched by all of it.
 
 ## 🎯 Strategy Lab
 
@@ -110,7 +117,7 @@ auction model tracks ESPN's prices.
 | Source | Contributes |
 |---|---|
 | Sleeper players | roster, teams, injury status + body part + notes, search rank |
-| Sleeper projections | stat-level season projections, PPR points, ADP |
+| Sleeper projections | stat-level season projections, PPR points, ADP, superflex (2QB) ADP |
 | Fantasy Football Calculator | ADP from real mock drafts |
 | ESPN (`kona_player_info`) | auction values, PPR ranks, a second projection, injury status |
 | ESPN pro teams | bye weeks |
@@ -239,6 +246,8 @@ live re-optimization and instant max-bid advice possible. Monte Carlo sits on to
 | `tests/test_build_data.py` | Builder unit tests (stdlib `unittest`, offline via fixtures) |
 | `tests/fixtures/` | Schema-faithful slices of the six upstream payloads (injury cases included) |
 | `tests/test_migration.js` | Playwright suite for bundle migration, injuries and the live refresh |
+| `tests/test_persistence.js` | Playwright suite for keeper/draft state survival across storage eviction |
+| `tests/test_superflex.js` | Playwright suite for superflex leagues (optimizer, ranks, sync, sim) |
 | `.nojekyll` | Lets Pages serve straight from a branch — see below |
 | `optimizer.py` | Python optimization engine (PuLP) |
 | `DraftOptimizer.ipynb` | Executed reference notebook |
