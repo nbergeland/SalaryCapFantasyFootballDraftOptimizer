@@ -1605,11 +1605,16 @@ function snakePlanState(){
     benchTE:[...assign.bench, ...assign.flex, ...assign.sflex]
       .filter(p=>p.pos==="TE").length,
     counts, used:new Set(), plan:[],
+    benchAt:{QB:assign.bench.filter(p=>p.pos==="QB").length,
+             RB:assign.bench.filter(p=>p.pos==="RB").length,
+             WR:assign.bench.filter(p=>p.pos==="WR").length,
+             TE:assign.bench.filter(p=>p.pos==="TE").length},
   };
 }
 function snakeCloneState(st){
   return {need:{...st.need}, flexOpen:st.flexOpen, sflexOpen:st.sflexOpen,
     benchOpen:st.benchOpen, benchQB:st.benchQB, benchTE:st.benchTE,
+    benchAt:{...st.benchAt},
     counts:{...st.counts}, used:new Set(st.used), plan:st.plan.slice()};
 }
 function snakeTake(st, r, role, n){
@@ -1621,6 +1626,7 @@ function snakeTake(st, r, role, n){
   }
   else if(role==="BN"){
     st.benchOpen--;
+    st.benchAt[r.p.pos]=(st.benchAt[r.p.pos]||0)+1;
     if(r.p.pos==="QB") st.benchQB++; else if(r.p.pos==="TE") st.benchTE++;
   }
   else st.need[role]--;
@@ -1630,11 +1636,19 @@ function snakeSlotsLeft(st){
     +st.flexOpen+st.sflexOpen+st.benchOpen;
 }
 // the plan's value: starters at full weight, bench at a quarter — bench
-// points only cash in through byes, busts and the weekly best-lineup choice
+// points only cash in through byes, busts and the weekly best-lineup choice.
+// Each ADDITIONAL bench player at the same position halves again: the WR
+// pool is deep and flat, and a flat bench weight let the rollout fill all
+// six bench spots with WRs, leaving two rostered RBs and an unplayable
+// bye week. The fifth bench WR backs up nobody; the first bench RB does.
 const SNAKE_BENCH_WEIGHT=0.25;
 function snakePlanValue(plan){
-  let v=0;
-  for(const s of plan) v += s.role==="BN" ? SNAKE_BENCH_WEIGHT*s.r.rpts : s.r.rpts;
+  let v=0; const benchAt={};
+  for(const s of plan){
+    if(s.role!=="BN"){ v += s.r.rpts; continue; }
+    const k = benchAt[s.r.p.pos] = (benchAt[s.r.p.pos]||0)+1;
+    v += SNAKE_BENCH_WEIGHT * Math.pow(0.5, k-1) * s.r.rpts;
+  }
   return v;
 }
 // best remaining player at each position, walking the projection-sorted
@@ -1724,10 +1738,19 @@ function snakeCandidates(st, n, nxt, cur, picksAfter, rule, rd){
       // rank a mid QB above an elite WR
       + Math.max(0, r.rpts-(M.repl[r.p.pos]||0))*1e-3;
     // backups at single-starter positions are insurance, not weekly
-    // points — their dropoff only pays off if the starter busts.
-    if(fit==="BN" && (r.p.pos==="QB"||r.p.pos==="TE")) score*=0.25;
-    const cur2=byFit[fit];
-    if(!cur2){ byFit[fit]={best:{r,role:fit,score}, top:{r,role:fit,score}}; continue; }
+    // points — their dropoff only pays off if the starter busts. And each
+    // extra bench player at the SAME position halves in value (mirroring
+    // snakePlanValue), or the deep flat WR pool fills the whole bench.
+    if(fit==="BN"){
+      if(r.p.pos==="QB"||r.p.pos==="TE") score*=0.25;
+      score*=Math.pow(0.5, st.benchAt[r.p.pos]||0);
+    }
+    // multi-eligible seats (FLEX/SFLEX/BN) keep one candidate PER POSITION —
+    // keyed by fit alone they collapsed to the single best scorer, so the
+    // rollout was never even offered "bench RB" against a wall of WRs
+    const fitKey = (fit==="FLEX"||fit==="SFLEX"||fit==="BN") ? fit+"|"+r.p.pos : fit;
+    const cur2=byFit[fitKey];
+    if(!cur2){ byFit[fitKey]={best:{r,role:fit,score}, top:{r,role:fit,score}}; continue; }
     if(score>cur2.best.score) cur2.best={r,role:fit,score};
     // the rollout also considers the best PLAYER for each slot, not only the
     // best marginal score — they differ exactly where the greedy is myopic
@@ -1769,7 +1792,7 @@ function snakeGreedyFill(st, picks, from, cur, T, rule){
 // his position drops off a round from here" — rolled out, that line loses
 // to "take the elite RB and draft a quarterback in round 8", which is what
 // the greedy could not see one pick at a time.
-const SNAKE_ROLLOUT_PICKS=8;    // later picks are forced; rolling them adds cost, not insight
+const SNAKE_ROLLOUT_PICKS=20;   // all picks: the bench mix is decided late
 function snakeRollout(picks, cur, T, rule){
   const st=snakePlanState();
   let relaxed=false;

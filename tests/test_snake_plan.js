@@ -110,8 +110,12 @@ const ok = (name, cond, extra) => {
     // cannot come out behind on its own objective
     ok(`slot ${slot}: the rollout never loses to the plain greedy`,
       R.value >= r.greedy.value, { rollout: R.value, greedy: r.greedy.value });
-    ok(`slot ${slot}: starters are no worse than the greedy's`,
-      R.starterPts >= r.greedy.starterPts,
+    // near-parity, not strict dominance: with per-position bench decay in the
+    // objective, the rollout may trade a couple of starter points for a
+    // playable bench mix (e.g. a first bench RB over a fifth WR) — that
+    // trade is the point. The hard guarantee is on the full objective above.
+    ok(`slot ${slot}: starters stay within 1% of the greedy's`,
+      R.starterPts >= r.greedy.starterPts * 0.99,
       { rollout: R.starterPts, greedy: r.greedy.starterPts });
     ok(`slot ${slot}: the whole recompute stays interactive`, r.ms < 400, r.ms);
   }
