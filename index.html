@@ -634,6 +634,10 @@ const BUNDLED = /*__DATA__*/{"meta":{"asOf":"2026-08-17","format":"PPR, 12-team,
 /* ============================ constants ============================ */
 const POSITIONS = ["QB","RB","WR","TE","K","DST"];
 const FLEX_POS = ["RB","WR","TE"];
+// superflex (SF / "2QB-lite"): a flex a quarterback may also fill. Rooms
+// with one of these behave like 2QB leagues — QB demand doubles, the
+// position's replacement level collapses, and the draft board reorders.
+const SFLEX_POS = ["QB","RB","WR","TE"];
 const POS_VOL = {QB:.10,RB:.16,WR:.15,TE:.18,K:.08,DST:.12}; // volatility heuristic
 const SCATTER_COLORS = {QB:"var(--qb)",RB:"var(--rb)",WR:"var(--wr)",TE:"var(--te)"};
 const LS_KEY = "sc-draft-companion-v1";      // legacy single-league state
@@ -649,6 +653,9 @@ const SLEEPER_PROJ_URL = `https://api.sleeper.com/projections/nfl/${SEASON}`+
   `&position[]=TE&position[]=K&position[]=DEF`;
 const FFC_ADP_URL =
   `https://fantasyfootballcalculator.com/api/v1/adp/ppr?teams=12&year=${SEASON}`;
+// ADP at or beyond this pick is one of Sleeper's padding defaults, not a
+// draft signal — same threshold scripts/build_data.py uses
+const MAX_REAL_ADP = 350;
 // Sleeper's stat key -> the key scorePlayer() reads
 const PROJ_STAT_KEYS = [["pass_yd","pass_yd"],["pass_td","pass_td"],["int","pass_int"],
   ["rush_yd","rush_yd"],["rush_td","rush_td"],["rec","rec"],["rec_yd","rec_yd"],
@@ -657,11 +664,14 @@ const PROJ_STAT_KEYS = [["pass_yd","pass_yd"],["pass_td","pass_td"],["int","pass
 /* ============================ state ============================ */
 const defaultSettings = () => ({
   mode:"auction", teams:12, snakeSlot:1, cap:200, bench:6, benchRes:1, dstCap:1,
-  slots:{QB:1,RB:2,WR:2,TE:1,FLEX:1,K:1,DST:1},
+  slots:{QB:1,RB:2,WR:2,TE:1,FLEX:1,SFLEX:0,K:1,DST:1},
   scoring:{preset:"ppr",rec:1,passYd:25,passTd:4,int:-2,rushYd:10,td:6},
   risk:0, blend:0.35, kcAllowed:2,
 });
 const isSnake = () => S.settings.mode==="snake";
+// superflex changes enough of the model (replacement level, draft ranks,
+// which slots a QB can fill) that the switch is worth naming once
+const isSF = () => (S.settings.slots.SFLEX||0) > 0;
 let S = {settings:defaultSettings(), players:[], log:[], sel:null};
 
 function playerId(p){ return (p.name+"|"+p.pos).toLowerCase(); }
@@ -731,7 +741,8 @@ function freshPlayer(o){
   const outData = !!(o.out || o.outData);
   return {name:o.name, team:o.team||"", pos:o.pos, aav:Math.max(1,Math.round(o.aav||1)),
     pts:+o.pts||0, stats:o.stats||null, floor:o.floor??null, ceil:o.ceil??null,
-    adp:o.adp??null, ecr:o.ecr??null, bye:o.bye??null, note:o.note||"", src:o.src||"",
+    adp:o.adp??null, adp2:o.adp2??null,   // adp2 = superflex/2QB ADP (optional)
+    ecr:o.ecr??null, bye:o.bye??null, note:o.note||"", src:o.src||"",
     boost:0, out:outData, outData, dnd:false, star:false, nom:false, drafted:null};
 }
 /* =====================================================================
@@ -1005,6 +1016,7 @@ function enrichFromBundle(){
       if(b.team) ex.team = b.team;
       if(b.bye!=null && ex.bye==null) ex.bye = b.bye;
       if(b.adp!=null) ex.adp = b.adp;
+      if(b.adp2!=null) ex.adp2 = b.adp2;
       if(b.ecr!=null) ex.ecr = b.ecr;
       if(b.stats && !ex.stats) ex.stats = b.stats;
       // injuries are news, not values: an imported sheet's dollar figures are
@@ -1129,6 +1141,11 @@ function starterCounts(){
   const {slots, teams} = S.settings;
   const counts = {};
   for(const pos of POSITIONS) counts[pos] = (slots[pos]||0)*teams;
+  // superflex slots are QB demand. Rooms fill them with quarterbacks whenever
+  // one is available — that is the whole reason SF is a different game — so a
+  // 12-team QB+SFLEX league starts 24 QBs and replacement drops from QB13 to
+  // QB25. Everything downstream (VORP, fair value, scarcity) follows from here.
+  counts.QB += (slots.SFLEX||0)*teams;
   // allocate league FLEX starters to RB/WR/TE by best remaining projection
   let flexN = (slots.FLEX||0)*teams;
   if(flexN>0){
@@ -1234,8 +1251,12 @@ function rebuildModel(){
   }
   // market rank for snake availability: explicit ADP first, then expert
   // consensus rank (ECR), else the market-value ordering (AAV desc,
-  // projection as tiebreak)
-  const rankKey = p => p.adp ?? p.ecr ?? null;
+  // projection as tiebreak). In a superflex league the 2QB board is the real
+  // one — QBs come off two to four rounds earlier than their 1QB ADP — so
+  // prefer adp2 there and fall back for anyone the feed has no 2QB rank for.
+  const rankKey = isSF()
+    ? p => p.adp2 ?? p.adp ?? p.ecr ?? null
+    : p => p.adp ?? p.ecr ?? null;
   const ranked = rows.slice().sort((a,b)=>{
     const aa=rankKey(a.p), ba=rankKey(b.p);
     if(aa!=null && ba!=null) return aa-ba;
@@ -1253,16 +1274,22 @@ function myRosterAssignment(){
   const slots = S.settings.slots;
   const mine = S.players.filter(p=>p.drafted && p.drafted.mine);
   const starters = {}; for(const pos of POSITIONS) starters[pos]=[];
-  const flex = [], benchList = [];
+  const flex = [], sflex = [], benchList = [];
+  // best-first, most restrictive slot first: dedicated, then FLEX, then
+  // SFLEX. Because every FLEX-eligible position is also SFLEX-eligible, that
+  // order is optimal — a QB simply falls through to the superflex slot, and
+  // nobody who could have filled FLEX is stranded on the bench by it.
   for(const p of mine.sort((a,b)=>b.pts-a.pts)){
     if(starters[p.pos].length < (slots[p.pos]||0)) starters[p.pos].push(p);
     else if(FLEX_POS.includes(p.pos) && flex.length < (slots.FLEX||0)) flex.push(p);
+    else if(SFLEX_POS.includes(p.pos) && sflex.length < (slots.SFLEX||0)) sflex.push(p);
     else benchList.push(p);
   }
   const remaining = {};
   for(const pos of POSITIONS) remaining[pos] = Math.max(0,(slots[pos]||0)-starters[pos].length);
   const flexOpen = Math.max(0,(slots.FLEX||0)-flex.length);
-  return {starters, flex, bench:benchList, remaining, flexOpen};
+  const sflexOpen = Math.max(0,(slots.SFLEX||0)-sflex.length);
+  return {starters, flex, sflex, bench:benchList, remaining, flexOpen, sflexOpen};
 }
 
 function budgetForOptimizer(assign){
@@ -1349,6 +1376,35 @@ function flexVariants(remaining, flexOpen){
   return variants;
 }
 
+// Superflex without touching the DP: a superflex slot is either a QB or an
+// ordinary flex, so enumerate the split (s_qb of the open SFLEX slots go to
+// QB, the rest join the FLEX pool) and let the existing exact solver run once
+// per split. Two passes for the usual SFLEX:1 league — exactness preserved,
+// and the DP itself never learns a new slot type. Every caller that solves a
+// completion must enumerate the same way, max bids included, or the max bid
+// and the optimal roster would disagree about how many QBs are being bought.
+function slotVariants(remaining, flexOpen, sflexOpen){
+  const S_ = sflexOpen||0;
+  if(S_===0) return flexVariants(remaining, flexOpen);
+  const out=[];
+  for(let q=0;q<=S_;q++){
+    const rem={...remaining}; rem.QB=(rem.QB||0)+q;
+    for(const v of flexVariants(rem, flexOpen+(S_-q))) out.push(v);
+  }
+  return out;
+}
+// drop one open slot that `pos` could have filled (dedicated first, then
+// FLEX, then SFLEX). Returns null when the position has no seat to give up.
+function slotsMinus(assign, pos){
+  const rem = {...assign.remaining};
+  let flexOpen = assign.flexOpen, sflexOpen = assign.sflexOpen||0;
+  if(rem[pos]>0) rem[pos]--;
+  else if(FLEX_POS.includes(pos) && flexOpen>0) flexOpen--;
+  else if(SFLEX_POS.includes(pos) && sflexOpen>0) sflexOpen--;
+  else return null;
+  return {remaining:rem, flexOpen, sflexOpen};
+}
+
 function candidatesByPos(excludeId){
   const by = {};
   for(const pos of POSITIONS){
@@ -1370,7 +1426,7 @@ function solveCompletion(opt){
   const B = o.budget!=null ? o.budget : budgetForOptimizer(assign).optBudget;
   const cands = o.cands || candidatesByPos(o.excludeId);
   const cache = o.cache || new Map();
-  const variants = flexVariants(assign.remaining, assign.flexOpen);
+  const variants = slotVariants(assign.remaining, assign.flexOpen, assign.sflexOpen);
   let best=null;
   for(const v of variants){
     // positions absent from the pool entirely (e.g. a sheet with no DST rows)
@@ -1415,12 +1471,10 @@ function computeMaxBids(base){
   const cache = new Map();
   const minus = {};
   for(const pos of POSITIONS){
-    let rem = {...assign.remaining}, flexOpen = assign.flexOpen;
-    if(rem[pos]>0) rem[pos]--;
-    else if(FLEX_POS.includes(pos)&&flexOpen>0) flexOpen--;
-    else { minus[pos]=null; continue; }
+    const less = slotsMinus(assign, pos);
+    if(!less){ minus[pos]=null; continue; }
     let arr=null, refs=null;
-    for(const v of flexVariants(rem, flexOpen)){
+    for(const v of slotVariants(less.remaining, less.flexOpen, less.sflexOpen)){
       const groups = POSITIONS.filter(q=>v[q]>0 && cands[q].length>0).map(q=>{
         const key=q+"|"+v[q];
         let table=cache.get(key);
@@ -1457,7 +1511,7 @@ function computeMaxBids(base){
       let compl = m.arr[left];
       if(completionHas(m, left, id)){
         const a = myRosterAssignment();
-        if(a.remaining[pos]>0) a.remaining[pos]--; else a.flexOpen--;
+        Object.assign(a, slotsMinus(a, pos));   // same seat the minus table gave up
         const ex = solveCompletion({excludeId:id, budget:left, assign:a});
         compl = ex? ex.total : -Infinity;
       }
@@ -1512,9 +1566,10 @@ function solveSnakePlan(){
   const assign=myRosterAssignment();
   const need={...assign.remaining};
   let flexOpen=assign.flexOpen;
+  let sflexOpen=assign.sflexOpen;
   let benchOpen=Math.max(0,S.settings.bench-assign.bench.length);
   const cur=currentOverallPick();
-  const slotsLeft=POSITIONS.reduce((a,p)=>a+need[p],0)+flexOpen+benchOpen;
+  const slotsLeft=POSITIONS.reduce((a,p)=>a+need[p],0)+flexOpen+sflexOpen+benchOpen;
   const picks=myPickNumbers().filter(n=>n>=cur).slice(0, slotsLeft);
   const used=new Set(); const plan=[];
   for(let i=0;i<picks.length;i++){
@@ -1545,7 +1600,7 @@ function solveSnakePlan(){
     const picksAfter=picks.length-1-i;
     const kdNeed=need.K+need.DST;
     const otherOpen=POSITIONS.reduce((a,p)=>a+(p==="K"||p==="DST"?0:need[p]),0)
-      +flexOpen+benchOpen;
+      +flexOpen+sflexOpen+benchOpen;
     const deferKD = picksAfter>=kdNeed && otherOpen>0;
     let take=null, role=null, bestScore=-1e9;
     for(const r of avail){
@@ -1555,6 +1610,10 @@ function solveSnakePlan(){
         fit=r.p.pos;
       }
       else if(flexOpen>0 && FLEX_POS.includes(r.p.pos)) fit="FLEX";
+      // a superflex seat is a STARTER seat, so no insurance discount below —
+      // this is what puts a second QB in the plan in an SF league without
+      // opening the door to QB hoarding on the bench
+      else if(sflexOpen>0 && SFLEX_POS.includes(r.p.pos)) fit="SFLEX";
       else if(benchOpen>0){
         // bench = depth that actually rotates into lineups: RB/WR churn
         // through flex, byes and injuries; single-starter positions are
@@ -1586,6 +1645,7 @@ function solveSnakePlan(){
     if(!take) continue;
     used.add(playerId(take.p)); plan.push({r:take, n, role});
     if(role==="FLEX") flexOpen--;
+    else if(role==="SFLEX") sflexOpen--;
     else if(role==="BN") benchOpen--;
     else need[role]--;
   }
@@ -1636,7 +1696,7 @@ function simulateRoster(players, slots, nSims){
     const wm = p.pts / (SIM.weeks * (1-miss));
     return {pos:p.pos, wm, sd: wm*(SIM.weeklyCV[p.pos] ?? .5), miss};
   });
-  const flexSlots = slots.FLEX||0;
+  const flexSlots = slots.FLEX||0, sflexSlots = slots.SFLEX||0;
   const totals = new Float64Array(n);
   const scores = new Float64Array(ps.length);
   for(let s=0; s<n; s++){
@@ -1650,8 +1710,12 @@ function simulateRoster(players, slots, nSims){
         const z=Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2);
         scores[i]=Math.max(0, p.wm + p.sd*z);
       }
-      // best lineup this week: top-k per position, then best leftovers to FLEX
-      const flexPool=[];
+      // best lineup this week: top-k per position, then best leftovers to
+      // FLEX and finally to SFLEX. Filling the narrower slot first and the
+      // wider one from what is left is optimal here (every FLEX-eligible
+      // position is SFLEX-eligible too), which is what lets a second QB
+      // contribute weekly points in a superflex league.
+      const flexPool=[], qbPool=[];
       for(const pos of POSITIONS){
         const k=slots[pos]||0;
         const own=[];
@@ -1660,10 +1724,18 @@ function simulateRoster(players, slots, nSims){
         for(let j=0;j<Math.min(k,own.length);j++) season+=own[j];
         if(FLEX_POS.includes(pos))
           for(let j=k;j<own.length;j++) flexPool.push(own[j]);
+        else if(sflexSlots && pos==="QB")
+          for(let j=k;j<own.length;j++) qbPool.push(own[j]);
       }
+      let flexUsed=0;
       if(flexSlots && flexPool.length){
         flexPool.sort((a,b)=>b-a);
-        for(let j=0;j<Math.min(flexSlots,flexPool.length);j++) season+=flexPool[j];
+        flexUsed=Math.min(flexSlots,flexPool.length);
+        for(let j=0;j<flexUsed;j++) season+=flexPool[j];
+      }
+      if(sflexSlots){
+        const sPool=flexPool.slice(flexUsed).concat(qbPool).sort((a,b)=>b-a);
+        for(let j=0;j<Math.min(sflexSlots,sPool.length);j++) season+=sPool[j];
       }
     }
     totals[s]=season;
@@ -1840,7 +1912,7 @@ function solveStrategyAuction(key){
       best={total:comb[B], chosen, B};
     }
   };
-  for(const v of flexVariants(assign.remaining, assign.flexOpen)){
+  for(const v of slotVariants(assign.remaining, assign.flexOpen, assign.sflexOpen)){
     if(spec.studs){
       const {min, from}=spec.studs;
       let need=spec.studs.n;
@@ -1935,11 +2007,12 @@ function solveStrategySnake(key){
   const assign=myRosterAssignment();
   const need={...assign.remaining};
   let flexOpen=assign.flexOpen;
+  let sflexOpen=assign.sflexOpen;
   let benchOpen=Math.max(0,S.settings.bench-assign.bench.length);
   const counts={QB:0,RB:0,WR:0,TE:0,K:0,DST:0};
   for(const p of S.players) if(p.drafted&&p.drafted.mine) counts[p.pos]++;
   const cur=currentOverallPick(), T=S.settings.teams;
-  const slotsLeft=POSITIONS.reduce((a,p)=>a+need[p],0)+flexOpen+benchOpen;
+  const slotsLeft=POSITIONS.reduce((a,p)=>a+need[p],0)+flexOpen+sflexOpen+benchOpen;
   const picks=myPickNumbers().filter(n=>n>=cur).slice(0, slotsLeft);
   const used=new Set(); const plan=[]; let relaxed=false;
   for(let i=0;i<picks.length;i++){
@@ -1961,7 +2034,7 @@ function solveStrategySnake(key){
     const picksAfter=picks.length-1-i;
     const kdNeed=need.K+need.DST;
     const otherOpen=POSITIONS.reduce((a,p)=>a+(p==="K"||p==="DST"?0:need[p]),0)
-      +flexOpen+benchOpen;
+      +flexOpen+sflexOpen+benchOpen;
     const deferKD = picksAfter>=kdNeed && otherOpen>0;
     const pickBest=useRule=>{
       let take=null, role=null, bestScore=-1e9;
@@ -1973,6 +2046,7 @@ function solveStrategySnake(key){
           fit=r.p.pos;
         }
         else if(flexOpen>0 && FLEX_POS.includes(r.p.pos)) fit="FLEX";
+        else if(sflexOpen>0 && SFLEX_POS.includes(r.p.pos)) fit="SFLEX";  // starter
         else if(benchOpen>0){
           if(r.p.pos==="K"||r.p.pos==="DST") continue;
           if(r.p.pos==="QB"&&benchQB>=1) continue;
@@ -1996,6 +2070,7 @@ function solveStrategySnake(key){
     used.add(playerId(take.p)); plan.push({r:take, n, role});
     counts[take.p.pos]++;
     if(role==="FLEX") flexOpen--;
+    else if(role==="SFLEX") sflexOpen--;
     else if(role==="BN") benchOpen--;
     else need[role]--;
   }
@@ -3645,6 +3720,11 @@ async function refreshProjections(){
     const stats = {}; let hasStats = false;
     for(const [k, src] of PROJ_STAT_KEYS) if(st[src]){ stats[k] = +st[src]; hasStats = true; }
     const adp = (st.adp_ppr!=null && +st.adp_ppr>0) ? +(+st.adp_ppr).toFixed(1) : null;
+    // superflex ADP rides the same feed. Sleeper pads it with 999-style
+    // defaults deep in the pool, so anything past MAX_REAL_ADP is a
+    // placeholder rather than a draft signal (same rule as the nightly build).
+    const adp2 = (st.adp_2qb!=null && +st.adp_2qb>0 && +st.adp_2qb<MAX_REAL_ADP)
+      ? +(+st.adp_2qb).toFixed(1) : null;
     const p = pos==="DST" ? dstFor(team) : (name ? matchPlayer(idx, name, pos, team) : null);
     if(p){
       if(!imported){
@@ -3652,13 +3732,14 @@ async function refreshProjections(){
         if(hasStats) p.stats = stats;
       }
       if(adp!=null) p.adp = adp;
+      if(adp2!=null) p.adp2 = adp2;
       if(team && pos!=="DST") p.team = team;
       updated++;
     }else if(pos!=="DST" && name && adp!=null && adp<=240){
       // a draftable body the pool is missing entirely. $1 is deliberate: the
       // nightly build is the authority on dollar values, this pull is not.
       const np = freshPlayer({name, team, pos, aav:1, pts:+st.pts_ppr||0,
-        stats:hasStats?stats:null, adp, src:"sleeper live",
+        stats:hasStats?stats:null, adp, adp2, src:"sleeper live",
         note:"added by live refresh — value not yet priced"});
       S.players.push(np);
       idx.set(normName(name)+"|"+pos, np);
@@ -4097,6 +4178,8 @@ window.APP={get S(){return S},get M(){return M},get R(){return R},
   get BUNDLED(){return BUNDLED},
   recompute,draftPlayer,undo,importCSV,importRows,importXLSX,parseXLSX,
   solveCompletion,posTable,combine,playerId,normPos,parseCSV,mapHeaders,
+  isSF,myRosterAssignment,starterCounts,slotVariants,solveSnakePlan,computeMaxBids,
+  settingsToForm,formToSettings,
   SYNC,applyExternalPicks,sleeperFind,sleeperLoad,sleeperSync,sleeperRefreshRanks,
   refreshData,renderAsOf,defaultPoolMeta,todayISO,
   buildStateBlob,restoreFromBackup,mirrorState,idbGet,idbPut,idbKeys,quarantine,
