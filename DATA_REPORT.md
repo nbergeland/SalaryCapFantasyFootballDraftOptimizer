@@ -1,6 +1,6 @@
 # Data build report
 
-- Built: 2026-08-17T09:58:17+00:00
+- Built: 2026-08-17T18:31:44+00:00
 - Season: 2026
 - Players in bundle: **609**
 - News lines: 25
@@ -18,13 +18,14 @@
 
 ## Counts
 
-- Sleeper players DB entries: 4385
-- Sleeper projection rows: 3300
-- Dropped (no stats, no ADP): 2373
+- Sleeper players DB entries: 4386
+- Sleeper projection rows: 3301
+- Dropped (no stats, no ADP): 2374
 - ESPN matched / added: 631 / 0
 - FFC matched / added: 259 / 0
 - Backfilled from the Sleeper players DB: 36 (0 team corrections)
 - Players marked OUT: 7
+- Carrying a superflex (2QB) ADP: 336 (of which QB: 44)
 - FantasyPros headlines parsed: 0
 - Pool before cutoff: 850 → kept 609
 
@@ -40,7 +41,7 @@
 ## Auction values
 
 - Replacement points: {'DST': 91.9, 'QB': 291.1, 'WR': 173.3, 'RB': 168.8, 'TE': 156.0, 'K': 116.2}
-- $/VORP scale: 0.4158 (calibration factor 0.9354)
+- $/VORP scale: 0.4157 (calibration factor 0.9353)
 - ESPN-priced players: 100
 - Mean abs error of the VORP model vs ESPN prices: 5.61
 
@@ -62,7 +63,7 @@
 ## Injury disagreements (Sleeper vs ESPN) (9)
 
 - Alec Pierce (WR): sleeper=PUP/Active espn=OUT
-- Chris Bell (WR): sleeper=PUP/Active espn=OUT
+- Chris Bell (WR): sleeper=Questionable/Active espn=OUT
 - George Kittle (TE): sleeper=PUP/Active espn=OUT
 - Isaac Guerendo (RB): sleeper=PUP/Active espn=OUT
 - Jaren Kanak (TE): sleeper=IR/Inactive espn=ACTIVE

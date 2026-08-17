@@ -15,7 +15,8 @@
    "pts_ppr": 395.4,
    "pts_half_ppr": 395.4,
    "pts_std": 395.4,
-   "adp_ppr": 22.5
+   "adp_ppr": 22.5,
+   "adp_2qb": 3.1
   },
   "player": {
    "player_id": "4984",
@@ -42,7 +43,8 @@
    "pts_ppr": 378.1,
    "pts_half_ppr": 378.1,
    "pts_std": 378.1,
-   "adp_ppr": 26.0
+   "adp_ppr": 26.0,
+   "adp_2qb": 4.5
   },
   "player": {
    "player_id": "4881",
@@ -69,7 +71,8 @@
    "pts_ppr": 368.9,
    "pts_half_ppr": 368.9,
    "pts_std": 368.9,
-   "adp_ppr": 30.4
+   "adp_ppr": 30.4,
+   "adp_2qb": 6.8
   },
   "player": {
    "player_id": "11566",
@@ -96,7 +99,8 @@
    "pts_ppr": 340.2,
    "pts_half_ppr": 340.2,
    "pts_std": 340.2,
-   "adp_ppr": 62.0
+   "adp_ppr": 62.0,
+   "adp_2qb": 12.4
   },
   "player": {
    "player_id": "4046",
@@ -123,7 +127,8 @@
    "pts_ppr": 361.0,
    "pts_half_ppr": 326.0,
    "pts_std": 291.0,
-   "adp_ppr": 1.4
+   "adp_ppr": 1.4,
+   "adp_2qb": 2.2
   },
   "player": {
    "player_id": "8151",
@@ -150,7 +155,8 @@
    "pts_ppr": 344.0,
    "pts_half_ppr": 313.0,
    "pts_std": 282.0,
-   "adp_ppr": 2.6
+   "adp_ppr": 2.6,
+   "adp_2qb": 3.9
   },
   "player": {
    "player_id": "9509",
@@ -177,7 +183,8 @@
    "pts_ppr": 330.0,
    "pts_half_ppr": 310.0,
    "pts_std": 290.0,
-   "adp_ppr": 5.1
+   "adp_ppr": 5.1,
+   "adp_2qb": 7.0
   },
   "player": {
    "player_id": "4866",
@@ -257,7 +264,8 @@
    "pts_ppr": 373.0,
    "pts_half_ppr": 317.0,
    "pts_std": 261.0,
-   "adp_ppr": 1.9
+   "adp_ppr": 1.9,
+   "adp_2qb": 2.8
   },
   "player": {
    "player_id": "6794",
@@ -282,7 +290,8 @@
    "pts_ppr": 340.0,
    "pts_half_ppr": 288.0,
    "pts_std": 236.0,
-   "adp_ppr": 4.3
+   "adp_ppr": 4.3,
+   "adp_2qb": 5.6
   },
   "player": {
    "player_id": "6794x",
@@ -307,7 +316,8 @@
    "pts_ppr": 336.0,
    "pts_half_ppr": 283.0,
    "pts_std": 230.0,
-   "adp_ppr": 6.2
+   "adp_ppr": 6.2,
+   "adp_2qb": 8.4
   },
   "player": {
    "player_id": "6786",
@@ -407,7 +417,8 @@
    "pts_ppr": 160.0,
    "pts_half_ppr": 131.0,
    "pts_std": 102.0,
-   "adp_ppr": 142.0
+   "adp_ppr": 142.0,
+   "adp_2qb": 999.0
   },
   "player": {
    "player_id": "9227",
@@ -484,7 +495,8 @@
    "pts_ppr": 264.0,
    "pts_half_ppr": 212.0,
    "pts_std": 160.0,
-   "adp_ppr": 10.2
+   "adp_ppr": 10.2,
+   "adp_2qb": 14.1
   },
   "player": {
    "player_id": "11604",
