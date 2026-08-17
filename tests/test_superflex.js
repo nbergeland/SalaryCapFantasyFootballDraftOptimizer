@@ -350,18 +350,26 @@ const SL = {
       const A = window.APP;
       const fresh = A.freshPlayer({ name: 'Test Guy', pos: 'QB', aav: 5, pts: 200, adp2: 12.3 });
       const bare = A.freshPlayer({ name: 'Bare Guy', pos: 'QB', aav: 5, pts: 200 });
-      const res = await A.refreshProjections();
       const by = n => A.S.players.find(p => p.name === n) || null;
+      const lamarBefore = by('Lamar Jackson') ? by('Lamar Jackson').adp2 : null;
+      const res = await A.refreshProjections();
       return {
         fresh: fresh.adp2, bare: bare.adp2, updated: res.updated,
         allen: by('Josh Allen') && by('Josh Allen').adp2,
+        lamarBefore,
         lamar: by('Lamar Jackson') && by('Lamar Jackson').adp2,
       };
     });
     ok('freshPlayer carries adp2 through', r.fresh === 12.3, r);
     ok('a player with no 2QB rank gets null, not undefined', r.bare === null, r);
     ok('the live refresh applies adp_2qb', r.allen === 5.5, r);
-    ok('the live refresh drops placeholder 2QB ADP', r.lamar === null, r);
+    // a 999-style placeholder in the live feed means "no current signal",
+    // not "his rank vanished" — whatever value the bundle supplied must
+    // survive it untouched. (When this test was written the bundle carried
+    // no adp2, so "left alone" and "nulled" were indistinguishable; the
+    // real nightly builds ship adp2 now.)
+    ok('placeholder 2QB ADP leaves the stored value alone',
+      r.lamar === r.lamarBefore, r);
     await ctx.unroute('**/api.sleeper.com/projections/**');
   }
 
