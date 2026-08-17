@@ -517,8 +517,13 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
       <div class="field"><label>WR</label><input type="number" id="s_WR" min="0" max="5"></div>
       <div class="field"><label>TE</label><input type="number" id="s_TE" min="0" max="3"></div>
       <div class="field"><label>FLEX (RB/WR/TE)</label><input type="number" id="s_FLEX" min="0" max="4"></div>
+      <div class="field"><label>Superflex (QB/RB/WR/TE)</label><input type="number" id="s_SFLEX" min="0" max="2"></div>
       <div class="field"><label>K</label><input type="number" id="s_K" min="0" max="2"></div>
       <div class="field"><label>DST</label><input type="number" id="s_DST" min="0" max="2"></div>
+      <p class="note">Set Superflex to 1 for an SF/2QB league (Sleeper calls it
+        SUPER_FLEX, ESPN calls it OP). It reprices the whole quarterback room:
+        replacement level drops to roughly QB2×teams, the draft board switches
+        to 2QB ADP, and the optimizer starts seating a second QB.</p>
     </div>
     <div class="card">
       <h2>Scoring</h2>
@@ -2136,11 +2141,12 @@ function scheduleStratLab(){
         S.settings.slots, 600);
       const slots=S.settings.slots;
       const starters={}; POSITIONS.forEach(p=>starters[p]=[]);
-      const flexRows=[], benchRows=[];
+      const flexRows=[], sflexRows=[], benchRows=[];
       for(const x of lineup.slice().sort((a,b)=>b.pts-a.pts)){
         if(x.bn){ benchRows.push(x); continue; }
         if(starters[x.pos].length < (slots[x.pos]||0)) starters[x.pos].push(x);
         else if(FLEX_POS.includes(x.pos) && flexRows.length<(slots.FLEX||0)) flexRows.push(x);
+        else if(SFLEX_POS.includes(x.pos) && sflexRows.length<(slots.SFLEX||0)) sflexRows.push(x);
         else benchRows.push(x);
       }
       const rowHtml=(label,x)=> x
@@ -2150,6 +2156,7 @@ function scheduleStratLab(){
       for(const pos of POSITIONS)
         for(let i=0;i<(slots[pos]||0);i++) rows+=rowHtml(pos, starters[pos][i]);
       for(let i=0;i<(slots.FLEX||0);i++) rows+=rowHtml("FLEX", flexRows[i]);
+      for(let i=0;i<(slots.SFLEX||0);i++) rows+=rowHtml("SFLEX", sflexRows[i]);
       for(const x of benchRows)
         rows+=`<div class="roster-slot"><span class="nm"><span class="pos ${x.pos}">${x.pos}</span> ${esc(x.name)} <span class="pill">bench</span></span><span>${x.cost}</span></div>`;
       const spentByMe=S.log.filter(e=>e.mine).reduce((a,e)=>a+e.price,0)
@@ -2432,10 +2439,13 @@ const tileLbl=(id,txt)=>{ $(id).parentElement.querySelector(".lbl").textContent=
 const tileSub=(id,txt)=>{ const s=$(id).parentElement.querySelector(".sub"); if(s) s.textContent=txt; };
 function renderTiles(){
   const assign = myRosterAssignment();
-  const spotsOpen = POSITIONS.reduce((a,p)=>a+assign.remaining[p],0)+assign.flexOpen;
+  const spotsOpen = POSITIONS.reduce((a,p)=>a+assign.remaining[p],0)
+    +assign.flexOpen+assign.sflexOpen;
   $("#tSpots").textContent = spotsOpen;
   $("#tSpotsSub").textContent = POSITIONS.filter(p=>assign.remaining[p]>0)
-    .map(p=>`${p}×${assign.remaining[p]}`).join(" ")+(assign.flexOpen?` FLEX×${assign.flexOpen}`:"");
+    .map(p=>`${p}×${assign.remaining[p]}`).join(" ")
+    +(assign.flexOpen?` FLEX×${assign.flexOpen}`:"")
+    +(assign.sflexOpen?` SFLEX×${assign.sflexOpen}`:"");
   const myPts = S.players.filter(p=>p.drafted&&p.drafted.mine)
     .reduce((a,p)=>{const r=M.rows.find(r=>r.p===p);return a+(r?r.rpts:0);},0);
   $("#tProj").textContent = R.sol? Math.round(myPts + R.sol.total) : "—";
@@ -2601,10 +2611,11 @@ function renderRoster(){
     for(let i=0;i<n;i++) slotRow(pos, a.starters[pos][i]);
   }
   for(let i=0;i<(S.settings.slots.FLEX||0);i++) slotRow("FLEX", a.flex[i]);
+  for(let i=0;i<(S.settings.slots.SFLEX||0);i++) slotRow("SFLEX", a.sflex[i]);
   const bn=S.settings.bench;
   for(let i=0;i<bn;i++) slotRow("Bench", a.bench[i]);
   // bye-week overlaps among my starters+flex (needs bye data in the pool)
-  const startersAll=[...Object.values(a.starters).flat(), ...a.flex];
+  const startersAll=[...Object.values(a.starters).flat(), ...a.flex, ...a.sflex];
   const byeCount={};
   for(const p of startersAll) if(p.bye) byeCount[p.bye]=(byeCount[p.bye]||0)+1;
   const overlaps=Object.entries(byeCount).filter(([,n])=>n>=2)
@@ -2661,7 +2672,9 @@ function renderOptimal(){
     for(const step of R.sol.plan){
       const d=document.createElement("div"); d.className="roster-slot";
       d.innerHTML=`<span class="nm">${roundDotPick(step.n)} <span class="pos ${step.r.p.pos}">${step.r.p.pos}</span>
-        ${esc(step.r.p.name)}${step.role==="BN"?' <span class="pill">bench</span>':step.role==="FLEX"?' <span class="pill">flex</span>':""}</span>
+        ${esc(step.r.p.name)}${step.role==="BN"?' <span class="pill">bench</span>'
+          :step.role==="FLEX"?' <span class="pill">flex</span>'
+          :step.role==="SFLEX"?' <span class="pill">superflex</span>':""}</span>
         <span>${step.r.rpts.toFixed(0)} pts</span>`;
       d.style.cursor="pointer";
       d.addEventListener("click",()=>selectPlayer(playerId(step.r.p)));
@@ -2726,6 +2739,7 @@ function renderNominate(){
     const cur=currentOverallPick(), nxt=nextMyPickAfter(cur);
     const fits=r=> assign.remaining[r.p.pos]>0
       || (assign.flexOpen>0 && FLEX_POS.includes(r.p.pos))
+      || (assign.sflexOpen>0 && SFLEX_POS.includes(r.p.pos))
       || (S.settings.bench-assign.bench.length)>0;
     const ideas=M.rows.filter(r=>!r.p.drafted && !r.p.out && !r.p.dnd && fits(r))
       .sort((a,b)=>b.rpts-a.rpts).slice(0,40)
@@ -3126,8 +3140,10 @@ async function sleeperLoad(){
       if(draft&&draft.settings&&draft.settings.budget) s.cap=draft.settings.budget;
       const rp=league.roster_positions||[];
       const cnt=k=>rp.filter(x=>x===k).length;
+      // SUPER_FLEX is its own slot type — folding it into FLEX imported every
+      // superflex league as an ordinary RB/WR/TE flex and hid the second QB
       s.slots={QB:cnt("QB"),RB:cnt("RB"),WR:cnt("WR"),TE:cnt("TE"),
-        FLEX:cnt("FLEX")+cnt("SUPER_FLEX"),K:cnt("K"),DST:cnt("DEF")};
+        FLEX:cnt("FLEX"),SFLEX:cnt("SUPER_FLEX"),K:cnt("K"),DST:cnt("DEF")};
       s.bench=cnt("BN");
       const sc=league.scoring_settings||{};
       if(sc.rec!=null) s.scoring.rec=sc.rec;
@@ -3313,7 +3329,10 @@ function espnApply(opts){
       s.cap=st.draftSettings.auctionBudget;
     const ls=(st.rosterSettings&&st.rosterSettings.lineupSlotCounts)||null;
     if(ls){ const g=i=>+ls[i]||0;
-      s.slots={QB:g(0),RB:g(2),WR:g(4),TE:g(6),FLEX:g(23),K:g(17),DST:g(16)};
+      // ESPN lineup slot ids: 23 = FLEX, 7 = OP ("offensive player" — their
+      // name for superflex, QB-eligible)
+      s.slots={QB:g(0),RB:g(2),WR:g(4),TE:g(6),FLEX:g(23),SFLEX:g(7),
+        K:g(17),DST:g(16)};
       s.bench=g(20);
     }
     if(data.teams) s.teams=data.teams.length||s.teams;
@@ -3656,6 +3675,7 @@ function settingsToForm(){
   $("#s_dstCap").value=s.dstCap||1;
   for(const pos of POSITIONS) $("#s_"+pos).value=s.slots[pos]||0;
   $("#s_FLEX").value=s.slots.FLEX||0;
+  $("#s_SFLEX").value=s.slots.SFLEX||0;
   $("#s_preset").value=s.scoring.preset;
   $("#s_rec").value=s.scoring.rec; $("#s_passYd").value=s.scoring.passYd;
   $("#s_passTd").value=s.scoring.passTd; $("#s_int").value=s.scoring.int;
@@ -3672,6 +3692,7 @@ function formToSettings(){
   s.dstCap=Math.max(1,+$("#s_dstCap").value||1);
   for(const pos of POSITIONS) s.slots[pos]=+$("#s_"+pos).value||0;
   s.slots.FLEX=+$("#s_FLEX").value||0;
+  s.slots.SFLEX=+$("#s_SFLEX").value||0;
   s.scoring.preset=$("#s_preset").value;
   s.scoring.rec=+$("#s_rec").value; s.scoring.passYd=+$("#s_passYd").value||25;
   s.scoring.passTd=+$("#s_passTd").value; s.scoring.int=+$("#s_int").value;
