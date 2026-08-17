@@ -3304,8 +3304,24 @@ function renderKeepers(){
   const kept=S.players.filter(p=>p.drafted&&p.drafted.keeper);
   for(const p of kept){
     const d=document.createElement("div"); d.className="roster-slot";
+    // price vs. neutral market value — reference only, the model already
+    // prices the inflation these discounts create. Deliberately compares
+    // against pre-inflation blended value: the inflation-adjusted number
+    // moves with every keeper entered (including this one), so it would
+    // call an overpaid keeper a "discount" in a room full of cheap keeps.
+    let deal="";
+    if(!isSnake() && M && M.rows){
+      const r=M.rows.find(x=>x.p===p);
+      if(r){
+        const value=Math.max(1, Math.round(r.blended));
+        const diff=value-p.drafted.price;
+        deal = diff>0? ` <span class="pill up" title="Kept at ${fmt$(p.drafted.price)}, market value ~${fmt$(value)}">${fmt$(diff)} discount</span>`
+             : diff<0? ` <span class="pill down" title="Kept at ${fmt$(p.drafted.price)}, market value ~${fmt$(value)}">${fmt$(-diff)} premium</span>`
+             : ` <span class="pill" title="Kept at market value">at value</span>`;
+      }
+    }
     d.innerHTML=`<span class="nm"><span class="pos ${p.pos}">${p.pos}</span> ${esc(p.name)}
-      ${p.drafted.mine?'<span class="pill up">me</span>':'<span class="pill">rival</span>'}</span>
+      ${p.drafted.mine?'<span class="pill up">me</span>':'<span class="pill">rival</span>'}${deal}</span>
       <span>${isSnake()?"":fmt$(p.drafted.price)+" "}<button class="small">✕</button></span>`;
     d.querySelector("button").addEventListener("click",()=>removeKeeper(p));
     el.appendChild(d);
