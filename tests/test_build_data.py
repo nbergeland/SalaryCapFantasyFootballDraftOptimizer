@@ -351,6 +351,28 @@ class InjuryClassification(unittest.TestCase):
         self.assertIs(tw["out"], True)
         self.assertIn("ESPN: Injured Reserve", tw["note"])
 
+    def test_dst_streamable_and_stalwart_notes(self):
+        dsts = [p for p in self.players if p["pos"] == "DST"]
+        stream = [p for p in dsts if "Streamable early" in p.get("note", "")]
+        hold = [p for p in dsts if "Season-long hold" in p.get("note", "")]
+        self.assertEqual(len(stream), bd.STREAM_COUNT)
+        self.assertEqual(len(hold), bd.STALWART_COUNT)
+        # the note names the actual opening slate
+        self.assertRegex(stream[0]["note"], r"vs [A-Z?]{2,3}(, [A-Z?]{2,3}){3}")
+        self.assertTrue(self.report.get("dst_schedule"))
+
+    def test_missing_schedule_degrades_to_no_dst_notes(self):
+        payload = {"settings": {"proTeams": [
+            {"id": 25, "abbrev": "SF", "byeWeek": 8}]}}   # byes but no games
+        recs = {}
+        r = bd.new_record("Seahawks D/ST", "DST", "SEA")
+        r["pts"] = 120.0
+        recs["x"] = r
+        report = {}
+        bd.annotate_dst_schedules(recs, payload, report)
+        self.assertEqual(r["flags"], [])
+        self.assertIn("unavailable", report["dst_schedule"][0])
+
     def test_teamless_season_enders_are_dropped_not_shipped(self):
         """Sleeper parks long-retired players on 'Injured Reserve' forever;
         the second live build put Adam Vinatieri in the news briefing. A
