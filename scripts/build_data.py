@@ -612,6 +612,85 @@ def ingest_byes(raw, recs):
     return byes
 
 
+STREAM_WEEKS = 4          # "streamable" = a soft slate across the opening month
+STREAM_COUNT = 8          # how many soft-slate DSTs get the note
+STALWART_COUNT = 5        # top-N season-long DSTs get the hold note
+
+
+def extract_schedule(payload, weeks=STREAM_WEEKS):
+    """{team: {week: opponent}} for the opening weeks, from ESPN's pro-team
+    schedule view (the same payload the bye weeks come from).  The view is
+    fetched for byes either way; the games list rides along for free.
+    Defensive throughout — an ESPN shape change degrades to {} and the
+    annotation simply doesn't happen that night."""
+    sched = {}
+    for t in (((payload or {}).get("settings") or {}).get("proTeams") or []):
+        team = canon_team(t.get("abbrev")) or ESPN_TEAM_BY_ID.get(t.get("id"), "")
+        if not team:
+            continue
+        games = t.get("proGamesByScoringPeriod") or {}
+        for wk_raw, lst in games.items():
+            try:
+                wk = int(wk_raw)
+            except (TypeError, ValueError):
+                continue
+            if not (1 <= wk <= weeks) or not lst:
+                continue
+            g = lst[0]
+            home = ESPN_TEAM_BY_ID.get(g.get("homeProTeamId"), "")
+            away = ESPN_TEAM_BY_ID.get(g.get("awayProTeamId"), "")
+            opp = away if home == team else home if away == team else ""
+            if opp:
+                sched.setdefault(team, {})[wk] = opp
+    return sched
+
+
+def offense_strength_ranks(recs):
+    """team -> rank 1..32 by projected offensive output (1 = most points =
+    the opponent a defense least wants to see).  Derived from our own pool:
+    the sum of each team's top six offensive projections."""
+    by_team = {}
+    for rec in recs.values():
+        if rec["pos"] in ("K", "DST") or rec.get("out") or not rec["team"]:
+            continue
+        by_team.setdefault(rec["team"], []).append(rec["pts"] or 0.0)
+    totals = {t: sum(sorted(v, reverse=True)[:6]) for t, v in by_team.items()}
+    ranked = sorted(totals, key=lambda t: -totals[t])
+    return {t: i + 1 for i, t in enumerate(ranked)}
+
+
+def annotate_dst_schedules(recs, byes_payload, report):
+    """Flag streamable openers (soft weeks 1-4) and season-long stalwarts on
+    D/ST rows.  'Soft' is measured against our own projections: the average
+    offense rank of the first four opponents, higher = weaker slate."""
+    sched = extract_schedule(byes_payload)
+    ranks = offense_strength_ranks(recs)
+    dsts = [r for r in recs.values() if r["pos"] == "DST"]
+    if not sched or not ranks or not dsts:
+        report["dst_schedule"] = ["schedule data unavailable — no annotations"]
+        return
+    rows = []
+    for rec in dsts:
+        opps = [sched.get(rec["team"], {}).get(w) for w in range(1, STREAM_WEEKS + 1)]
+        known = [o for o in opps if o and o in ranks]
+        if len(known) < 3:
+            continue
+        softness = sum(ranks[o] for o in known) / len(known)
+        rows.append((softness, rec, opps))
+    rows.sort(key=lambda x: -x[0])
+    for i, (softness, rec, opps) in enumerate(rows):
+        slate = ", ".join(o or "?" for o in opps)
+        if i < STREAM_COUNT:
+            rec["flags"].append(
+                f"Streamable early: soft weeks 1-{STREAM_WEEKS} (vs {slate})")
+    for rec in sorted(dsts, key=lambda r: -(r["pts"] or 0))[:STALWART_COUNT]:
+        rec["flags"].append("Season-long hold: top-5 projected defense")
+    report["dst_schedule"] = [
+        f"{rec['name']}: avg opponent offense rank {softness:.1f} "
+        f"(vs {', '.join(o or '?' for o in opps)}) — season proj {rec['pts']:.0f}"
+        for softness, rec, opps in rows]
+
+
 def resolve_teams(recs, report):
     """Sleeper > ESPN > FFC.  Every disagreement is reported."""
     mismatches = []
@@ -1237,6 +1316,8 @@ def render_report(data, status, report):
     section("Marked OUT (excluded from recommendations)", report.get("out_players") or [])
     section("Teamless season-enders dropped (retired-player DB residue)",
             report.get("dropped_teamless_out") or [])
+    section("D/ST opening-month schedule (softest slate first)",
+            report.get("dst_schedule") or [])
     section("Injury disagreements (Sleeper vs ESPN)",
             report.get("injury_disagreements") or [])
     if report.get("fp_out_flagged"):
@@ -1289,6 +1370,7 @@ def build(season, fixtures_dir=None, as_of=None, fp_key=None):
         f"{r['name']} ({r['pos']})" for r in ghosts.values())
 
     flag_injuries(recs, report)
+    annotate_dst_schedules(recs, raw.get("espn_byes"), report)
 
     kept = apply_cutoff(recs, report)
     kept.sort(key=lambda r: (-r["aav"], consensus_key(r), r["name"]))
