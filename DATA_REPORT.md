@@ -1,6 +1,6 @@
 # Data build report
 
-- Built: 2026-08-18T09:49:06+00:00
+- Built: 2026-08-19T09:50:23+00:00
 - Season: 2026
 - Players in bundle: **609**
 - News lines: 25
@@ -20,22 +20,22 @@
 
 - Sleeper players DB entries: 4386
 - Sleeper projection rows: 3301
-- Dropped (no stats, no ADP): 2375
+- Dropped (no stats, no ADP): 2373
 - ESPN matched / added: 633 / 0
-- FFC matched / added: 265 / 0
+- FFC matched / added: 266 / 0
 - Backfilled from the Sleeper players DB: 36 (0 team corrections)
-- Players marked OUT: 7
-- Carrying a superflex (2QB) ADP: 336 (of which QB: 44)
+- Players marked OUT: 8
+- Carrying a superflex (2QB) ADP: 338 (of which QB: 44)
 - FantasyPros headlines parsed: 0
-- Pool before cutoff: 849 → kept 609
+- Pool before cutoff: 851 → kept 609
 
 ### Position breakdown
 
-- QB: 70
+- QB: 69
 - RB: 126
 - WR: 191
-- TE: 95
-- K: 95
+- TE: 97
+- K: 94
 - DST: 32
 
 ## Auction values
@@ -43,12 +43,13 @@
 - Replacement points: {'DST': 91.9, 'QB': 291.1, 'WR': 169.9, 'RB': 168.8, 'TE': 156.0, 'K': 116.2}
 - $/VORP scale: 0.4052 (calibration factor 0.9325)
 - ESPN-priced players: 100
-- Mean abs error of the VORP model vs ESPN prices: 5.73
+- Mean abs error of the VORP model vs ESPN prices: 5.72
 
-## Marked OUT (excluded from recommendations) (7)
+## Marked OUT (excluded from recommendations) (8)
 
 - Brandon Aiyuk (SF WR): sleeper injury_status=DNR, espn injuryStatus=OUT
 - Jaren Kanak (TEN TE): sleeper injury_status=IR
+- Jerome Ford (WAS RB): sleeper injury_status=IR
 - John Michael Gyllenborg (KC TE): sleeper injury_status=IR
 - Julian Hill (NE TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Ricky Pearsall (SF WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
@@ -95,13 +96,14 @@
 - Broncos D/ST: avg opponent offense rank 9.0 (vs KC, JAX, LAR, SF) — season proj 110
 - Texans D/ST: avg opponent offense rank 7.5 (vs BUF, CIN, IND, DAL) — season proj 114
 
-## Injury disagreements (Sleeper vs ESPN) (9)
+## Injury disagreements (Sleeper vs ESPN) (10)
 
 - Alec Pierce (WR): sleeper=PUP/Active espn=OUT
 - Chris Bell (WR): sleeper=Questionable/Active espn=OUT
 - George Kittle (TE): sleeper=PUP/Active espn=OUT
 - Isaac Guerendo (RB): sleeper=PUP/Active espn=OUT
 - Jaren Kanak (TE): sleeper=IR/Inactive espn=ACTIVE
+- Jerome Ford (RB): sleeper=IR/Inactive espn=ACTIVE
 - Luke Musgrave (TE): sleeper=PUP/Active espn=OUT
 - Tip Reiman (TE): sleeper=PUP/Active espn=OUT
 - Tyrell Shavers (WR): sleeper=PUP/Active espn=OUT
@@ -171,6 +173,7 @@ _none_
 - Mason Tipton (NO WR) rank=1154
 - Laquon Treadwell (IND WR) rank=1158
 - Alec Ingold (LAC RB) rank=1160
+- Ben Sims (MIA TE) rank=1172
 - Adam Prentice (DEN RB) rank=1213
 - Connor Heyward (LV RB) rank=1216
 - Michael Burton (CLE RB) rank=1217
@@ -196,7 +199,6 @@ _none_
 - Britain Covey (PHI WR) rank=1346
 - Ke'Shawn Williams (CIN WR) rank=1349
 - Michael Bandy (DEN WR) rank=1358
-- Jeshaun Jones (MIN WR) rank=1359
 - …and 327 more
 
 ## FFC rows with no Sleeper match (0)
