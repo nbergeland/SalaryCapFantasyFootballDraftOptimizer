@@ -236,9 +236,10 @@ class FixtureBuild(unittest.TestCase):
         self.assertEqual(by_name(self.players, "Josh Allen")["bye"], 7)       # BUF
 
     def test_aav_blends_real_prices_and_floors_at_one(self):
-        # Bijan: ESPN only -> ESPN's $62. Chase: ESPN $60 + Boone $48 -> $54
+        # Bijan: ESPN only -> ESPN's $62.
+        # Chase: ESPN $60 + Boone $48 + Sleeper $45 -> $51
         self.assertEqual(by_name(self.players, "Bijan Robinson")["aav"], 62)
-        self.assertEqual(by_name(self.players, "Ja'Marr Chase")["aav"], 54)
+        self.assertEqual(by_name(self.players, "Ja'Marr Chase")["aav"], 51)
         self.assertTrue(all(p["aav"] >= 1 for p in self.players))
         self.assertTrue(all(isinstance(p["aav"], int) for p in self.players))
         # ESPN never priced him, so his dollar value is model-derived and says so
@@ -404,6 +405,36 @@ class InjuryClassification(unittest.TestCase):
         self.assertIsNone(by_name(self.players, "Totally Unknown Guy"))
         self.assertTrue(any("Totally Unknown Guy" in u
                             for u in self.report["boone_unmatched"]))
+
+    def test_sleeper_auction_value_joins_the_price_blend(self):
+        # Chase's fixture row carries auction_value_ppr 45 AND
+        # auction_value_std 40; the ppr key must win, or the mean below
+        # would land on $49 instead of (60 + 48 + 45) / 3 = $51
+        self.assertEqual(by_name(self.players, "Ja'Marr Chase")["aav"], 51)
+        self.assertEqual(self.report["sleeper_aav_rows"], 2)
+        self.assertEqual(self.report["sleeper_auction_keys"],
+                         {"auction_value_ppr": 3, "auction_value_std": 1})
+
+    def test_sleeper_only_price_beats_the_vorp_estimate(self):
+        # Kittle has no ESPN auction value and no Boone value in the
+        # fixtures, so his $14 Sleeper price is the only real one — it must
+        # be used verbatim rather than falling back to the model estimate
+        kittle = by_name(self.players, "George Kittle")
+        self.assertEqual(kittle["aav"], 14)
+        self.assertNotIn("(aav est)", kittle["src"])
+
+    def test_out_of_range_sleeper_auction_value_is_ignored(self):
+        # Mahomes' row says 999 — outside the $1..$200 sanity band, so it
+        # is counted in the key census but never priced: ESPN's $9 stands
+        self.assertEqual(by_name(self.players, "Patrick Mahomes")["aav"], 9)
+        self.assertIn("auction_value_ppr", self.report["sleeper_auction_keys"])
+
+    def test_report_names_the_sleeper_auction_keys(self):
+        # the rendered DATA_REPORT line is the discovery instrument: when
+        # the live feed carries no auction keys it must say so honestly
+        lines = bd.render_report(self.data, self.status, self.report)
+        self.assertTrue(any("Sleeper-priced players: 2" in ln and
+                            "auction_value_ppr" in ln for ln in lines.splitlines()))
 
     def test_missing_boone_file_is_skipped_not_degraded(self):
         tmp = tempfile.mkdtemp()
@@ -696,12 +727,15 @@ class OutageMatrix(unittest.TestCase):
         self.assertIn("espn_kona", data["meta"]["degraded"])
         self.assertTrue(status["espn_kona"].startswith("FAILED"))
         self.assertIsNotNone(by_name(data["players"], "Michael Wilson"))
-        # no ESPN prices left, so every dollar value without a Boone price
-        # is model-derived; Boone-priced players keep a real number
+        # no ESPN prices left, so every dollar value without a Boone or
+        # Sleeper price is model-derived; the others keep a real number
+        # (George Kittle carries a Sleeper auction value in the fixtures)
         self.assertTrue(all("aav est" in p["src"] for p in data["players"]
-                            if "boone" not in p["src"]))
+                            if "boone" not in p["src"]
+                            and p["name"] != "George Kittle"))
         self.assertTrue(any("boone" in p["src"] and "aav est" not in p["src"]
                             for p in data["players"]))
+        self.assertEqual(by_name(data["players"], "George Kittle")["aav"], 14)
 
     def test_missing_ffc_degrades(self):
         data, _s, _r = build_fixture(self._subset({"ffc_adp.json"}))

@@ -100,7 +100,8 @@
    "pts_half_ppr": 340.2,
    "pts_std": 340.2,
    "adp_ppr": 62.0,
-   "adp_2qb": 12.4
+   "adp_2qb": 12.4,
+   "auction_value_ppr": 999
   },
   "player": {
    "player_id": "4046",
@@ -265,7 +266,9 @@
    "pts_half_ppr": 317.0,
    "pts_std": 261.0,
    "adp_ppr": 1.9,
-   "adp_2qb": 2.8
+   "adp_2qb": 2.8,
+   "auction_value_std": 40.0,
+   "auction_value_ppr": 45.0
   },
   "player": {
    "player_id": "6794",
@@ -546,7 +549,8 @@
    "pts_ppr": 206.0,
    "pts_half_ppr": 170.0,
    "pts_std": 134.0,
-   "adp_ppr": 42.0
+   "adp_ppr": 42.0,
+   "auction_value_ppr": 14.0
   },
   "player": {
    "player_id": "4217",
