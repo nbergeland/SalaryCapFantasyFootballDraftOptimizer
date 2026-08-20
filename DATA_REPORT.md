@@ -1,6 +1,6 @@
 # Data build report
 
-- Built: 2026-08-20T18:35:36+00:00
+- Built: 2026-08-20T20:23:40+00:00
 - Season: 2026
 - Players in bundle: **610**
 - News lines: 25
@@ -44,6 +44,7 @@
 - Replacement points: {'DST': 91.9, 'QB': 291.1, 'WR': 169.9, 'RB': 168.8, 'TE': 156.0, 'K': 116.2}
 - $/VORP scale: 0.4051 (calibration factor 0.9334)
 - ESPN-priced players: 100
+- Sleeper-priced players: 0 (auction keys seen in the feed: none)
 - Mean abs error of the VORP model vs ESPN prices: 5.72
 
 ## Marked OUT (excluded from recommendations) (8)

@@ -377,7 +377,7 @@ def new_record(name, pos, team):
     return {
         "name": name, "pos": pos, "team": team,
         "stats": None, "sleeper_pts": None, "sleeper_adp": None,
-        "sleeper_adp2": None,
+        "sleeper_adp2": None, "sleeper_aav": None,
         "search_rank": None, "injury": None, "injury_body": None,
         "injury_notes": None, "sleeper_status": None,
         "espn_rank": None, "espn_aav": None, "espn_pts": None, "espn_team": "",
@@ -403,6 +403,8 @@ def ingest_sleeper(raw, report):
 
     recs = {}
     dropped = 0
+    auction_keys = {}
+    key_census = {}
     rows = raw.get("sleeper_projections") or []
     if isinstance(rows, dict):                      # defensive: some mirrors wrap it
         rows = rows.get("projections") or list(rows.values())
@@ -448,6 +450,20 @@ def ingest_sleeper(raw, report):
         if adp2 is not None and float(adp2) >= MAX_REAL_ADP:
             adp2 = None
 
+        # Sleeper's stat objects are not formally documented, so the auction
+        # value is DISCOVERED rather than assumed: any key naming an auction
+        # value counts, ppr variants preferred, sane dollar range required.
+        # The report lists every candidate key seen, so a rename in their
+        # feed shows up in the next build instead of silently zeroing prices.
+        aav_val = None
+        for k in sorted(st_raw, key=lambda x: ("ppr" not in x, x)):
+            key_census[k] = key_census.get(k, 0) + 1
+            if "auction" in k or k == "aav":
+                auction_keys[k] = auction_keys.get(k, 0) + 1
+                v = st_raw.get(k)
+                if aav_val is None and isinstance(v, (int, float)) and 1 <= v <= 200:
+                    aav_val = float(v)
+
         if not stats and adp is None and pos not in ("K", "DST"):
             dropped += 1                            # no signal at all — skip
             continue
@@ -458,6 +474,8 @@ def ingest_sleeper(raw, report):
         rec["sleeper_pts"] = round(float(pts), 1) if pts is not None else None
         rec["sleeper_adp"] = round(float(adp), 1) if adp is not None else None
         rec["sleeper_adp2"] = round(float(adp2), 1) if adp2 is not None else None
+        if aav_val is not None:
+            rec["sleeper_aav"] = round(aav_val, 1)
         rec["sources"].add("sleeper")
         if db:
             rec["search_rank"] = db.get("search_rank")
@@ -474,6 +492,16 @@ def ingest_sleeper(raw, report):
             rec["sources"].add("sleeper")
             recs[key] = rec
 
+    # the build log carries the full stat-key census so a future price-like
+    # field (whatever Sleeper names it) is visible without instrumenting
+    print("build_data: sleeper stat keys "
+          f"({len(key_census)} distinct): "
+          + ", ".join(f"{k}:{n}" for k, n in
+                      sorted(key_census.items(), key=lambda kv: -kv[1])[:80]))
+
+    report["sleeper_auction_keys"] = auction_keys
+    report["sleeper_aav_rows"] = sum(
+        1 for r in recs.values() if r.get("sleeper_aav") is not None)
     report["sleeper_projection_rows"] = len(rows)
     report["sleeper_dropped_no_signal"] = dropped
     return recs, by_key
@@ -897,12 +925,14 @@ def compute_aav(recs, report):
         # real prices beat the VORP model; two real prices beat one. Boone
         # prices half-PPR $200 rooms - close enough to average with ESPN's,
         # and the blend damps either source's quirks.
-        prices = [p for p in (rec["espn_aav"], rec.get("boone_val")) if p]
+        prices = [p for p in (rec["espn_aav"], rec.get("boone_val"),
+                              rec.get("sleeper_aav")) if p]
         if prices:
             rec["aav"] = max(1, int(round(sum(prices) / len(prices))))
             rec["aav_src"] = "+".join(
                 k for k, p in (("espn", rec["espn_aav"]),
-                               ("boone", rec.get("boone_val"))) if p)
+                               ("boone", rec.get("boone_val")),
+                               ("sleeper", rec.get("sleeper_aav"))) if p)
             if rec["espn_aav"] and id(rec) in priced_ids:
                 errors.append(abs(est - max(1, int(round(rec["espn_aav"])))))
         else:
@@ -913,6 +943,8 @@ def compute_aav(recs, report):
     report["aav_scale"] = round(scale, 4)
     report["aav_calibration"] = round(calib, 4)
     report["aav_espn_priced"] = len(priced)
+    report["aav_sleeper_priced"] = sum(
+        1 for r in recs.values() if r.get("sleeper_aav"))
     report["aav_mae_vs_espn"] = round(sum(errors) / len(errors), 2) if errors else None
 
 
@@ -1423,6 +1455,8 @@ def render_report(data, status, report):
     A(f"- Replacement points: {report.get('aav_replacement')}")
     A(f"- $/VORP scale: {report.get('aav_scale')} (calibration factor {report.get('aav_calibration')})")
     A(f"- ESPN-priced players: {report.get('aav_espn_priced')}")
+    A(f"- Sleeper-priced players: {report.get('aav_sleeper_priced', 0)} "
+      f"(auction keys seen in the feed: {report.get('sleeper_auction_keys') or 'none'})")
     A(f"- Mean abs error of the VORP model vs ESPN prices: {report.get('aav_mae_vs_espn')}")
     A("")
 
