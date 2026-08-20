@@ -764,11 +764,15 @@ def apply_boone(recs, payload, report):
     row carries one."""
     if not payload:
         return
-    by_name_pos, by_name = {}, {}
+    by_name_pos, by_name, by_initial = {}, {}, {}
     for rec in recs.values():
         key = norm_name(rec["name"])
         by_name_pos[key + "|" + rec["pos"]] = rec
         by_name.setdefault(key, []).append(rec)
+        parts = rec["name"].split(None, 1)
+        if len(parts) == 2 and parts[0]:
+            ik = parts[0][0].lower() + "|" + norm_name(parts[1])
+            by_initial.setdefault(ik, []).append(rec)
 
     def find(name, pos):
         key = norm_name(name)
@@ -777,7 +781,19 @@ def apply_boone(recs, payload, report):
             if hit:
                 return hit
         cands = by_name.get(key) or []
-        return cands[0] if len(cands) == 1 else None
+        if len(cands) == 1:
+            return cands[0]
+        # Yahoo's rendered ranking tables abbreviate to "J. Gibbs" — resolve
+        # initial + surname, but only when the pool answer is unambiguous
+        m = re.match(r"^([A-Za-z])\.?\s+(.+)$", name)
+        if m and len(m.group(2)) > 2:
+            ik = m.group(1).lower() + "|" + norm_name(m.group(2))
+            ic = by_initial.get(ik) or []
+            if pos:
+                ic = [r for r in ic if r["pos"] == pos] or ic
+            if len(ic) == 1:
+                return ic[0]
+        return None
 
     matched_r = matched_v = 0
     unmatched = []

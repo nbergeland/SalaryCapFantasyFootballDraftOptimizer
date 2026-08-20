@@ -363,6 +363,12 @@ class InjuryClassification(unittest.TestCase):
         self.assertEqual(bijan["ecr"], round((1 + 4) / 2))
         self.assertIn("boone", bijan["src"])
 
+    def test_boone_initial_form_names_match(self):
+        # Yahoo's rendered top-300 abbreviates names to "J. Gibbs" — the
+        # matcher resolves initial + surname when the pool answer is unique
+        self.assertIn("boone", by_name(self.players, "Jahmyr Gibbs")["src"])
+        self.assertIn("boone", by_name(self.players, "Amon-Ra St. Brown")["src"])
+
     def test_boone_value_blends_into_aav(self):
         # Chase: ESPN auction and Boone's $48 average together
         chase = by_name(self.players, "Ja'Marr Chase")
