@@ -6,11 +6,6 @@ name: Refresh Justin Boone rankings
 # what the nightly data build blends; between refreshes it simply ages.
 on:
   workflow_dispatch:
-  # TEMPORARY (remove before merge): dispatch-only workflows aren't registered
-  # until they reach the default branch; iterate the parser via branch pushes.
-  push:
-    branches: [claude/analytics-modeling-evaluation-dz5iic]
-    paths: [".github/workflows/boone-refresh.yml", "scripts/fetch_boone.py"]
 
 permissions:
   contents: write
