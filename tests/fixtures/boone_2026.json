@@ -1,0 +1,55 @@
+{
+ "meta": {
+  "expert": "Justin Boone (Yahoo Sports)",
+  "fetched": "2026-08-20T12:00:00+00:00",
+  "format": "half-PPR, 12-team, $200 salary cap",
+  "sources": [
+   "fixture"
+  ],
+  "errors": []
+ },
+ "overall": [
+  {
+   "rank": 1,
+   "name": "Ja'Marr Chase",
+   "pos": "WR"
+  },
+  {
+   "rank": 4,
+   "name": "Bijan Robinson",
+   "pos": "RB"
+  },
+  {
+   "rank": 12,
+   "name": "Josh Allen",
+   "pos": "QB"
+  },
+  {
+   "rank": 40,
+   "name": "Kenneth Walker",
+   "pos": "RB"
+  },
+  {
+   "rank": 250,
+   "name": "Totally Unknown Guy",
+   "pos": "WR"
+  }
+ ],
+ "values": [
+  {
+   "name": "Ja'Marr Chase",
+   "pos": "WR",
+   "value": 48
+  },
+  {
+   "name": "Josh Allen",
+   "pos": "QB",
+   "value": 39
+  },
+  {
+   "name": "Puka Nacua",
+   "pos": "WR",
+   "value": 52
+  }
+ ]
+}

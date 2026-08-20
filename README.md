@@ -126,6 +126,12 @@ auction model tracks ESPN's prices.
 | ESPN (`kona_player_info`) | auction values, PPR ranks, a second projection, injury status |
 | ESPN pro teams | bye weeks |
 | FantasyPros news *(optional)* | headlines, and corroboration for season-ending injuries |
+| Justin Boone *(optional)* | top-300 expert rank (joins the ECR vote) and salary-cap $ values (joins the AAV blend) |
+
+Boone's rankings come from his Yahoo Sports articles via the manual-dispatch
+**boone-refresh** workflow (Actions → *Refresh Justin Boone rankings* → Run) — run it
+whenever he publishes an update; the committed `data/boone_2026.json` feeds every
+nightly build until the next refresh and the build flags it when it goes stale.
 
 Sleeper is required: if either Sleeper call fails the build aborts and yesterday's data
 stays live. ESPN and FFC are degradable — the build proceeds and flags itself in the app.
