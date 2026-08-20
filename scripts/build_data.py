@@ -727,6 +727,119 @@ def blend_projections(recs, report):
     report["projection_splits"] = splits
 
 
+BOONE_FILE = "data/boone_2026.json"
+BOONE_STALE_DAYS = 30
+BOONE_SOURCE_LINK = "Justin Boone rankings & salary-cap values (Yahoo Sports, via data/boone_2026.json)"
+
+
+def load_boone(fixtures_dir=None):
+    """Optional repo-local expert source, written by scripts/fetch_boone.py
+    on manual dispatch. Missing file = skipped, never degraded - it is an
+    extra voice, not a pipeline dependency."""
+    path = (os.path.join(fixtures_dir, "boone_2026.json")
+            if fixtures_dir else BOONE_FILE)
+    if not os.path.exists(path):
+        return None, "skipped (no file)"
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        fetched = str((data.get("meta") or {}).get("fetched") or "")[:10]
+        age = ""
+        try:
+            days = (date.today() - date.fromisoformat(fetched)).days
+            age = ", {}d old".format(days)
+            if days > BOONE_STALE_DAYS:
+                age += " - STALE, re-run the boone-refresh workflow"
+        except ValueError:
+            pass
+        return data, "ok ({} ranks, {} values{})".format(
+            len(data.get("overall") or []), len(data.get("values") or []), age)
+    except Exception as e:                                     # noqa: BLE001
+        return None, "FAILED: {}".format(e)
+
+
+def apply_boone(recs, payload, report):
+    """Attach Boone's overall rank and salary-cap value to matched records.
+    Matching mirrors the other legs: normalized name, plus position when the
+    row carries one."""
+    if not payload:
+        return
+    by_name_pos, by_name, by_initial = {}, {}, {}
+    for rec in recs.values():
+        key = norm_name(rec["name"])
+        by_name_pos[key + "|" + rec["pos"]] = rec
+        by_name.setdefault(key, []).append(rec)
+        parts = rec["name"].split(None, 1)
+        if len(parts) == 2 and parts[0]:
+            ik = parts[0][0].lower() + "|" + norm_name(parts[1])
+            by_initial.setdefault(ik, []).append(rec)
+
+    def market_rank(rec):
+        for v in (rec.get("sleeper_adp"), rec.get("espn_rank")):
+            if v is not None:
+                return float(v)
+        sr = rec.get("search_rank")
+        return float(sr) if isinstance(sr, (int, float)) and 0 < sr < 3000 else None
+
+    def find(name, pos, boone_rank=None):
+        # nav text bleeds into rendered tables ("29 Days of Fantasy" became a
+        # rank-29 row on the first live blend) — refuse non-name rows outright
+        if re.search(r"fantasy|ranking|yahoo|sports|days of", name, re.I):
+            return None
+        key = norm_name(name)
+        if pos:
+            hit = by_name_pos.get(key + "|" + pos)
+            if hit:
+                return hit
+        cands = by_name.get(key) or []
+        if len(cands) == 1:
+            return cands[0]
+        # Yahoo's rendered ranking tables abbreviate to "J. Gibbs" — resolve
+        # initial + surname; a unique pool answer stands on its own
+        m = re.match(r"^([A-Za-z])\.?\s+(.+)$", name)
+        if not (m and len(m.group(2)) > 2):
+            return None
+        ik = m.group(1).lower() + "|" + norm_name(m.group(2))
+        ic = by_initial.get(ik) or []
+        if pos:
+            ic = [r for r in ic if r["pos"] == pos] or ic
+        if len(ic) == 1:
+            return ic[0]
+        # ambiguous initials ("B. Robinson" — Bijan or Brian) resolve by the
+        # row's own rank: a rank-2 B. Robinson is the one the market also has
+        # near 2. Decisive-margin rule, else stay unmatched rather than guess.
+        if len(ic) > 1 and boone_rank:
+            import math
+            scored = sorted(
+                (abs(math.log((market_rank(r) or 9e9) + 1) - math.log(boone_rank + 1)), r)
+                for r in ic)
+            if scored[0][0] < math.log(2.5) and                scored[1][0] - scored[0][0] > math.log(2.0):
+                return scored[0][1]
+        return None
+
+    matched_r = matched_v = 0
+    unmatched = []
+    for row in payload.get("overall") or []:
+        rec = find(row.get("name") or "", (row.get("pos") or "").upper(),
+                   boone_rank=row.get("rank"))
+        if rec is None:
+            unmatched.append("{} (rank {})".format(row.get("name"), row.get("rank")))
+            continue
+        rec["boone_rank"] = int(row["rank"])
+        rec["sources"].add("boone")
+        matched_r += 1
+    for row in payload.get("values") or []:
+        rec = find(row.get("name") or "", (row.get("pos") or "").upper())
+        if rec is None:
+            unmatched.append("{} (${})".format(row.get("name"), row.get("value")))
+            continue
+        rec["boone_val"] = int(row["value"])
+        rec["sources"].add("boone")
+        matched_v += 1
+    report["boone_matched"] = {"ranks": matched_r, "values": matched_v}
+    report["boone_unmatched"] = sorted(set(unmatched))
+
+
 def blend_ranks(recs):
     for rec in recs.values():
         rec["adp"] = median([rec["sleeper_adp"], rec["ffc_adp"]])
@@ -738,11 +851,16 @@ def blend_ranks(recs):
         rec["adp2"] = median([rec["sleeper_adp2"]])
         if rec["adp2"] is not None:
             rec["adp2"] = round(rec["adp2"], 1)
-        ecr = rec["espn_rank"]
-        if ecr is None:
+        # expert consensus: ESPN's editorial rank and Boone's top-300 are
+        # peer votes (Boone is a two-time FantasyPros most-accurate winner);
+        # Sleeper's search_rank is only the no-expert fallback
+        votes = [v for v in (rec["espn_rank"], rec.get("boone_rank")) if v is not None]
+        if votes:
+            ecr = sum(votes) / len(votes)
+        else:
             sr = rec["search_rank"]
             ecr = sr if isinstance(sr, (int, float)) and 0 < sr < 3000 else None
-        rec["ecr"] = int(ecr) if ecr is not None else None
+        rec["ecr"] = int(round(ecr)) if ecr is not None else None
 
 
 def compute_aav(recs, report):
@@ -776,11 +894,17 @@ def compute_aav(recs, report):
     for rec in recs.values():
         est = max(1, int(round(scale * rec["vorp"])))
         rec["aav_est"] = est
-        if rec["espn_aav"]:
-            rec["aav"] = max(1, int(round(rec["espn_aav"])))
-            rec["aav_src"] = "espn"
-            if id(rec) in priced_ids:
-                errors.append(abs(est - rec["aav"]))
+        # real prices beat the VORP model; two real prices beat one. Boone
+        # prices half-PPR $200 rooms - close enough to average with ESPN's,
+        # and the blend damps either source's quirks.
+        prices = [p for p in (rec["espn_aav"], rec.get("boone_val")) if p]
+        if prices:
+            rec["aav"] = max(1, int(round(sum(prices) / len(prices))))
+            rec["aav_src"] = "+".join(
+                k for k, p in (("espn", rec["espn_aav"]),
+                               ("boone", rec.get("boone_val"))) if p)
+            if rec["espn_aav"] and id(rec) in priced_ids:
+                errors.append(abs(est - max(1, int(round(rec["espn_aav"])))))
         else:
             rec["aav"] = est
             rec["aav_src"] = "est"
@@ -895,9 +1019,9 @@ def flag_injuries(recs, report):
 
 
 def provenance(rec):
-    order = [s for s in ("sleeper", "espn", "ffc") if s in rec["sources"]]
+    order = [s for s in ("sleeper", "espn", "ffc", "boone") if s in rec["sources"]]
     base = "+".join(order) or "unknown"
-    return base if rec["aav_src"] == "espn" else base + " (aav est)"
+    return base if rec["aav_src"] != "est" else base + " (aav est)"
 
 
 def sleeper_note(rec):
@@ -1318,6 +1442,11 @@ def render_report(data, status, report):
             report.get("dropped_teamless_out") or [])
     section("D/ST opening-month schedule (softest slate first)",
             report.get("dst_schedule") or [])
+    if report.get("boone_matched"):
+        A("")
+        A("- Boone matched: {ranks} ranks, {values} salary-cap values".format(
+            **report["boone_matched"]))
+    section("Boone rows with no pool match", report.get("boone_unmatched") or [])
     section("Injury disagreements (Sleeper vs ESPN)",
             report.get("injury_disagreements") or [])
     if report.get("fp_out_flagged"):
@@ -1349,6 +1478,10 @@ def build(season, fixtures_dir=None, as_of=None, fp_key=None):
     backfill_from_sleeper(recs, sleeper_by_key, report)
     ingest_byes(raw, recs)
     resolve_teams(recs, report)
+    boone_payload, boone_status = load_boone(fixtures_dir)
+    status["boone"] = boone_status
+    apply_boone(recs, boone_payload, report)
+
     blend_projections(recs, report)
     blend_ranks(recs)
     compute_aav(recs, report)
@@ -1377,8 +1510,10 @@ def build(season, fixtures_dir=None, as_of=None, fp_key=None):
 
     # "skipped" is not "degraded" — an optional leg nobody enabled is normal
     degraded = [k for k, v in status.items()
-                if v != "ok" and not str(v).startswith("skipped")]
+                if v != "ok" and not str(v).startswith(("skipped", "ok ("))]
     sources = list(SOURCE_LINKS)
+    if boone_payload:
+        sources.append(BOONE_SOURCE_LINK)
     if fp_status == "ok":
         sources.append(FP_SOURCE_LINK)
     data = {

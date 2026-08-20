@@ -120,7 +120,11 @@ class FixtureBuild(unittest.TestCase):
         # FantasyPros is optional and no key is set in the test environment,
         # so it reports "skipped" — which is explicitly not a degradation
         self.assertEqual(self.status["fantasypros"], "skipped (no key)")
-        others = {k: v for k, v in self.status.items() if k != "fantasypros"}
+        # Boone is the other optional leg; in fixture mode it loads the
+        # committed fixture and reports its row counts
+        self.assertTrue(self.status["boone"].startswith("ok ("), self.status["boone"])
+        others = {k: v for k, v in self.status.items()
+                  if k not in ("fantasypros", "boone")}
         self.assertEqual(set(others.values()), {"ok"})
         self.assertEqual(self.data["meta"]["degraded"], [])
 
@@ -216,9 +220,10 @@ class FixtureBuild(unittest.TestCase):
         bijan = by_name(self.players, "Bijan Robinson")
         self.assertAlmostEqual(bijan["adp"], (1.4 + 1.6) / 2, places=2)
 
-    def test_ecr_prefers_espn_rank_then_search_rank(self):
-        self.assertEqual(by_name(self.players, "Bijan Robinson")["ecr"], 1)
-        # nobody at ESPN has Jake Bates, so Sleeper's search_rank carries it
+    def test_ecr_averages_expert_votes_then_falls_back(self):
+        # ESPN ranks Bijan 1, Boone ranks him 4 -> the expert votes average
+        self.assertEqual(by_name(self.players, "Bijan Robinson")["ecr"], 2)
+        # nobody at ESPN or Boone has Jake Bates, so search_rank carries it
         self.assertEqual(by_name(self.players, "Jake Bates")["ecr"], 190)
 
     def test_injury_status_lands_in_note(self):
@@ -230,9 +235,10 @@ class FixtureBuild(unittest.TestCase):
         self.assertEqual(by_name(self.players, "Michael Wilson")["bye"], 8)   # ARI
         self.assertEqual(by_name(self.players, "Josh Allen")["bye"], 7)       # BUF
 
-    def test_aav_prefers_espn_and_floors_at_one(self):
+    def test_aav_blends_real_prices_and_floors_at_one(self):
+        # Bijan: ESPN only -> ESPN's $62. Chase: ESPN $60 + Boone $48 -> $54
         self.assertEqual(by_name(self.players, "Bijan Robinson")["aav"], 62)
-        self.assertEqual(by_name(self.players, "Ja'Marr Chase")["aav"], 60)
+        self.assertEqual(by_name(self.players, "Ja'Marr Chase")["aav"], 54)
         self.assertTrue(all(p["aav"] >= 1 for p in self.players))
         self.assertTrue(all(isinstance(p["aav"], int) for p in self.players))
         # ESPN never priced him, so his dollar value is model-derived and says so
@@ -350,6 +356,65 @@ class InjuryClassification(unittest.TestCase):
         tw = by_name(self.players, "Tyler Warren")
         self.assertIs(tw["out"], True)
         self.assertIn("ESPN: Injured Reserve", tw["note"])
+
+    def test_boone_rank_joins_the_ecr_vote(self):
+        # ESPN has Bijan at rank 1; Boone says 4 -> mean 2 (rounded)
+        bijan = by_name(self.players, "Bijan Robinson")
+        self.assertEqual(bijan["ecr"], round((1 + 4) / 2))
+        self.assertIn("boone", bijan["src"])
+
+    def test_boone_initial_form_names_match(self):
+        # Yahoo's rendered top-300 abbreviates names to "J. Gibbs" — the
+        # matcher resolves initial + surname when the pool answer is unique
+        self.assertIn("boone", by_name(self.players, "Jahmyr Gibbs")["src"])
+        self.assertIn("boone", by_name(self.players, "Amon-Ra St. Brown")["src"])
+
+    def test_boone_ambiguous_initials_resolve_by_rank_proximity(self):
+        recs = {}
+        for name, adp in (("Bijan Robinson", 1.4), ("Brian Robinson", 96.0)):
+            r = bd.new_record(name, "RB", "ATL" if name.startswith("Bijan") else "WAS")
+            r["sleeper_adp"] = adp
+            recs[name] = r
+        report = {}
+        bd.apply_boone(recs, {"overall": [
+            {"rank": 2, "name": "B. Robinson", "pos": ""},
+            {"rank": 142, "name": "B. Robinson Jr.", "pos": ""},
+            {"rank": 29, "name": "Days of Fantasy", "pos": ""},   # nav junk
+        ], "values": []}, report)
+        self.assertEqual(recs["Bijan Robinson"].get("boone_rank"), 2)
+        self.assertEqual(recs["Brian Robinson"].get("boone_rank"), 142)
+        self.assertTrue(any("Days of Fantasy" in u for u in report["boone_unmatched"]))
+
+    def test_boone_value_blends_into_aav(self):
+        # Chase: ESPN auction and Boone's $48 average together
+        chase = by_name(self.players, "Ja'Marr Chase")
+        self.assertGreaterEqual(chase["aav"], 40)
+        self.assertNotIn("(aav est)", chase["src"])
+
+    def test_boone_only_price_beats_the_vorp_estimate(self):
+        puka = by_name(self.players, "Puka Nacua")
+        self.assertNotIn("(aav est)", puka["src"])
+        self.assertIn("boone", puka["src"])
+
+    def test_boone_suffixless_spelling_matches(self):
+        kw = by_name(self.players, "Kenneth Walker III")
+        self.assertIn("boone", kw["src"])
+
+    def test_boone_unmatched_rows_are_reported_not_added(self):
+        self.assertIsNone(by_name(self.players, "Totally Unknown Guy"))
+        self.assertTrue(any("Totally Unknown Guy" in u
+                            for u in self.report["boone_unmatched"]))
+
+    def test_missing_boone_file_is_skipped_not_degraded(self):
+        tmp = tempfile.mkdtemp()
+        for f in os.listdir(FIXTURES):
+            if f != "boone_2026.json":
+                shutil.copy(os.path.join(FIXTURES, f), os.path.join(tmp, f))
+        self.addCleanup(shutil.rmtree, tmp)
+        data, _s, _r = build_fixture(fixtures_dir=tmp)[0], None, None
+        self.assertEqual(build_fixture(fixtures_dir=tmp)[1]["boone"],
+                         "skipped (no file)")
+        self.assertEqual(build_fixture(fixtures_dir=tmp)[0]["meta"]["degraded"], [])
 
     def test_dst_streamable_and_stalwart_notes(self):
         dsts = [p for p in self.players if p["pos"] == "DST"]
@@ -631,8 +696,12 @@ class OutageMatrix(unittest.TestCase):
         self.assertIn("espn_kona", data["meta"]["degraded"])
         self.assertTrue(status["espn_kona"].startswith("FAILED"))
         self.assertIsNotNone(by_name(data["players"], "Michael Wilson"))
-        # no ESPN prices left, so every dollar value is model-derived
-        self.assertTrue(all("aav est" in p["src"] for p in data["players"]))
+        # no ESPN prices left, so every dollar value without a Boone price
+        # is model-derived; Boone-priced players keep a real number
+        self.assertTrue(all("aav est" in p["src"] for p in data["players"]
+                            if "boone" not in p["src"]))
+        self.assertTrue(any("boone" in p["src"] and "aav est" not in p["src"]
+                            for p in data["players"]))
 
     def test_missing_ffc_degrades(self):
         data, _s, _r = build_fixture(self._subset({"ffc_adp.json"}))

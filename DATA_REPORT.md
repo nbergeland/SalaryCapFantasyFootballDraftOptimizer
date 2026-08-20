@@ -1,8 +1,8 @@
 # Data build report
 
-- Built: 2026-08-20T09:51:12+00:00
+- Built: 2026-08-20T18:35:36+00:00
 - Season: 2026
-- Players in bundle: **608**
+- Players in bundle: **610**
 - News lines: 25
 
 ## Source status
@@ -14,6 +14,7 @@
 | ffc_adp | ok |
 | espn_kona | ok |
 | espn_byes | ok |
+| boone | ok (278 ranks, 0 values, 0d old) |
 | fantasypros | skipped (no key) |
 
 ## Counts
@@ -24,18 +25,18 @@
 - ESPN matched / added: 630 / 0
 - FFC matched / added: 264 / 0
 - Backfilled from the Sleeper players DB: 36 (0 team corrections)
-- Players marked OUT: 7
+- Players marked OUT: 8
 - Carrying a superflex (2QB) ADP: 335 (of which QB: 45)
 - FantasyPros headlines parsed: 0
-- Pool before cutoff: 852 → kept 608
+- Pool before cutoff: 852 → kept 610
 
 ### Position breakdown
 
 - QB: 68
-- RB: 129
-- WR: 186
-- TE: 97
-- K: 96
+- RB: 134
+- WR: 187
+- TE: 94
+- K: 95
 - DST: 32
 
 ## Auction values
@@ -43,11 +44,12 @@
 - Replacement points: {'DST': 91.9, 'QB': 291.1, 'WR': 169.9, 'RB': 168.8, 'TE': 156.0, 'K': 116.2}
 - $/VORP scale: 0.4051 (calibration factor 0.9334)
 - ESPN-priced players: 100
-- Mean abs error of the VORP model vs ESPN prices: 5.73
+- Mean abs error of the VORP model vs ESPN prices: 5.72
 
-## Marked OUT (excluded from recommendations) (7)
+## Marked OUT (excluded from recommendations) (8)
 
 - Brandon Aiyuk (SF WR): sleeper injury_status=DNR, espn injuryStatus=OUT
+- Jack Stoll (CLE TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Jaren Kanak (TEN TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Jayden Higgins (HOU WR): sleeper injury_status=IR
 - Jerome Ford (WAS RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
@@ -95,6 +97,21 @@
 - Bills D/ST: avg opponent offense rank 11.8 (vs HOU, DET, LAC, NE) — season proj 90
 - Broncos D/ST: avg opponent offense rank 9.0 (vs KC, JAX, LAR, SF) — season proj 110
 - Texans D/ST: avg opponent offense rank 7.5 (vs BUF, CIN, IND, DAL) — season proj 114
+
+
+- Boone matched: 268 ranks, 0 salary-cap values
+## Boone rows with no pool match (10)
+
+- Days of Fantasy (rank 29)
+- E. All Jr. (rank 265)
+- J. Ferguson (rank 178)
+- J. Williams (rank 43)
+- J. Williams (rank 50)
+- K. Allen (rank 162)
+- K. Allen (rank 198)
+- M. Washington (rank 157)
+- M. Washington Jr. (rank 153)
+- N. Whittington (rank 297)
 
 ## Injury disagreements (Sleeper vs ESPN) (8)
 

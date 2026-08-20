@@ -1,0 +1,42 @@
+name: Refresh Justin Boone rankings
+
+# MANUAL dispatch only. This reads editorial articles (Yahoo Sports / AOL
+# syndication), so it is a polite one-shot pull run when the user asks for a
+# refresh — never a scheduled scraper. The committed data/boone_2026.json is
+# what the nightly data build blends; between refreshes it simply ages.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests playwright
+      - name: Install headless Chromium (rendered-page fallback)
+        run: playwright install --with-deps chromium
+      - name: Fetch and parse Boone articles
+        run: |
+          mkdir -p data
+          python3 scripts/fetch_boone.py --out data/boone_2026.json
+      - name: Commit if changed
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- data/boone_2026.json && \
+             ! git status --porcelain data/boone_2026.json | grep -q .; then
+            echo "No changes."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/boone_2026.json
+          git commit -m "Refresh Justin Boone rankings ($(date -u +%Y-%m-%d))"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
