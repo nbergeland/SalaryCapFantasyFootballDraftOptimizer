@@ -29,7 +29,11 @@ from datetime import datetime, timezone
 UA = ("Mozilla/5.0 (compatible; BergSheetsPersonal/1.0; "
       "personal fantasy tool, one-shot manual fetch)")
 
+# AOL syndication mirrors flatten the content into static HTML; Yahoo's own
+# article pages render the list with JavaScript and serve an empty shell
+# (verified on the first live fetch), so the mirrors go first.
 TOP300 = [
+    "https://www.aol.com/articles/2026-fantasy-football-full-ppr-155359000.html",
     "https://sports.yahoo.com/fantasy/article/2026-fantasy-football-full-ppr-rankings-justin-boones-top-300-players-155359326.html",
     "https://sports.yahoo.com/fantasy/article/2026-fantasy-football-rankings-justin-boone-top-300-players-155300098.html",
 ]
@@ -64,8 +68,9 @@ def parse_overall(text):
     """Ranked rows: '12. Player Name, TEAM' / '12. Player Name (WR4) TEAM'."""
     rows = {}
     pat = re.compile(
-        r"(?m)^\s*(\d{1,3})\.\s+([A-Z][A-Za-z.'\- ]+?[a-z.])"
-        r"(?:\s*[,(]\s*(" + POS_RE + r")\d*\)?)?(?:\s*[,–-]\s*[A-Z]{2,3})?\s*$")
+        r"(?m)^\s*(\d{1,3})[.)]?\s+([A-Z][A-Za-z.'\- ]+?[a-z.])"
+        r"(?:\s*[,(–—-]+\s*(?:[A-Z]{2,3}\s*[,/ ]\s*)?(" + POS_RE + r")\d*\)?)?"
+        r"(?:\s*[,–—-]+\s*[A-Z]{2,3})?\s*$")
     for m in pat.finditer(text):
         rank = int(m.group(1))
         if 1 <= rank <= 300 and rank not in rows:
@@ -90,11 +95,17 @@ def parse_cap_values(text, pos):
 
 
 def discover_links(page):
-    """Companion-article URLs mentioned inside a fetched page."""
+    """Companion-article URLs mentioned inside a fetched page's raw HTML."""
     urls = set()
-    for m in re.finditer(r'https://(?:sports\.yahoo|www\.aol)\.com/[^"\' ]*justin-boone[^"\' ]*', page):
+    for m in re.finditer(
+            r'https://(?:sports\.yahoo\.com|www\.aol\.com)/[^"\' >]*'
+            r'(?:justin-boone|boone|fantasy-football)[^"\' >]*\.html', page):
         urls.add(m.group(0))
     return urls
+
+
+def iframe_srcs(page):
+    return re.findall(r'<iframe[^>]+src=["\']([^"\']+)["\']', page, flags=re.I)
 
 
 def main(argv=None):
@@ -112,10 +123,27 @@ def main(argv=None):
             print(f"boone: top-300 from {url}: {len(overall)} ranked rows")
             if len(overall) >= 150:
                 sources.append(url)
-                for disc in sorted(discover_links(page)):
-                    print(f"boone: discovered companion link: {disc}")
+                break
+            # the ranking table may live in an embedded iframe — follow
+            # same-host frames before giving up on this URL
+            for src in iframe_srcs(page)[:6]:
+                if not src.startswith("http"):
+                    src = "https://sports.yahoo.com" + src
+                try:
+                    itext = strip_tags(fetch(src))
+                    got = parse_overall(itext)
+                    print(f"boone: iframe {src}: {len(got)} ranked rows")
+                    if len(got) >= 150:
+                        overall = got
+                        sources.append(src)
+                        break
+                except Exception as ie:                        # noqa: BLE001
+                    print(f"boone: iframe {src} failed: {ie}")
+            if len(overall) >= 150:
                 break
             errors.append(f"{url}: only {len(overall)} rows parsed")
+            for disc in sorted(discover_links(page)):
+                print(f"boone: raw-html link: {disc}")
             print("boone: text sample for parser iteration:\n" + text[:1500])
         except Exception as e:                                  # noqa: BLE001
             errors.append(f"{url}: {e}")
