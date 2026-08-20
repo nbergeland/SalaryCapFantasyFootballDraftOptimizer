@@ -774,7 +774,18 @@ def apply_boone(recs, payload, report):
             ik = parts[0][0].lower() + "|" + norm_name(parts[1])
             by_initial.setdefault(ik, []).append(rec)
 
-    def find(name, pos):
+    def market_rank(rec):
+        for v in (rec.get("sleeper_adp"), rec.get("espn_rank")):
+            if v is not None:
+                return float(v)
+        sr = rec.get("search_rank")
+        return float(sr) if isinstance(sr, (int, float)) and 0 < sr < 3000 else None
+
+    def find(name, pos, boone_rank=None):
+        # nav text bleeds into rendered tables ("29 Days of Fantasy" became a
+        # rank-29 row on the first live blend) — refuse non-name rows outright
+        if re.search(r"fantasy|ranking|yahoo|sports|days of", name, re.I):
+            return None
         key = norm_name(name)
         if pos:
             hit = by_name_pos.get(key + "|" + pos)
@@ -784,21 +795,33 @@ def apply_boone(recs, payload, report):
         if len(cands) == 1:
             return cands[0]
         # Yahoo's rendered ranking tables abbreviate to "J. Gibbs" — resolve
-        # initial + surname, but only when the pool answer is unambiguous
+        # initial + surname; a unique pool answer stands on its own
         m = re.match(r"^([A-Za-z])\.?\s+(.+)$", name)
-        if m and len(m.group(2)) > 2:
-            ik = m.group(1).lower() + "|" + norm_name(m.group(2))
-            ic = by_initial.get(ik) or []
-            if pos:
-                ic = [r for r in ic if r["pos"] == pos] or ic
-            if len(ic) == 1:
-                return ic[0]
+        if not (m and len(m.group(2)) > 2):
+            return None
+        ik = m.group(1).lower() + "|" + norm_name(m.group(2))
+        ic = by_initial.get(ik) or []
+        if pos:
+            ic = [r for r in ic if r["pos"] == pos] or ic
+        if len(ic) == 1:
+            return ic[0]
+        # ambiguous initials ("B. Robinson" — Bijan or Brian) resolve by the
+        # row's own rank: a rank-2 B. Robinson is the one the market also has
+        # near 2. Decisive-margin rule, else stay unmatched rather than guess.
+        if len(ic) > 1 and boone_rank:
+            import math
+            scored = sorted(
+                (abs(math.log((market_rank(r) or 9e9) + 1) - math.log(boone_rank + 1)), r)
+                for r in ic)
+            if scored[0][0] < math.log(2.5) and                scored[1][0] - scored[0][0] > math.log(2.0):
+                return scored[0][1]
         return None
 
     matched_r = matched_v = 0
     unmatched = []
     for row in payload.get("overall") or []:
-        rec = find(row.get("name") or "", (row.get("pos") or "").upper())
+        rec = find(row.get("name") or "", (row.get("pos") or "").upper(),
+                   boone_rank=row.get("rank"))
         if rec is None:
             unmatched.append("{} (rank {})".format(row.get("name"), row.get("rank")))
             continue

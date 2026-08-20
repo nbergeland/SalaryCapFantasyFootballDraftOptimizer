@@ -369,6 +369,22 @@ class InjuryClassification(unittest.TestCase):
         self.assertIn("boone", by_name(self.players, "Jahmyr Gibbs")["src"])
         self.assertIn("boone", by_name(self.players, "Amon-Ra St. Brown")["src"])
 
+    def test_boone_ambiguous_initials_resolve_by_rank_proximity(self):
+        recs = {}
+        for name, adp in (("Bijan Robinson", 1.4), ("Brian Robinson", 96.0)):
+            r = bd.new_record(name, "RB", "ATL" if name.startswith("Bijan") else "WAS")
+            r["sleeper_adp"] = adp
+            recs[name] = r
+        report = {}
+        bd.apply_boone(recs, {"overall": [
+            {"rank": 2, "name": "B. Robinson", "pos": ""},
+            {"rank": 142, "name": "B. Robinson Jr.", "pos": ""},
+            {"rank": 29, "name": "Days of Fantasy", "pos": ""},   # nav junk
+        ], "values": []}, report)
+        self.assertEqual(recs["Bijan Robinson"].get("boone_rank"), 2)
+        self.assertEqual(recs["Brian Robinson"].get("boone_rank"), 142)
+        self.assertTrue(any("Days of Fantasy" in u for u in report["boone_unmatched"]))
+
     def test_boone_value_blends_into_aav(self):
         # Chase: ESPN auction and Boone's $48 average together
         chase = by_name(self.players, "Ja'Marr Chase")
