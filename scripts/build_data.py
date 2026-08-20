@@ -404,6 +404,7 @@ def ingest_sleeper(raw, report):
     recs = {}
     dropped = 0
     auction_keys = {}
+    key_census = {}
     rows = raw.get("sleeper_projections") or []
     if isinstance(rows, dict):                      # defensive: some mirrors wrap it
         rows = rows.get("projections") or list(rows.values())
@@ -456,6 +457,7 @@ def ingest_sleeper(raw, report):
         # feed shows up in the next build instead of silently zeroing prices.
         aav_val = None
         for k in sorted(st_raw, key=lambda x: ("ppr" not in x, x)):
+            key_census[k] = key_census.get(k, 0) + 1
             if "auction" in k or k == "aav":
                 auction_keys[k] = auction_keys.get(k, 0) + 1
                 v = st_raw.get(k)
@@ -489,6 +491,13 @@ def ingest_sleeper(raw, report):
             rec = new_record(dst_name(team), "DST", team)
             rec["sources"].add("sleeper")
             recs[key] = rec
+
+    # the build log carries the full stat-key census so a future price-like
+    # field (whatever Sleeper names it) is visible without instrumenting
+    print("build_data: sleeper stat keys "
+          f"({len(key_census)} distinct): "
+          + ", ".join(f"{k}:{n}" for k, n in
+                      sorted(key_census.items(), key=lambda kv: -kv[1])[:80]))
 
     report["sleeper_auction_keys"] = auction_keys
     report["sleeper_aav_rows"] = sum(
