@@ -1,23 +1,25 @@
 {
  "meta": {
   "expert": "Justin Boone (Yahoo Sports)",
-  "fetched": "2026-08-20T18:31:21+00:00",
+  "fetched": "2026-08-20T20:09:09+00:00",
   "format": "half-PPR, 12-team, $200 salary cap",
   "sources": [
    "https://sports.yahoo.com/fantasy/article/2026-fantasy-football-full-ppr-rankings-justin-boones-top-300-players-155359326.html (rendered)"
   ],
   "rank_basis": "top-300 article",
   "errors": [
-   "https://thepicks.com/us/news/nfl/2026-fantasy-football-full-ppr-rankings-justin-boone/: only 0 rows parsed",
+   "https://thepicks.com/us/news/nfl/2026-fantasy-football-full-ppr-rankings-justin-boone/: 403 Client Error: Forbidden for url: https://thepicks.com/us/news/nfl/2026-fantasy-football-full-ppr-rankings-justin-boone/",
    "https://www.aol.com/articles/2026-fantasy-football-full-ppr-155359000.html: only 0 rows parsed",
    "https://sports.yahoo.com/fantasy/article/2026-fantasy-football-full-ppr-rankings-justin-boones-top-300-players-155359326.html: only 1 rows parsed",
    "https://sports.yahoo.com/fantasy/article/2026-fantasy-football-rankings-justin-boone-top-300-players-155300098.html: only 1 rows parsed",
-   "https://www.aol.com/sports/fantasy-football-justin-boones-rankings-154116242.html: no 2026 dateline \u2014 stale mirror?",
-   "https://www.aol.com/sports/fantasy-football-justin-boones-rankings-154122967.html: no 2026 dateline \u2014 stale mirror?",
-   "https://www.aol.com/sports/fantasy-football-justin-boones-rankings-154113349.html: no 2026 dateline \u2014 stale mirror?",
-   "https://www.aol.com/sports/fantasy-football-justin-boones-rankings-154119951.html: no 2026 dateline \u2014 stale mirror?",
-   "https://www.aol.com/sports/fantasy-football-justin-boones-rankings-154119352.html: no 2026 dateline \u2014 stale mirror?",
-   "https://ca.sports.yahoo.com/news/fantasy-football-justin-boones-wide-receiver-rankings-tiers-and-salary-cap-values-154119352.html: no 2026 dateline \u2014 stale mirror?"
+   "https://sports.yahoo.com/fantasy/article/fantasy-football-justin-boones-running-backs-rankings-tiers-and-salary-cap-values-154116034.html: no 2026 dateline \u2014 stale edition?",
+   "https://www.aol.com/sports/fantasy-football-justin-boones-rankings-154116242.html: no 2026 dateline \u2014 stale edition?",
+   "https://www.aol.com/sports/fantasy-football-justin-boones-rankings-154122967.html: no 2026 dateline \u2014 stale edition?",
+   "https://sports.yahoo.com/fantasy/article/fantasy-football-justin-boones-rankings-quarterbacks-tiers-and-salary-cap-values-154113133.html: no 2026 dateline \u2014 stale edition?",
+   "https://www.aol.com/sports/fantasy-football-justin-boones-rankings-154113349.html: no 2026 dateline \u2014 stale edition?",
+   "https://sports.yahoo.com/fantasy/article/fantasy-football-justin-boones-wide-receiver-rankings-tiers-and-salary-cap-values-154119352.html: no 2026 dateline \u2014 stale edition?",
+   "https://www.aol.com/sports/fantasy-football-justin-boones-rankings-154119951.html: no 2026 dateline \u2014 stale edition?",
+   "https://ca.sports.yahoo.com/news/fantasy-football-justin-boones-wide-receiver-rankings-tiers-and-salary-cap-values-154119352.html: no 2026 dateline \u2014 stale edition?"
   ]
  },
  "overall": [
