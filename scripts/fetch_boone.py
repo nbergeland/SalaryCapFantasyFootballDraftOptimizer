@@ -73,7 +73,7 @@ def parse_overall(text):
     rows = {}
     pat = re.compile(
         r"(?m)^\s*(\d{1,3})[.)]?\s+([A-Z][A-Za-z.'\- ]+?[a-z.])"
-        r"(?:\s*[,(–—-]+\s*(?:[A-Z]{2,3}\s*[,/ ]\s*)?(" + POS_RE + r")\d*\)?)?"
+        r"(?:\s*[,(–—-]+\s*(?:[A-Z]{2,3}\s*[,/ ]?\s*)?\(?(" + POS_RE + r")\d*\)?)?"
         r"(?:\s*[,–—-]+\s*[A-Z]{2,3})?\s*$")
     for m in pat.finditer(text):
         rank = int(m.group(1))
@@ -110,12 +110,13 @@ def discover_links(page):
 
 def article_year_ok(text, want="2026"):
     """These salary-cap articles carry evergreen titles; a stale mirror would
-    silently feed last season's board. Demand the season year near the top
-    (title/dateline) before trusting a page."""
+    silently feed last season's board. The FIRST year token near the top is
+    the dateline; a mere '2026' in surrounding navigation must not pass —
+    a 2025 article slipped through exactly that way on the fourth live run."""
     head = text[:4000]
     m = re.search(r"\b(20\d{2})\b", head)
     print(f"boone: dateline year seen: {m.group(1) if m else 'none'}")
-    return want in head
+    return bool(m) and m.group(1) == want
 
 
 def derive_overall_from_values(values):
@@ -125,6 +126,25 @@ def derive_overall_from_values(values):
     ordered = sorted(values, key=lambda v: (-v["value"], v["pos"], v["name"]))
     return [{"rank": i + 1, "name": v["name"], "pos": v["pos"]}
             for i, v in enumerate(ordered)]
+
+
+def render_text(url, wait_ms=4000):
+    """Load the page in headless Chromium and return the rendered body text —
+    the last resort for articles whose list only exists client-side. One page
+    per call, closed immediately; still a polite one-shot."""
+    from playwright.sync_api import sync_playwright
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch()
+        page = browser.new_page(user_agent=UA)
+        page.goto(url, wait_until="domcontentloaded", timeout=45000)
+        try:
+            page.wait_for_load_state("networkidle", timeout=15000)
+        except Exception:                                       # noqa: BLE001
+            pass
+        page.wait_for_timeout(wait_ms)
+        text = page.inner_text("body")
+        browser.close()
+    return text
 
 
 def iframe_srcs(page):
@@ -218,6 +238,23 @@ def main(argv=None):
             except Exception as e:                              # noqa: BLE001
                 errors.append(f"{url}: {e}")
                 print(f"boone: FAILED {url}: {e}")
+
+    if len(overall) < 150:
+        for url in TOP300:
+            try:
+                text = render_text(url)
+                got = parse_overall(text)
+                print(f"boone: RENDERED {url}: {len(got)} ranked rows")
+                if len(got) < 150:
+                    idx = max(text.find("1."), 0)
+                    print("boone: rendered text sample:\n" + text[idx:idx + 1200])
+                if len(got) >= 150:
+                    overall = got
+                    sources.append(url + " (rendered)")
+                    break
+            except Exception as e:                              # noqa: BLE001
+                errors.append(f"render {url}: {e}")
+                print(f"boone: RENDER FAILED {url}: {e}")
 
     rank_basis = "top-300 article"
     pos_covered = {v["pos"] for v in values}

@@ -24,7 +24,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install requests
+      - run: pip install requests playwright
+      - name: Install headless Chromium (rendered-page fallback)
+        run: playwright install --with-deps chromium
       - name: Fetch and parse Boone articles
         run: |
           mkdir -p data
