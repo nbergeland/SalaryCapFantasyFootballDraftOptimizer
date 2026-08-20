@@ -42,10 +42,12 @@ TOP300 = [
 CAP_ARTICLES = {
     "RB": ["https://www.aol.com/sports/fantasy-football-justin-boones-rankings-154116242.html"],
     "TE": ["https://www.aol.com/sports/fantasy-football-justin-boones-rankings-154122967.html"],
-    # WR/QB slugs are discovered from links inside the articles above when
-    # not listed here; add them explicitly once known.
-    "WR": [],
-    "QB": [],
+    "QB": ["https://www.aol.com/sports/fantasy-football-justin-boones-rankings-154113349.html"],
+    "WR": [
+        "https://www.aol.com/sports/fantasy-football-justin-boones-rankings-154119951.html",
+        "https://www.aol.com/sports/fantasy-football-justin-boones-rankings-154119352.html",
+        "https://ca.sports.yahoo.com/news/fantasy-football-justin-boones-wide-receiver-rankings-tiers-and-salary-cap-values-154119352.html",
+    ],
 }
 
 POS_RE = r"(?:QB|RB|WR|TE|K|D/?ST|DEF)"
@@ -104,6 +106,25 @@ def discover_links(page):
             r'(?:justin-boone|boone|fantasy-football)[^"\' >]*\.html', page):
         urls.add(m.group(0))
     return urls
+
+
+def article_year_ok(text, want="2026"):
+    """These salary-cap articles carry evergreen titles; a stale mirror would
+    silently feed last season's board. Demand the season year near the top
+    (title/dateline) before trusting a page."""
+    head = text[:4000]
+    m = re.search(r"\b(20\d{2})\b", head)
+    print(f"boone: dateline year seen: {m.group(1) if m else 'none'}")
+    return want in head
+
+
+def derive_overall_from_values(values):
+    """Boone's $200-cap values price every position on one scale, so sorting
+    them is his cross-position board — the honest fallback when the top-300
+    article itself is an unparseable client-rendered shell."""
+    ordered = sorted(values, key=lambda v: (-v["value"], v["pos"], v["name"]))
+    return [{"rank": i + 1, "name": v["name"], "pos": v["pos"]}
+            for i, v in enumerate(ordered)]
 
 
 def iframe_srcs(page):
@@ -181,9 +202,15 @@ def main(argv=None):
         for url in urls:
             try:
                 text = strip_tags(fetch(url))
+                if not article_year_ok(text):
+                    errors.append(f"{url}: no 2026 dateline — stale mirror?")
+                    print(f"boone: REJECT {url}: not verifiably 2026")
+                    continue
                 got = parse_cap_values(text, pos)
                 print(f"boone: {pos} cap values from {url}: {len(got)} rows")
                 if got:
+                    for v in got[:3]:
+                        print(f"boone:   sample {pos}: {v['name']} ${v['value']}")
                     values.extend(got)
                     sources.append(url)
                     break
@@ -192,15 +219,26 @@ def main(argv=None):
                 errors.append(f"{url}: {e}")
                 print(f"boone: FAILED {url}: {e}")
 
+    rank_basis = "top-300 article"
+    pos_covered = {v["pos"] for v in values}
     if len(overall) < 150:
-        print("boone: ABORT — top-300 parse below threshold; not writing")
-        return 1
+        if len(values) >= 120 and len(pos_covered) >= 3:
+            overall = derive_overall_from_values(values)
+            rank_basis = "derived from salary-cap values"
+            print(f"boone: overall derived from values: {len(overall)} rows "
+                  f"across {sorted(pos_covered)}")
+            for row in overall[:10]:
+                print(f"boone:   #{row['rank']} {row['name']} ({row['pos']})")
+        else:
+            print("boone: ABORT — no top-300 and not enough cap values; not writing")
+            return 1
     data = {
         "meta": {
             "expert": "Justin Boone (Yahoo Sports)",
             "fetched": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "format": "half-PPR, 12-team, $200 salary cap",
             "sources": sources,
+            "rank_basis": rank_basis,
             "errors": errors,
         },
         "overall": overall,
