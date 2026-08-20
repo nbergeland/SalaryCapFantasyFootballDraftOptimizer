@@ -33,6 +33,8 @@ UA = ("Mozilla/5.0 (compatible; BergSheetsPersonal/1.0; "
 # article pages render the list with JavaScript and serve an empty shell
 # (verified on the first live fetch), so the mirrors go first.
 TOP300 = [
+    # third-party syndication renders the list as static HTML
+    "https://thepicks.com/us/news/nfl/2026-fantasy-football-full-ppr-rankings-justin-boone/",
     "https://www.aol.com/articles/2026-fantasy-football-full-ppr-155359000.html",
     "https://sports.yahoo.com/fantasy/article/2026-fantasy-football-full-ppr-rankings-justin-boones-top-300-players-155359326.html",
     "https://sports.yahoo.com/fantasy/article/2026-fantasy-football-rankings-justin-boone-top-300-players-155300098.html",
@@ -108,6 +110,23 @@ def iframe_srcs(page):
     return re.findall(r'<iframe[^>]+src=["\']([^"\']+)["\']', page, flags=re.I)
 
 
+def parse_embedded_json(page):
+    """Rankings living in hydration JSON inside <script> tags — the list
+    Yahoo renders client-side is usually shipped as data in the raw HTML.
+    Accept both key orders and a few key spellings."""
+    rows = {}
+    pats = [
+        re.compile(r'"(?:player_?[Nn]ame|name|full[Nn]ame)"\s*:\s*"([^"]{3,40})"[^{}]{0,220}?"(?:overall_?)?rank"\s*:\s*"?(\d{1,3})"?'),
+        re.compile(r'"(?:overall_?)?rank"\s*:\s*"?(\d{1,3})"?[^{}]{0,220}?"(?:player_?[Nn]ame|name|full[Nn]ame)"\s*:\s*"([^"]{3,40})"'),
+    ]
+    for i, pat in enumerate(pats):
+        for m in pat.finditer(page):
+            name, rank = (m.group(1), int(m.group(2))) if i == 0 else (m.group(2), int(m.group(1)))
+            if 1 <= rank <= 300 and rank not in rows and not name.isupper():
+                rows[rank] = {"rank": rank, "name": name.strip(), "pos": ""}
+    return [rows[k] for k in sorted(rows)]
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="data/boone_2026.json")
@@ -120,10 +139,19 @@ def main(argv=None):
             page = fetch(url)
             text = strip_tags(page)
             overall = parse_overall(text)
-            print(f"boone: top-300 from {url}: {len(overall)} ranked rows")
+            print(f"boone: top-300 from {url}: {len(overall)} ranked rows (text)")
+            if len(overall) < 150:
+                got = parse_embedded_json(page)
+                print(f"boone: embedded-json scan: {len(got)} ranked rows")
+                if len(got) > len(overall):
+                    overall = got
             if len(overall) >= 150:
                 sources.append(url)
                 break
+            # where is the data? print embed-ish URLs from the raw page
+            for eu in sorted(set(re.findall(
+                    r'https://[^"\' >]*(?:embed|rankings|graphite|datawrapper|infogram)[^"\' >]*', page)))[:12]:
+                print(f"boone: embed-ish url: {eu}")
             # the ranking table may live in an embedded iframe — follow
             # same-host frames before giving up on this URL
             for src in iframe_srcs(page)[:6]:
