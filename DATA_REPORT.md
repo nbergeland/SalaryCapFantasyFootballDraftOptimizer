@@ -1,6 +1,6 @@
 # Data build report
 
-- Built: 2026-08-20T20:21:50+00:00
+- Built: 2026-08-20T20:23:40+00:00
 - Season: 2026
 - Players in bundle: **610**
 - News lines: 25
