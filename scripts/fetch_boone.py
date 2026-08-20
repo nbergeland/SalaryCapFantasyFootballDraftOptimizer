@@ -40,15 +40,54 @@ TOP300 = [
     "https://sports.yahoo.com/fantasy/article/2026-fantasy-football-rankings-justin-boone-top-300-players-155300098.html",
 ]
 CAP_ARTICLES = {
-    "RB": ["https://www.aol.com/sports/fantasy-football-justin-boones-rankings-154116242.html"],
+    "RB": [
+        "https://sports.yahoo.com/fantasy/article/fantasy-football-justin-boones-running-backs-rankings-tiers-and-salary-cap-values-154116034.html",
+        "https://www.aol.com/sports/fantasy-football-justin-boones-rankings-154116242.html",
+    ],
     "TE": ["https://www.aol.com/sports/fantasy-football-justin-boones-rankings-154122967.html"],
-    "QB": ["https://www.aol.com/sports/fantasy-football-justin-boones-rankings-154113349.html"],
+    "QB": [
+        "https://sports.yahoo.com/fantasy/article/fantasy-football-justin-boones-rankings-quarterbacks-tiers-and-salary-cap-values-154113133.html",
+        "https://www.aol.com/sports/fantasy-football-justin-boones-rankings-154113349.html",
+    ],
     "WR": [
+        "https://sports.yahoo.com/fantasy/article/fantasy-football-justin-boones-wide-receiver-rankings-tiers-and-salary-cap-values-154119352.html",
         "https://www.aol.com/sports/fantasy-football-justin-boones-rankings-154119951.html",
-        "https://www.aol.com/sports/fantasy-football-justin-boones-rankings-154119352.html",
         "https://ca.sports.yahoo.com/news/fantasy-football-justin-boones-wide-receiver-rankings-tiers-and-salary-cap-values-154119352.html",
     ],
 }
+
+# a single article carrying values for EVERY position, split by section
+# headings (user-supplied). If the values on it are only visible to Fantasy
+# Ultra subscribers, the public fetch simply finds none — reported honestly,
+# never worked around: no login, no paywall circumvention, ever.
+CAP_ALL_PAGES = [
+    "https://sports.yahoo.com/fantasy/article/fantasy-ultra-has-arrived--heres-everything-you-need-to-know-125559999.html",
+]
+
+SECTION_POS = [
+    (re.compile(r"quarterback", re.I), "QB"),
+    (re.compile(r"running\s*back", re.I), "RB"),
+    (re.compile(r"wide\s*receiver", re.I), "WR"),
+    (re.compile(r"tight\s*end", re.I), "TE"),
+    (re.compile(r"kicker", re.I), "K"),
+    (re.compile(r"defen[cs]e|d/?st", re.I), "DST"),
+]
+
+
+def parse_cap_sections(text):
+    """Values article covering all positions: split on position headings and
+    parse each section with its own position tag."""
+    marks = []
+    for pat, pos in SECTION_POS:
+        m = pat.search(text)
+        if m:
+            marks.append((m.start(), pos))
+    marks.sort()
+    out = []
+    for i, (start, pos) in enumerate(marks):
+        end = marks[i + 1][0] if i + 1 < len(marks) else len(text)
+        out.extend(parse_cap_values(text[start:end], pos))
+    return out
 
 POS_RE = r"(?:QB|RB|WR|TE|K|D/?ST|DEF)"
 
@@ -218,15 +257,48 @@ def main(argv=None):
             errors.append(f"{url}: {e}")
             print(f"boone: FAILED {url}: {e}")
 
+    for url in CAP_ALL_PAGES:
+        try:
+            text = render_text(url, wait_ms=6000)
+            if not article_year_ok(text):
+                print(f"boone: REJECT {url}: not verifiably 2026")
+            else:
+                got = parse_cap_sections(text)
+                by_pos = {}
+                for v in got:
+                    by_pos[v["pos"]] = by_pos.get(v["pos"], 0) + 1
+                print(f"boone: ALL-page cap values from {url}: {len(got)} rows {by_pos}")
+                for v in got[:6]:
+                    print(f"boone:   sample: {v['name']} ({v['pos']}) ${v['value']}")
+                if len(got) >= 60 and len(by_pos) >= 3:
+                    values.extend(got)
+                    sources.append(url)
+                else:
+                    idx = max(text.find("$"), 0)
+                    print("boone: ALL-page sample near first $:\n" + text[max(0,idx-300):idx+900])
+                    print("boone: values not freely visible or unparsed — if they are "
+                          "Fantasy Ultra subscriber content, they stay out: no paywall workarounds.")
+        except Exception as e:                                  # noqa: BLE001
+            errors.append(f"{url}: {e}")
+            print(f"boone: FAILED {url}: {e}")
+
+    covered = {v["pos"] for v in values}
     for pos, urls in CAP_ARTICLES.items():
+        if pos in covered:
+            continue
         for url in urls:
             try:
                 text = strip_tags(fetch(url))
-                if not article_year_ok(text):
-                    errors.append(f"{url}: no 2026 dateline — stale mirror?")
-                    print(f"boone: REJECT {url}: not verifiably 2026")
-                    continue
-                got = parse_cap_values(text, pos)
+                got = []
+                if article_year_ok(text):
+                    got = parse_cap_values(text, pos)
+                if not got:
+                    text = render_text(url)
+                    if not article_year_ok(text):
+                        errors.append(f"{url}: no 2026 dateline — stale edition?")
+                        print(f"boone: REJECT {url}: not verifiably 2026")
+                        continue
+                    got = parse_cap_values(text, pos)
                 print(f"boone: {pos} cap values from {url}: {len(got)} rows")
                 if got:
                     for v in got[:3]:
