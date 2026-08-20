@@ -1,6 +1,6 @@
 # Data build report
 
-- Built: 2026-08-20T18:33:30+00:00
+- Built: 2026-08-20T18:35:36+00:00
 - Season: 2026
 - Players in bundle: **610**
 - News lines: 25
@@ -99,37 +99,19 @@
 - Texans D/ST: avg opponent offense rank 7.5 (vs BUF, CIN, IND, DAL) — season proj 114
 
 
-- Boone matched: 250 ranks, 0 salary-cap values
-## Boone rows with no pool match (28)
+- Boone matched: 268 ranks, 0 salary-cap values
+## Boone rows with no pool match (10)
 
-- B. Robinson (rank 2)
-- B. Robinson Jr. (rank 142)
-- C. Williams (rank 73)
 - Days of Fantasy (rank 29)
 - E. All Jr. (rank 265)
-- J. Bates (rank 255)
-- J. Brooks (rank 79)
 - J. Ferguson (rank 178)
-- J. Hill (rank 205)
-- J. Johnson (rank 159)
-- J. Lane (rank 158)
-- J. Love (rank 169)
-- J. Love (rank 37)
-- J. Taylor (rank 11)
-- J. Warren (rank 81)
 - J. Williams (rank 43)
 - J. Williams (rank 50)
-- J. Wright (rank 223)
 - K. Allen (rank 162)
 - K. Allen (rank 198)
-- K. Coleman (rank 266)
-- M. Evans (rank 56)
 - M. Washington (rank 157)
 - M. Washington Jr. (rank 153)
 - N. Whittington (rank 297)
-- R. White (rank 114)
-- T. Etienne (rank 279)
-- T. Etienne Jr. (rank 48)
 
 ## Injury disagreements (Sleeper vs ESPN) (8)
 
