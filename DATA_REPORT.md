@@ -1,6 +1,6 @@
 # Data build report
 
-- Built: 2026-08-20T20:23:40+00:00
+- Built: 2026-08-21T09:53:19+00:00
 - Season: 2026
 - Players in bundle: **610**
 - News lines: 25
@@ -14,29 +14,29 @@
 | ffc_adp | ok |
 | espn_kona | ok |
 | espn_byes | ok |
-| boone | ok (278 ranks, 0 values, 0d old) |
+| boone | ok (278 ranks, 0 values, 1d old) |
 | fantasypros | skipped (no key) |
 
 ## Counts
 
 - Sleeper players DB entries: 4386
 - Sleeper projection rows: 3301
-- Dropped (no stats, no ADP): 2371
-- ESPN matched / added: 630 / 0
-- FFC matched / added: 264 / 0
+- Dropped (no stats, no ADP): 2367
+- ESPN matched / added: 635 / 0
+- FFC matched / added: 267 / 0
 - Backfilled from the Sleeper players DB: 36 (0 team corrections)
 - Players marked OUT: 8
-- Carrying a superflex (2QB) ADP: 335 (of which QB: 45)
+- Carrying a superflex (2QB) ADP: 339 (of which QB: 45)
 - FantasyPros headlines parsed: 0
-- Pool before cutoff: 852 → kept 610
+- Pool before cutoff: 856 → kept 610
 
 ### Position breakdown
 
-- QB: 68
-- RB: 134
-- WR: 187
-- TE: 94
-- K: 95
+- QB: 70
+- RB: 133
+- WR: 194
+- TE: 89
+- K: 92
 - DST: 32
 
 ## Auction values
@@ -114,13 +114,14 @@
 - M. Washington Jr. (rank 153)
 - N. Whittington (rank 297)
 
-## Injury disagreements (Sleeper vs ESPN) (8)
+## Injury disagreements (Sleeper vs ESPN) (9)
 
 - Alec Pierce (WR): sleeper=PUP/Active espn=OUT
 - George Kittle (TE): sleeper=PUP/Active espn=OUT
 - Isaac Guerendo (RB): sleeper=PUP/Active espn=OUT
 - Jayden Higgins (WR): sleeper=IR/Active espn=DOUBTFUL
 - Luke Musgrave (TE): sleeper=PUP/Active espn=OUT
+- Mason Tipton (WR): sleeper=PUP/Active espn=OUT
 - Tip Reiman (TE): sleeper=PUP/Active espn=OUT
 - Tyrell Shavers (WR): sleeper=PUP/Active espn=OUT
 - Zach Charbonnet (RB): sleeper=PUP/Active espn=OUT
@@ -173,7 +174,7 @@ _none_
 - Jauan Jennings (WR): sleeper=105.7 espn=192.7
 - …and 146 more
 
-## ESPN rows not matched and not added (370)
+## ESPN rows not matched and not added (365)
 
 - Kene Nwangwu (NYJ RB) rank=431
 - Bam Knight (ARI RB) rank=435
@@ -187,7 +188,6 @@ _none_
 - Hollywood Brown (PHI WR) rank=1040
 - Justin Watson (HOU WR) rank=1094
 - Hunter Luepke (DAL RB) rank=1098
-- Mason Tipton (NO WR) rank=1155
 - Alec Ingold (LAC RB) rank=1161
 - Ben Sims (MIA TE) rank=1173
 - Adam Prentice (DEN RB) rank=1214
@@ -198,7 +198,6 @@ _none_
 - CJ Dippre (NE TE) rank=1239
 - Kenny Pickett (CAR QB) rank=1244
 - Matthew Hibner (BAL TE) rank=1258
-- Andrew Beck (NYJ RB) rank=1265
 - Jonathan Mingo (DAL WR) rank=1268
 - Lewis Bond (HOU WR) rank=1269
 - Johnny Mundt (PHI TE) rank=1274
@@ -215,7 +214,9 @@ _none_
 - Britain Covey (PHI WR) rank=1346
 - Ke'Shawn Williams (CIN WR) rank=1350
 - Michael Bandy (DEN WR) rank=1359
-- …and 330 more
+- Jeshaun Jones (MIN WR) rank=1360
+- Mason Kinsey (TEN WR) rank=1361
+- …and 325 more
 
 ## FFC rows with no Sleeper match (0)
 
