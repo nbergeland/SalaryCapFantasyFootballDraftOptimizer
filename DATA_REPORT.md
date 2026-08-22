@@ -1,8 +1,8 @@
 # Data build report
 
-- Built: 2026-08-21T09:53:19+00:00
+- Built: 2026-08-22T09:43:54+00:00
 - Season: 2026
-- Players in bundle: **610**
+- Players in bundle: **612**
 - News lines: 25
 
 ## Source status
@@ -14,29 +14,29 @@
 | ffc_adp | ok |
 | espn_kona | ok |
 | espn_byes | ok |
-| boone | ok (278 ranks, 0 values, 1d old) |
+| boone | ok (278 ranks, 0 values, 2d old) |
 | fantasypros | skipped (no key) |
 
 ## Counts
 
 - Sleeper players DB entries: 4386
 - Sleeper projection rows: 3301
-- Dropped (no stats, no ADP): 2367
-- ESPN matched / added: 635 / 0
-- FFC matched / added: 267 / 0
-- Backfilled from the Sleeper players DB: 36 (0 team corrections)
+- Dropped (no stats, no ADP): 2364
+- ESPN matched / added: 637 / 0
+- FFC matched / added: 266 / 0
+- Backfilled from the Sleeper players DB: 37 (0 team corrections)
 - Players marked OUT: 8
-- Carrying a superflex (2QB) ADP: 339 (of which QB: 45)
+- Carrying a superflex (2QB) ADP: 312 (of which QB: 44)
 - FantasyPros headlines parsed: 0
-- Pool before cutoff: 856 → kept 610
+- Pool before cutoff: 860 → kept 612
 
 ### Position breakdown
 
-- QB: 70
-- RB: 133
-- WR: 194
-- TE: 89
-- K: 92
+- QB: 69
+- RB: 132
+- WR: 189
+- TE: 99
+- K: 91
 - DST: 32
 
 ## Auction values
@@ -45,23 +45,22 @@
 - $/VORP scale: 0.4051 (calibration factor 0.9334)
 - ESPN-priced players: 100
 - Sleeper-priced players: 0 (auction keys seen in the feed: none)
-- Mean abs error of the VORP model vs ESPN prices: 5.72
+- Mean abs error of the VORP model vs ESPN prices: 5.73
 
 ## Marked OUT (excluded from recommendations) (8)
 
 - Brandon Aiyuk (SF WR): sleeper injury_status=DNR, espn injuryStatus=OUT
 - Jack Stoll (CLE TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Jaren Kanak (TEN TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- Jayden Higgins (HOU WR): sleeper injury_status=IR
+- Jayden Higgins (HOU WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Jerome Ford (WAS RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - John Michael Gyllenborg (KC TE): sleeper injury_status=IR
 - Julian Hill (NE TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Ricky Pearsall (SF WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 
-## Teamless season-enders dropped (retired-player DB residue) (3)
+## Teamless season-enders dropped (retired-player DB residue) (2)
 
 - Adam Vinatieri (K)
-- Hale Hentges (TE)
 - Stephen Hauschka (K)
 
 ## D/ST opening-month schedule (softest slate first) (32)
@@ -100,9 +99,10 @@
 - Texans D/ST: avg opponent offense rank 7.5 (vs BUF, CIN, IND, DAL) — season proj 114
 
 
-- Boone matched: 268 ranks, 0 salary-cap values
-## Boone rows with no pool match (10)
+- Boone matched: 266 ranks, 0 salary-cap values
+## Boone rows with no pool match (12)
 
+- C. Allen (rank 188)
 - Days of Fantasy (rank 29)
 - E. All Jr. (rank 265)
 - J. Ferguson (rank 178)
@@ -113,13 +113,13 @@
 - M. Washington (rank 157)
 - M. Washington Jr. (rank 153)
 - N. Whittington (rank 297)
+- R. White (rank 114)
 
-## Injury disagreements (Sleeper vs ESPN) (9)
+## Injury disagreements (Sleeper vs ESPN) (8)
 
 - Alec Pierce (WR): sleeper=PUP/Active espn=OUT
 - George Kittle (TE): sleeper=PUP/Active espn=OUT
 - Isaac Guerendo (RB): sleeper=PUP/Active espn=OUT
-- Jayden Higgins (WR): sleeper=IR/Active espn=DOUBTFUL
 - Luke Musgrave (TE): sleeper=PUP/Active espn=OUT
 - Mason Tipton (WR): sleeper=PUP/Active espn=OUT
 - Tip Reiman (TE): sleeper=PUP/Active espn=OUT
@@ -174,7 +174,7 @@ _none_
 - Jauan Jennings (WR): sleeper=105.7 espn=192.7
 - …and 146 more
 
-## ESPN rows not matched and not added (365)
+## ESPN rows not matched and not added (363)
 
 - Kene Nwangwu (NYJ RB) rank=431
 - Bam Knight (ARI RB) rank=435
@@ -198,6 +198,7 @@ _none_
 - CJ Dippre (NE TE) rank=1239
 - Kenny Pickett (CAR QB) rank=1244
 - Matthew Hibner (BAL TE) rank=1258
+- Andrew Beck (NYJ RB) rank=1265
 - Jonathan Mingo (DAL WR) rank=1268
 - Lewis Bond (HOU WR) rank=1269
 - Johnny Mundt (PHI TE) rank=1274
@@ -215,8 +216,7 @@ _none_
 - Ke'Shawn Williams (CIN WR) rank=1350
 - Michael Bandy (DEN WR) rank=1359
 - Jeshaun Jones (MIN WR) rank=1360
-- Mason Kinsey (TEN WR) rank=1361
-- …and 325 more
+- …and 323 more
 
 ## FFC rows with no Sleeper match (0)
 
