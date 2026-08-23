@@ -39,7 +39,7 @@ exactly. On Safari/iPhone, export after entering keepers — belt and suspenders
 | Platform | How it works | Hands-free? |
 |---|---|---|
 | **Sleeper** | Enter your username → pick your league → **Auto-sync every 5s**. Pulls roster slots, budget, scoring, draft type, and your draft slot, then every pick and price as they happen. No login needed — Sleeper's API is public. | ✅ fully |
-| **ESPN** | Drag the generated **📡 BERG ESPN bridge** bookmarklet to your bookmarks bar. On draft day, click it once on a logged-in ESPN tab — it streams picks and bid amounts to the app every 12s. | ✅ after one click |
+| **ESPN** | Enter your **League ID** (or paste the league URL) → **Auto-sync every 10s**. Reads teams, slots, budget and every pick with its price straight from ESPN's API — verified to allow cross-origin reads from the hosted page. Public leagues need no login; private leagues work when this browser is logged into espn.com (Safari's cookie rules may block that — the **📡 bridge** bookmarklet and JSON paste remain as fallbacks). | ✅ fully |
 | **Yahoo** | Drag the **📡 BERG Yahoo bridge** bookmarklet, then click it in the draft room with the **Draft Results** panel visible — results stream over every 8s. | ✅ after one click |
 
 Manual entry is always available and takes about three seconds per sale. Bridges require
@@ -52,6 +52,16 @@ before the real thing.**
   you could build without them. The discipline line: bid to it, never past it.
 - **Optimal completion** — the best way to finish your starters with the money and slots
   you have left, re-solved after every pick (~150 ms).
+- **Hard positional caps** — QB, TE, K and DST are never recommended beyond what your
+  lineup can start (superflex counts toward QB, so SF leagues still plan two). Once you
+  have your starter, every further one is a $0 "pass" and never enters a plan.
+- **Suggested next picks** — three real options for your next move: in snake, the plan's
+  pick plus the strongest alternative lines, each judged by where the whole draft ends
+  up; in auction, the optimizer's top remaining targets with their max bids.
+- **League review** (Review tab) — after (or during) the draft, every team's roster,
+  best projected lineup, Monte Carlo floor/median/ceiling, spent vs value, steals and
+  overpays — with your team ranked against the room. Team rosters come from a synced
+  league or snake pick order; unattributable manual-auction rivals grade as one pool.
 - **Adj$** — each player's true price in *your* room: model value blended with market
   AAV, corrected for live auction inflation (money left ÷ value left), which keepers
   push upward.
@@ -259,6 +269,7 @@ live re-optimization and instant max-bid advice possible. Monte Carlo sits on to
 | `tests/test_persistence.js` | Playwright suite for keeper/draft state survival across storage eviction |
 | `tests/test_superflex.js` | Playwright suite for superflex leagues (optimizer, ranks, sync, sim) |
 | `tests/test_snake_plan.js` | Playwright suite for snake plan shape (QB timing, TE stacking, K/DST last) |
+| `tests/test_caps_review.js` | Playwright suite for hard positional caps, the league review, next-pick options, and ESPN sync wiring |
 | `.nojekyll` | Lets Pages serve straight from a branch — see below |
 | `optimizer.py` | Python optimization engine (PuLP) |
 | `DraftOptimizer.ipynb` | Executed reference notebook |

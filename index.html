@@ -172,6 +172,7 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
 <nav class="tabs">
   <button data-tab="draft" class="active">Draft</button>
   <button data-tab="data">Data &amp; News</button>
+  <button data-tab="review">Review</button>
   <button data-tab="settings">Settings</button>
   <button data-tab="guide">Guide</button>
 </nav>
@@ -246,6 +247,11 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         <h2>My roster <button class="small" id="kpJump" style="float:right"
           title="Keeper league? Enter kept players (yours and rivals') before the draft">keepers</button></h2>
         <div id="roster"></div>
+      </div>
+      <div class="card">
+        <h2 id="nextPicksHead">Suggested next picks</h2>
+        <div class="note" id="nextPicksNote" style="margin-bottom:6px"></div>
+        <div id="nextPicks"></div>
       </div>
       <div class="card">
         <h2>Optimal completion</h2>
@@ -416,35 +422,40 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         <p class="note" id="slStatus">Reads your league, roster slots, auction budget and
           every pick (with prices) from Sleeper's public API — no login needed.</p>
 
-        <h3 style="margin-top:14px">ESPN — paste sync</h3>
+        <h3 style="margin-top:14px">ESPN — live auto-sync</h3>
         <p>
           <input type="text" id="esLeague" placeholder="League ID or paste league URL" style="width:210px"
             title="The number in your ESPN league URL — or just paste the whole URL and I'll pull it out">
           <input type="number" id="esSeason" value="2026" style="width:74px" title="Season">
-          <a id="esLink" href="#" target="_blank" rel="noopener">open league JSON ↗</a>
         </p>
         <p class="note" id="esIdHint">ESPN identifies leagues by <b>number</b>, not name. Open your
           league on espn.com and copy the digits after <code>leagueId=</code> — e.g.
           <code>fantasy.espn.com/football/league?leagueId=<b>123456</b></code>. Pasting the
           whole URL works too.</p>
-        <p class="note">ESPN blocks cross-site reads from private leagues (login cookies),
-          so full auto-sync isn't possible from a static page. Instead: log into ESPN in
-          this browser, click the link above, copy the whole JSON page, paste below, and
-          re-paste whenever you want to re-sync — picks and prices apply in one shot.</p>
-        <textarea id="esPaste" placeholder='Paste the ESPN league JSON here…' style="min-height:70px"></textarea>
         <p>
-          <button id="esRead">Read JSON</button>
+          <button class="primary" id="esConnect">Sync picks now</button>
+          <button id="esAuto">▶ Auto-sync every 10s</button>
           My team: <select id="esMyTeam" style="max-width:170px"></select>
           <label class="note"><input type="checkbox" id="esApplySettings" checked>
             apply budget/slots</label>
-          <button class="primary" id="esApply">Apply picks</button>
         </p>
+        <p class="note">Reads your league, teams and every pick (with auction prices)
+          straight from ESPN — public leagues need no login; for a private league,
+          log into espn.com in this browser first. Pick your team once and every
+          sync lands picks automatically.</p>
         <p class="note" id="esStatus"></p>
-        <p class="note">🔗 <b>Live bridge (no more pasting):</b>
+        <p class="note">🔗 <b>Fallbacks if the direct read is blocked</b> (private league
+          + Safari's cookie rules, workplace proxies):
           <a id="esBridge" href="#">📡 BERG ESPN bridge</a> — drag this to your
-          bookmarks bar. On draft day: log into ESPN in a tab, click the bookmark
-          once — it opens your BERG SHEETS tab and streams every pick and price here
-          automatically every 12 seconds. Keep the ESPN tab open.</p>
+          bookmarks bar; on draft day log into ESPN in a tab, click the bookmark once,
+          and it streams every pick here every 12 seconds. Or copy the
+          <a id="esLink" href="#" target="_blank" rel="noopener">league JSON ↗</a>
+          and paste it below.</p>
+        <textarea id="esPaste" placeholder='Paste the ESPN league JSON here…' style="min-height:70px"></textarea>
+        <p>
+          <button id="esRead">Read JSON</button>
+          <button id="esApply">Apply picks</button>
+        </p>
 
         <h3 style="margin-top:14px">Yahoo — paste sync</h3>
         <p class="note">Yahoo's API needs an OAuth app + server, which a local page can't
@@ -471,6 +482,23 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         <h2>2026 offseason briefing</h2>
         <p class="note" id="newsAsOf"></p>
         <div id="news"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ REVIEW TAB ============================ -->
+<section id="tab-review" class="hidden">
+  <div class="layout">
+    <div>
+      <div class="card">
+        <h2>League review — how the room drafted</h2>
+        <p class="note">Every team's roster, best projected lineup, and a Monte Carlo
+          season simulation — so you can size up your draft against the competition.
+          Live during the draft, final once the board empties. Team-by-team rosters
+          come from a synced league (Sleeper or ESPN) or from snake pick order;
+          a manual auction's rivals are graded as one pool.</p>
+        <div id="review"></div>
       </div>
     </div>
   </div>
@@ -574,10 +602,21 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
         are usually below-market, the remaining pool inflates: watch Adj$ rise above
         AAV. That gap is your league's real price list.</li>
       <li><b>Pairing with your real draft:</b> in <i>Data &amp; News → League sync</i>,
-        connect Sleeper (live auto-sync of every pick and price), ESPN (paste the league
-        JSON), or Yahoo (paste the Draft Results text). Synced picks flow into the log
-        exactly like manual ones — you can stop logging by hand entirely in a Sleeper
-        auction.</li>
+        connect Sleeper (username → live auto-sync) or ESPN (League ID → live
+        auto-sync; private leagues need this browser logged into espn.com, with a
+        bridge bookmarklet and JSON paste as fallbacks), or paste Yahoo's Draft
+        Results text. Synced picks flow into the log exactly like manual ones — you
+        can stop logging by hand entirely.</li>
+      <li><b>One of each, and no more:</b> QB, TE, K and DST are hard-capped at what
+        your lineup can start — once you have your starter, the model never
+        recommends a second (no bids, no plan seats, no urgency). Superflex leagues
+        count the SFLEX seat, so two quarterbacks still get planned there. RB/WR
+        depth stays uncapped — that's the depth that actually rotates in.</li>
+      <li><b>League review (Review tab):</b> sizes up every team's draft — best
+        projected lineup, Monte Carlo floor/median/ceiling, dollars spent vs value
+        won, steals and overpays — and ranks your team against the room. Rosters
+        come from a synced league or snake pick order; a manual auction's rivals
+        are graded as one pool.</li>
       <li><b>Every nomination (auction):</b> type the player's name, click the row (or
         dot). The sticky bar shows the one number that matters — <b>Max bid</b>. Bid to
         it, never past it.</li>
@@ -798,6 +837,7 @@ function adoptLeague(lg){
   applyMarks(lg.marks);
   if(typeof SYNC!=="undefined"){          // league sync belongs to the old league
     if(SYNC.sl.timer) sleeperAutoToggle();
+    if(SYNC.es.timer) espnAutoToggle();
     SYNC.sl.applied = new Set(); SYNC.es.settingsApplied = false;
   }
 }
@@ -1385,6 +1425,27 @@ function flexVariants(remaining, flexOpen){
   return variants;
 }
 
+// Hard positional caps on recommendations: the lineup's single-starter
+// positions are never recommended in multiples. A second QB/TE/K/DST is a
+// roster spot that beats nobody's bye week — the waiver wire is the backup
+// there — so the cap is the number of lineup seats that can start the
+// position: QB counts superflex seats (an SF league still plans two
+// quarterbacks), TE/K/DST count their dedicated slots. RB/WR stay uncapped —
+// their depth churns through flex, byes and injuries every week.
+function myPosCounts(){
+  const c={QB:0,RB:0,WR:0,TE:0,K:0,DST:0};
+  for(const p of S.players) if(p.drafted&&p.drafted.mine) c[p.pos]++;
+  return c;
+}
+function posCap(pos){
+  const sl=S.settings.slots;
+  if(pos==="QB")  return Math.max(1,(sl.QB||0)+(sl.SFLEX||0));
+  if(pos==="TE")  return Math.max(1, sl.TE||0);
+  if(pos==="K")   return Math.max(1, sl.K||0);
+  if(pos==="DST") return Math.max(1, sl.DST||0);
+  return Infinity;
+}
+
 // Superflex without touching the DP: a superflex slot is either a QB or an
 // ordinary flex, so enumerate the split (s_qb of the open SFLEX slots go to
 // QB, the rest join the FLEX pool) and let the existing exact solver run once
@@ -1392,15 +1453,28 @@ function flexVariants(remaining, flexOpen){
 // and the DP itself never learns a new slot type. Every caller that solves a
 // completion must enumerate the same way, max bids included, or the max bid
 // and the optimal roster would disagree about how many QBs are being bought.
-function slotVariants(remaining, flexOpen, sflexOpen){
+// `assumePos` counts one extra owned player at that position — the max-bid
+// solver uses it so a completion priced around winning a TE can't sneak a
+// second TE into the flex.
+function slotVariants(remaining, flexOpen, sflexOpen, assumePos){
   const S_ = sflexOpen||0;
-  if(S_===0) return flexVariants(remaining, flexOpen);
-  const out=[];
-  for(let q=0;q<=S_;q++){
-    const rem={...remaining}; rem.QB=(rem.QB||0)+q;
-    for(const v of flexVariants(rem, flexOpen+(S_-q))) out.push(v);
+  let out;
+  if(S_===0) out = flexVariants(remaining, flexOpen);
+  else{
+    out=[];
+    for(let q=0;q<=S_;q++){
+      const rem={...remaining}; rem.QB=(rem.QB||0)+q;
+      for(const v of flexVariants(rem, flexOpen+(S_-q))) out.push(v);
+    }
   }
-  return out;
+  // apply the hard caps: no variant may hand a capped position more seats
+  // than the cap leaves open. Math.max keeps a hand-drafted overage (two TEs
+  // entered manually) from declaring every completion infeasible — the cap
+  // stops NEW recommendations, it never breaks an existing roster.
+  const own=myPosCounts();
+  if(assumePos) own[assumePos]=(own[assumePos]||0)+1;
+  return out.filter(v=>POSITIONS.every(pos=>
+    (own[pos]||0)+(v[pos]||0) <= Math.max(posCap(pos), own[pos]||0)));
 }
 // drop one open slot that `pos` could have filled (dedicated first, then
 // FLEX, then SFLEX). Returns null when the position has no seat to give up.
@@ -1435,7 +1509,8 @@ function solveCompletion(opt){
   const B = o.budget!=null ? o.budget : budgetForOptimizer(assign).optBudget;
   const cands = o.cands || candidatesByPos(o.excludeId);
   const cache = o.cache || new Map();
-  const variants = slotVariants(assign.remaining, assign.flexOpen, assign.sflexOpen);
+  const variants = slotVariants(assign.remaining, assign.flexOpen,
+    assign.sflexOpen, o.assumePos);
   let best=null;
   for(const v of variants){
     // positions absent from the pool entirely (e.g. a sheet with no DST rows)
@@ -1466,6 +1541,7 @@ function computeMaxBids(base){
   if(!base){ return {bids:new Map(), withoutCache:new Map()}; }
   const bids = new Map();
   const assign = myRosterAssignment();
+  const ownPos = myPosCounts();
   const {optBudget} = budgetForOptimizer(assign);
   const inOpt = new Set(base.chosen.map(r=>playerId(r.p)));
   // best total without each optimal-roster member (also powers alternates)
@@ -1483,7 +1559,9 @@ function computeMaxBids(base){
     const less = slotsMinus(assign, pos);
     if(!less){ minus[pos]=null; continue; }
     let arr=null, refs=null;
-    for(const v of slotVariants(less.remaining, less.flexOpen, less.sflexOpen)){
+    // the completion assumes the bid target occupies the removed seat, so a
+    // capped position can't double up through the flex behind the bid
+    for(const v of slotVariants(less.remaining, less.flexOpen, less.sflexOpen, pos)){
       const groups = POSITIONS.filter(q=>v[q]>0 && cands[q].length>0).map(q=>{
         const key=q+"|"+v[q];
         let table=cache.get(key);
@@ -1509,6 +1587,9 @@ function computeMaxBids(base){
   for(const r of M.rows){
     if(r.p.drafted || r.p.out || r.p.dnd) continue;
     const id = playerId(r.p), pos=r.p.pos;
+    // at the hard cap for this position — one starter set is enough, so
+    // every further QB/TE/K/DST is a pass regardless of price
+    if(ownPos[pos] >= posCap(pos)){ bids.set(id, 0); continue; }
     const m = minus[pos];
     if(!m){ bids.set(id, 0); continue; }
     const hardCap = pos==="DST" ? Math.max(1, S.settings.dstCap||1) : Infinity;
@@ -1521,7 +1602,8 @@ function computeMaxBids(base){
       if(completionHas(m, left, id)){
         const a = myRosterAssignment();
         Object.assign(a, slotsMinus(a, pos));   // same seat the minus table gave up
-        const ex = solveCompletion({excludeId:id, budget:left, assign:a});
+        const ex = solveCompletion({excludeId:id, budget:left, assign:a,
+          assumePos:pos});
         compl = ex? ex.total : -Infinity;
       }
       return r.rpts + compl;
@@ -1692,7 +1774,8 @@ function snakeCandidates(st, n, nxt, cur, picksAfter, rule, rd){
     +st.flexOpen+st.sflexOpen+st.benchOpen;
   const deferKD = picksAfter>=kdNeed && otherOpen>0;
   const benchPos=["QB","RB","WR","TE"].filter(p=>
-    !(p==="QB"&&st.benchQB>=1) && !(p==="TE"&&st.benchTE>=1));
+    st.counts[p]<posCap(p)
+    && !(p==="QB"&&st.benchQB>=1) && !(p==="TE"&&st.benchTE>=1));
   const laterFor={};
   const later=fit=>{
     if(!(fit in laterFor))
@@ -1706,6 +1789,10 @@ function snakeCandidates(st, n, nxt, cur, picksAfter, rule, rd){
   for(const pos of POSITIONS){
     const r=avail[pos];
     if(!r) continue;
+    // hard cap: the plan never holds more QB/TE/K/DST than the lineup can
+    // start (SFLEX seats count for QB) — a second one is a wasted pick, and
+    // the waiver wire is the real backup at single-starter positions
+    if(st.counts[pos]>=posCap(pos)) continue;
     if(rule && !rule(r.p.pos, rd, st.counts)) continue;
     let fit=null;
     if(st.need[r.p.pos]>0){
@@ -1720,7 +1807,9 @@ function snakeCandidates(st, n, nxt, cur, picksAfter, rule, rd){
     else if(st.benchOpen>0){
       // bench = depth that actually rotates into lineups: RB/WR churn
       // through flex, byes and injuries; single-starter positions are
-      // insurance at best — no K/DST, at most one backup QB, one bench TE
+      // insurance at best — no K/DST, and the hard cap above already keeps
+      // backups off the bench wherever the position is at its cap (these
+      // checks still bite when the cap is above one, e.g. superflex QBs)
       if(r.p.pos==="K"||r.p.pos==="DST") continue;
       if(r.p.pos==="QB"&&st.benchQB>=1) continue;
       if(r.p.pos==="TE"&&st.benchTE>=1) continue;
@@ -2333,11 +2422,16 @@ function recompute(){
 }
 
 /* ============================ draft actions ============================ */
-function applyPick(p, price, mine){  // shared by manual drafting and league sync
+function applyPick(p, price, mine, by){  // shared by manual drafting and league sync
   p.drafted = {price:Math.max(1,Math.round(price)), mine};
+  // `by` is the drafting team's label from a synced league — it powers the
+  // post-draft review's team-by-team breakdown, so keep it on both records
+  if(by) p.drafted.by = by;
   rebuildModel();   // cheap; snapshots post-pick positional value remaining
-  S.log.push({id:playerId(p), name:p.name, pos:p.pos, price:p.drafted.price,
-    mine, n:S.log.length+1, left:M.posValue[p.pos].pct});
+  const e={id:playerId(p), name:p.name, pos:p.pos, price:p.drafted.price,
+    mine, n:S.log.length+1, left:M.posValue[p.pos].pct};
+  if(by) e.by = by;
+  S.log.push(e);
 }
 function draftPlayer(p, price, mine){
   applyPick(p, price, mine);
@@ -2843,6 +2937,77 @@ function renderOptimal(){
   el.appendChild(d);
 }
 
+/* ---------- suggested next picks: three real options, not one ---------- */
+// snake: every distinct candidate for my next pick, each line finished with
+// the plan's own greedy and judged on the full objective — so option 2 is a
+// genuinely different draft, not the second-best marginal score at this pick
+function snakeNextOptions(k){
+  const cur=currentOverallPick(), T=S.settings.teams;
+  const st=snakePlanState();
+  const picks=myPickNumbers().filter(n=>n>=cur).slice(0, snakeSlotsLeft(st));
+  if(!picks.length) return [];
+  const n=picks[0], nxt=picks[1]||n+2*T;
+  const cands=snakeCandidates(st, n, nxt, cur, picks.length-1, null, Math.ceil(n/T));
+  const seen=new Set(), out=[];
+  for(const c of cands){
+    const id=playerId(c.r.p);
+    if(seen.has(id)) continue; seen.add(id);
+    const probe=snakeCloneState(st);
+    snakeTake(probe, c.r, c.role, n);
+    snakeGreedyFill(probe, picks, 1, cur, T, null);
+    out.push({r:c.r, role:c.role, val:snakePlanValue(probe.plan)});
+  }
+  out.sort((a,b)=>b.val-a.val);
+  return out.slice(0,k).map((o,i,arr)=>({...o, lose:Math.round(arr[0].val-o.val)}));
+}
+// auction: the optimizer's most valuable remaining targets, max bid attached
+function auctionNextOptions(k){
+  if(!R.sol || R.sol.snake) return [];
+  return R.sol.chosen.filter(r=>!r.p.drafted)
+    .map(r=>({r, bid:R.bids.get(playerId(r.p))||0}))
+    .sort((a,b)=>b.r.vorp-a.r.vorp).slice(0,k);
+}
+function renderNextPicks(){
+  const el=$("#nextPicks"); if(!el) return;
+  const head=$("#nextPicksHead"), note=$("#nextPicksNote");
+  el.innerHTML="";
+  if(isSnake()){
+    head.textContent="Next pick — 3 options";
+    note.textContent="Three ways to spend your next pick: the plan's choice first, then "+
+      "the strongest alternatives — each judged by where the whole draft lands if you "+
+      "start there, not by this pick alone.";
+    const opts=snakeNextOptions(3);
+    if(!opts.length){ el.innerHTML='<p class="note">No picks left to plan.</p>'; return; }
+    opts.forEach((o,i)=>{
+      const d=document.createElement("div"); d.className="roster-slot";
+      d.style.cursor="pointer";
+      d.innerHTML=`<span class="nm">${i+1}. <span class="pos ${o.r.p.pos}">${o.r.p.pos}</span> `+
+        `${esc(o.r.p.name)} <span class="pill">${o.role==="BN"?"bench":o.role}</span>`+
+        (i===0?' <span class="pill up">plan</span>':'')+`</span>`+
+        `<span>${i===0? Math.round(o.val)+" plan pts"
+                      : (o.lose>0? "−"+o.lose+" pts vs #1" : "dead even")}</span>`;
+      d.addEventListener("click",()=>selectPlayer(playerId(o.r.p)));
+      el.appendChild(d);
+    });
+  }else{
+    head.textContent="Next targets — 3 options";
+    note.textContent="The optimizer's three most valuable remaining buys. Nominate them "+
+      "when the room is poor, and bid to the max — never past it.";
+    const opts=auctionNextOptions(3);
+    if(!opts.length){ el.innerHTML='<p class="note">Starters are covered — '+
+      'everything left is bench money.</p>'; return; }
+    opts.forEach((o,i)=>{
+      const d=document.createElement("div"); d.className="roster-slot";
+      d.style.cursor="pointer";
+      d.innerHTML=`<span class="nm">${i+1}. <span class="pos ${o.r.p.pos}">${o.r.p.pos}</span> `+
+        `${esc(o.r.p.name)}</span>`+
+        `<span>~${fmt$(o.r.adj)} · max ${fmt$(o.bid)}</span>`;
+      d.addEventListener("click",()=>selectPlayer(playerId(o.r.p)));
+      el.appendChild(d);
+    });
+  }
+}
+
 function renderNominate(){
   const el=$("#nominate"); el.innerHTML="";
   const card=el.closest(".card");
@@ -2853,10 +3018,12 @@ function renderNominate(){
       "the dropoff vs the best same-position player likely left for you.";
     const assign=myRosterAssignment();
     const cur=currentOverallPick(), nxt=nextMyPickAfter(cur);
-    const fits=r=> assign.remaining[r.p.pos]>0
+    const own=myPosCounts();
+    // the hard cap gates urgency too — a second TE is never "take now"
+    const fits=r=> own[r.p.pos]<posCap(r.p.pos) && (assign.remaining[r.p.pos]>0
       || (assign.flexOpen>0 && FLEX_POS.includes(r.p.pos))
       || (assign.sflexOpen>0 && SFLEX_POS.includes(r.p.pos))
-      || (S.settings.bench-assign.bench.length)>0;
+      || (S.settings.bench-assign.bench.length)>0);
     const ideas=M.rows.filter(r=>!r.p.drafted && !r.p.out && !r.p.dnd && fits(r))
       .sort((a,b)=>b.rpts-a.rpts).slice(0,40)
       .map(r=>({r, u:snakeUrgency(r, nxt)}))
@@ -3161,7 +3328,7 @@ function gotoKeepers(){
    ===================================================================== */
 const SYNC = {sl:{userId:null, leagues:[], league:null, users:[], draftId:null,
                   applied:new Set(), timer:null},
-              es:{data:null, playersById:null}};
+              es:{data:null, playersById:null, timer:null}};
 
 function normName(s){ return String(s).toLowerCase()
   .replace(/\b(jr|sr|ii|iii|iv|v)\b\.?/g,"").replace(/[^a-z]/g,""); }
@@ -3193,8 +3360,9 @@ function applyExternalPicks(list){
     if(p.drafted){ skipped++; continue; }
     if(pk.keeper){   // platforms flag keepers in the same feed as picks
       p.drafted={price:Math.max(1,Math.round(pk.price||1)), mine:!!pk.mine, keeper:true};
+      if(pk.by) p.drafted.by=pk.by;
       keepers++;
-    }else{ applyPick(p, pk.price||1, !!pk.mine); applied++; }
+    }else{ applyPick(p, pk.price||1, !!pk.mine, pk.by); applied++; }
   }
   if(applied||keepers) recompute();
   return {applied, keepers, skipped, unmatched};
@@ -3281,6 +3449,8 @@ async function sleeperSync(){
     if(!SYNC.sl.draftId){ slStatus("Load a league (with a draft) first."); return; }
     const picks=await slFetch(`draft/${SYNC.sl.draftId}/picks`);
     const me=$("#slMyTeam").value;
+    const nameOf={};   // rival attribution for the post-draft review
+    for(const u of SYNC.sl.users) nameOf[u.user_id]=u.display_name||("Team "+u.user_id);
     const fresh=[];
     for(const pk of (picks||[])){
       const key=pk.player_id||String(pk.pick_no);
@@ -3291,7 +3461,8 @@ async function sleeperSync(){
         name:(md.first_name||"")+" "+(md.last_name||""),
         pos:normPos(md.position), team:md.team,
         price:+(md.amount||0)||1,
-        mine: pk.picked_by===me});
+        mine: pk.picked_by===me,
+        by: nameOf[pk.picked_by]||null});
     }
     const res=applyExternalPicks(fresh);
     slStatus(`Synced ${picks?picks.length:0} picks — ${res.applied} new applied, `+
@@ -3418,7 +3589,7 @@ function espnIngest(data, live){
   if(live){
     if(!sel.value){
       SYNC.es.livePending=true;
-      esStatus(`Live bridge connected — ${picks.length} picks seen. Select your team above; `+
+      esStatus(`Live sync connected — ${picks.length} picks seen. Select your team above; `+
         `picks then apply automatically on every update.`);
       return;
     }
@@ -3426,6 +3597,48 @@ function espnIngest(data, live){
   }else{
     esStatus(`Read OK: ${data.teams?data.teams.length:0} teams, ${byId.size} rostered `+
       `players, ${picks.length} draft picks. Pick your team and Apply.`);
+  }
+}
+// league-ID live sync: fetch the league JSON straight from this page, exactly
+// like the Sleeper poll. ESPN's fantasy API answers cross-origin reads with
+// the caller's origin echoed and credentials allowed (verified live from the
+// hosted origin), so public leagues sync with no login at all, and private
+// leagues sync when this browser is logged into ESPN and sends its cookies
+// cross-site. Where a browser refuses (Safari's third-party-cookie block),
+// the honest fallbacks below still exist: the bridge bookmarklet or paste.
+async function espnFetchNow(){
+  const id=espnLeagueId();
+  if(!id){ esStatus("Enter your League ID (or paste your league URL) first."); return false; }
+  if(!SYNC.es.timer) esStatus(`Fetching league ${id}…`);
+  try{
+    const r=await fetch(espnUrl(), {credentials:"include"});
+    if(!r.ok){
+      if(r.status===401||r.status===403){
+        esStatus(`ESPN answered ${r.status} — a private league. Log into espn.com in `+
+          `this browser and try again; if your browser blocks cross-site cookies `+
+          `(Safari does), use the 📡 bridge bookmarklet below — it reads ESPN from `+
+          `your logged-in tab — or paste the league JSON.`);
+        if(SYNC.es.timer) espnAutoToggle();
+      }else esStatus(`ESPN answered HTTP ${r.status} — check the League ID and season.`);
+      return false;
+    }
+    espnIngest(await r.json(), true);
+    return true;
+  }catch(e){
+    esStatus(`Couldn't reach ESPN from this page (${e.message}) — the browser or ESPN `+
+      `blocked the cross-site read. Use the 📡 bridge bookmarklet below or paste the JSON.`);
+    if(SYNC.es.timer) espnAutoToggle();
+    return false;
+  }
+}
+function espnAutoToggle(){
+  if(SYNC.es.timer){
+    clearInterval(SYNC.es.timer); SYNC.es.timer=null;
+    $("#esAuto").textContent="▶ Auto-sync every 10s";
+  }else{
+    SYNC.es.timer=setInterval(espnFetchNow, 10000);
+    $("#esAuto").textContent="⏸ Stop auto-sync";
+    espnFetchNow();
   }
 }
 function espnRead(){
@@ -3457,12 +3670,16 @@ function espnApply(opts){
   const me=+$("#esMyTeam").value;
   const dd=data.draftDetail||{};
   const all=dd.picks||[];
+  const tname=new Map();   // rival attribution for the post-draft review
+  for(const t of (data.teams||[]))
+    tname.set(t.id, t.name||((t.location||"")+" "+(t.nickname||"")).trim()||("Team "+t.id));
   // ESPN pre-populates every future slot with playerId -1; those aren't picks
   const made=all.filter(pk=>pk.playerId>0);
   const picks=made.map(pk=>{
     const pl=SYNC.es.playersById.get(pk.playerId)||{};
     return {name:pl.name, pos:pl.pos, team:"", keeper:!!pk.keeper,
-      price:+(pk.bidAmount||0)||1, mine:pk.teamId===me};
+      price:+(pk.bidAmount||0)||1, mine:pk.teamId===me,
+      by:tname.get(pk.teamId)||null};
   });
   const res=applyExternalPicks(picks);
   if(!res.applied && !res.keepers && !live) recompute();  // settings may have changed
@@ -3472,7 +3689,7 @@ function espnApply(opts){
   if(res.skipped) parts.push(`${res.skipped} already recorded`);
   if(res.unmatched.length) parts.push(`unmatched: ${res.unmatched.slice(0,3).join(", ")}`+
     (res.unmatched.length>3?"…":""));
-  const stamp=live? `Live bridge ✓ ${new Date().toLocaleTimeString()} — ` : "";
+  const stamp=live? `Live sync ✓ ${new Date().toLocaleTimeString()} — ` : "";
   if(!made.length){
     const waiting=all.length? ` ESPN has ${all.length} empty pick slots ready.` : "";
     esStatus(`${stamp}Connected to your league — ${data.teams.length} teams, settings imported.`+
@@ -3735,6 +3952,176 @@ function recapText(){
   return lines.join("\n");
 }
 
+/* ---------- post-draft league review ----------
+   Sizes up every team's draft, not just mine. Rosters are reconstructed
+   from whatever attribution exists: synced leagues carry the platform's
+   team name on each pick (`by`), snake drafts recover the team from the
+   pick number's serpentine slot, and anything unattributable (a manual
+   auction's rivals) pools as "the field" — shown, but never ranked as if
+   it were one team. */
+function teamOfSnakePick(n){
+  const T=S.settings.teams, r=Math.ceil(n/T), i=n-(r-1)*T;
+  return r%2===1 ? i : T+1-i;
+}
+// best season lineup for [{pos,pts}] under the league's slots. Same fill
+// order as the simulator's weekly lineup (dedicated seats, then FLEX, then
+// SFLEX from what's left — optimal because every FLEX position is also
+// SFLEX-eligible); flex points are credited to the position of the player
+// sitting in the seat, which is what the strengths matrix reads.
+function bestLineup(players){
+  const slots=S.settings.slots;
+  const byPos={QB:0,RB:0,WR:0,TE:0,K:0,DST:0};
+  const flexPool=[], qbPool=[];
+  for(const pos of POSITIONS){
+    const own=players.filter(x=>x.pos===pos).map(x=>x.pts).sort((a,b)=>b-a);
+    const k=slots[pos]||0;
+    for(let j=0;j<Math.min(k,own.length);j++) byPos[pos]+=own[j];
+    if(FLEX_POS.includes(pos))
+      for(let j=k;j<own.length;j++) flexPool.push({pos,pts:own[j]});
+    else if((slots.SFLEX||0) && pos==="QB")
+      for(let j=k;j<own.length;j++) qbPool.push({pos,pts:own[j]});
+  }
+  flexPool.sort((a,b)=>b.pts-a.pts);
+  const f=Math.min(slots.FLEX||0, flexPool.length);
+  for(let j=0;j<f;j++) byPos[flexPool[j].pos]+=flexPool[j].pts;
+  const sPool=flexPool.slice(f).concat(qbPool).sort((a,b)=>b.pts-a.pts);
+  for(let j=0;j<Math.min(slots.SFLEX||0,sPool.length);j++)
+    byPos[sPool[j].pos]+=sPool[j].pts;
+  return {total:Object.values(byPos).reduce((a,b)=>a+b,0), byPos};
+}
+function reviewData(){
+  const teams=new Map();
+  const bucket=label=>{
+    let b=teams.get(label);
+    if(!b){ b={label, mine:label==="You", players:[], spent:0, value:0}; teams.set(label,b); }
+    return b;
+  };
+  const logByPid=new Map();
+  for(const e of S.log) if(!logByPid.has(e.id)) logByPid.set(e.id, e);
+  for(const p of S.players){
+    if(!p.drafted) continue;
+    const e=logByPid.get(playerId(p));
+    let label;
+    if(p.drafted.mine) label="You";
+    else if(p.drafted.by || (e&&e.by)) label=p.drafted.by||e.by;
+    else if(isSnake() && e) label="Slot "+teamOfSnakePick(e.n);
+    else label="The field";
+    const r=M.rows.find(r=>r.p===p);
+    const b=bucket(label);
+    b.players.push({p, pts:r? r.pts0 : p.pts});
+    b.spent+=p.drafted.price;
+    b.value+=r? r.blended : p.drafted.price;
+  }
+  if(!teams.size) return null;
+  const spots=rosterSizeTotal();
+  const list=[...teams.values()];
+  for(const t of list){
+    // a "team" holding far more players than a roster is the undivided
+    // rival pool from a manual auction — grade it honestly as a pool
+    t.pooled = !t.mine && t.players.length > spots+2;
+    const lu=bestLineup(t.players.map(x=>({pos:x.p.pos, pts:x.pts})));
+    t.starters=Math.round(lu.total); t.byPos=lu.byPos;
+    t.sim = t.pooled ? null
+      : simulateRoster(t.players.map(x=>({pos:x.p.pos, pts:x.pts})),
+                       S.settings.slots, 400);
+  }
+  const ranked=list.filter(t=>!t.pooled)
+    .sort((a,b)=>(b.sim?b.sim.p50:b.starters)-(a.sim?a.sim.p50:a.starters));
+  ranked.forEach((t,i)=>t.rank=i+1);
+  const med={};
+  for(const pos of POSITIONS){
+    const xs=ranked.map(t=>t.byPos[pos]).sort((a,b)=>a-b);
+    med[pos]=xs.length? xs[Math.floor(xs.length/2)] : 0;
+  }
+  // best buys and overpays across every attributable team (auction only —
+  // snake picks all cost the same thing: the pick)
+  const deals=[];
+  if(!isSnake())
+    for(const t of list){
+      if(t.pooled) continue;
+      for(const x of t.players){
+        const r=M.rows.find(r=>r.p===x.p);
+        if(r && x.p.drafted.price>1)
+          deals.push({team:t.label, p:x.p, price:x.p.drafted.price,
+            delta:Math.round(x.p.drafted.price - r.blended)});
+      }
+    }
+  deals.sort((a,b)=>a.delta-b.delta);
+  return {list, ranked, med, deals,
+    pooled:list.find(t=>t.pooled)||null,
+    me:list.find(t=>t.mine)||null};
+}
+function renderReview(){
+  const el=$("#review"); if(!el) return;
+  const d=reviewData();
+  if(!d){
+    el.innerHTML='<p class="note">Nothing to review yet — picks collect here as '+
+      'the draft runs, and this page sizes up the finished league.</p>';
+    return;
+  }
+  let html="";
+  if(d.me && d.me.rank)
+    html+=`<p style="font-size:17px;margin:0 0 10px"><b>Your draft ranks `+
+      `#${d.me.rank} of ${d.ranked.length}</b> by simulated median season.</p>`;
+  else if(d.me && !d.ranked.length)
+    html+=`<p class="note">Only your roster is attributable so far.</p>`;
+  html+='<div class="tblwrap"><table><thead><tr><th class="l">Team</th>'+
+    '<th title="Best starting lineup, season projection">Starters</th>'+
+    '<th title="Monte Carlo season simulation of the whole roster">Floor / Median / Ceiling</th>'+
+    (isSnake()? '' :
+      '<th>Spent</th><th title="Market value of the roster vs dollars paid">Value ±</th>')+
+    '</tr></thead><tbody>';
+  for(const t of d.ranked){
+    const sim=t.sim? `${t.sim.p10} / <b>${t.sim.p50}</b> / ${t.sim.p90}` : "—";
+    const dv=Math.round(t.value-t.spent);
+    html+=`<tr${t.mine?' style="outline:2px solid var(--accent);outline-offset:-2px"':''}>`+
+      `<td class="l">${t.rank}. ${esc(t.label)}${t.mine?' <span class="pill up">me</span>':''}</td>`+
+      `<td>${t.starters}</td><td style="font-variant-numeric:tabular-nums">${sim}</td>`+
+      (isSnake()? '' :
+        `<td>${fmt$(t.spent)}</td><td><span class="${dv>=0?"up":"down"}">${dv>=0?"+":"−"}$${Math.abs(dv)}</span></td>`)+
+      '</tr>';
+  }
+  html+='</tbody></table></div>';
+  if(d.me && d.ranked.length>1){
+    html+='<h3 style="margin:14px 0 4px">Your edge by position</h3>'+
+      '<p class="note">Your projected starter points vs the league median — '+
+      'where your lineup wins and where it bleeds.</p><div>';
+    for(const pos of POSITIONS){
+      const diff=Math.round(d.me.byPos[pos]-d.med[pos]);
+      if(!d.me.byPos[pos] && !d.med[pos]) continue;
+      html+=`<span class="pill" style="margin:2px 6px 2px 0">`+
+        `<span class="pos ${pos}">${pos}</span> `+
+        `<span class="${diff>=0?"up":"down"}">${diff>=0?"+":"−"}${Math.abs(diff)}</span></span>`;
+    }
+    html+='</div>';
+  }
+  if(d.deals.length){
+    const steals=d.deals.filter(x=>x.delta<=-2).slice(0,5);
+    const overs=d.deals.filter(x=>x.delta>=2).slice(-5).reverse();
+    if(steals.length){
+      html+='<h3 style="margin:14px 0 4px">Steals of the draft</h3>';
+      for(const s of steals)
+        html+=`<div class="roster-slot"><span class="nm"><span class="pos ${s.p.pos}">${s.p.pos}</span> `+
+          `${esc(s.p.name)} <span class="pill">${esc(s.team)}</span></span>`+
+          `<span>${fmt$(s.price)} · <span class="up">$${Math.abs(s.delta)} under value</span></span></div>`;
+    }
+    if(overs.length){
+      html+='<h3 style="margin:14px 0 4px">Overpays</h3>';
+      for(const s of overs)
+        html+=`<div class="roster-slot"><span class="nm"><span class="pos ${s.p.pos}">${s.p.pos}</span> `+
+          `${esc(s.p.name)} <span class="pill">${esc(s.team)}</span></span>`+
+          `<span>${fmt$(s.price)} · <span class="down">+$${s.delta} over value</span></span></div>`;
+    }
+  }
+  if(d.pooled)
+    html+=`<p class="note" style="margin-top:10px">${d.pooled.players.length} rival picks `+
+      `aren't attributed to teams, so they're graded as one pool ("${esc(d.pooled.label)}": `+
+      `${fmt$(d.pooled.spent)} spent on ${fmt$(Math.round(d.pooled.value))} of value). `+
+      `Sync your league on the Data tab — or draft in snake mode, where the pick `+
+      `number names the team — and the review breaks out every roster.</p>`;
+  el.innerHTML=html;
+}
+
 /* ---------- Yahoo (free-text paste) ---------- */
 const yhStatus=t=>{ $("#yhStatus").textContent=t; };
 // Parse copied Yahoo draft-results text: find the longest known player name in
@@ -3967,7 +4354,11 @@ function renderStorageHealth(){
 /* ---------- glue ---------- */
 function renderAll(){
   renderTiles(); renderScarcity(); renderPool(); renderRoster(); renderOptimal();
-  renderNominate(); renderLog(); renderRecap(); renderKeepers(); renderScatter(); renderData();
+  renderNominate(); renderNextPicks(); renderLog(); renderRecap(); renderKeepers();
+  renderScatter(); renderData();
+  // the review re-simulates every roster, so only refresh it while in view
+  const rv=document.getElementById("tab-review");
+  if(rv && !rv.classList.contains("hidden")) renderReview();
   renderAsOf();
   if(S.sel) selectPlayer(S.sel);           // keep block bar fresh after recompute
   else $("#block").classList.add("hidden");
@@ -3975,9 +4366,10 @@ function renderAll(){
 function showTab(tab){
   document.querySelectorAll("nav.tabs button").forEach(x=>
     x.classList.toggle("active", x.dataset.tab===tab));
-  for(const t of ["draft","data","settings","guide"])
+  for(const t of ["draft","data","review","settings","guide"])
     document.getElementById("tab-"+t).classList.toggle("hidden", t!==tab);
   if(tab==="draft") renderScatter();
+  if(tab==="review") renderReview();
 }
 function gotoSync(){
   showTab("data");
@@ -4173,6 +4565,7 @@ function bind(){
     S.log=[]; S.sel=null;
     SYNC.sl.applied=new Set();
     if(SYNC.sl.timer) sleeperAutoToggle();
+    if(SYNC.es.timer) espnAutoToggle();
     recompute();
     toast(`Draft cleared${keepers?` — ${keepers} keeper${keepers===1?"":"s"} kept (remove them in Data & News)`:""}.`);
   });
@@ -4252,6 +4645,8 @@ function bind(){
   });
   $("#esRead").addEventListener("click",espnRead);
   $("#esApply").addEventListener("click",espnApply);
+  $("#esConnect").addEventListener("click",espnFetchNow);
+  $("#esAuto").addEventListener("click",espnAutoToggle);
   $("#yhApply").addEventListener("click",yahooApply);
   $("#kpJump").addEventListener("click",gotoKeepers);
   $("#kcAdd").addEventListener("click",()=>{
@@ -4325,7 +4720,10 @@ window.APP={get S(){return S},get M(){return M},get R(){return R},
   yahooParse,yahooApply,normName,matchPlayer,buildNameIndex,
   get LEAGUES(){return LEAGUES},switchLeague,addLeague,activeLeague,saveState,loadState,
   simulateRoster,simIfWon,outlookRoster,addKeeper,removeKeeper,findPoolPlayer,
-  recapData,recapText,keeperAdvice,STRATEGIES,solveStrategyAuction,solveStrategySnake};
+  recapData,recapText,keeperAdvice,STRATEGIES,solveStrategyAuction,solveStrategySnake,
+  posCap,myPosCounts,reviewData,bestLineup,teamOfSnakePick,renderReview,
+  snakeNextOptions,auctionNextOptions,renderNextPicks,
+  espnFetchNow,espnAutoToggle,applyPick,showTab};
 </script>
 </body>
 </html>

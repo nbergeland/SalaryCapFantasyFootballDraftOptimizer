@@ -346,6 +346,38 @@ hoarding a third; and the Monte Carlo lineup builder seats FLEX first and superf
 what remains, which is what lets QB2 contribute weekly points. With no superflex slot
 every one of these paths short-circuits to its previous behavior.
 
+### 2.7 Hard positional caps (one QB/TE/K/DST, ever)
+
+Soft penalties (the bench-insurance discount, per-position bench decay) made a second
+tight end *unlikely*; live drafts showed "unlikely" still surfaces one whenever the
+board tilts. The model now enforces what every experienced drafter does by hand: at
+single-starter positions, one is the roster. The cap per position is the number of
+lineup seats that can start it — QB counts superflex seats (`QB + SFLEX` slots, so an
+SF league still plans and prices two quarterbacks), TE/K/DST count their dedicated
+slots, RB/WR stay uncapped because their depth genuinely rotates through flex, byes
+and injuries.
+
+The cap is enforced at every recommendation surface from one pair of helpers
+(`posCap`, `myPosCounts`): the auction slot-variant enumeration refuses any completion
+handing a capped position more seats than remain (so a second TE can't arrive through
+FLEX), max bids answer $0 ("pass") for any player at a capped position — including
+inside the minus-one-seat completions, which assume the bid target occupies the freed
+seat — and the snake candidate generator skips capped positions outright, in the plan,
+the rollout, and the take-now urgency list. A hand-entered overage (you typed in two
+TEs yourself) is deliberately tolerated: the cap blocks *new* recommendations but
+never declares your existing roster infeasible.
+
+### 2.8 Post-draft league review (evaluation layer)
+
+The Review tab reconstructs every team's roster and sizes them against each other:
+best projected lineup under your league's slots (dedicated seats, then FLEX, then
+SFLEX — the same provably-optimal fill order as the simulator), a Monte Carlo season
+per team, dollars spent vs blended value won, and the league's steals and overpays.
+Attribution comes from wherever it truthfully exists — synced leagues carry the
+platform's team name on every pick, snake drafts recover the team from the pick
+number's serpentine slot — and a manual auction's rivals, who genuinely can't be
+told apart, are graded as one pool rather than invented.
+
 ## 3. Alternatives considered (and why they weren't chosen)
 
 - **Full stochastic programming / Monte Carlo roster simulation.** The theoretically
