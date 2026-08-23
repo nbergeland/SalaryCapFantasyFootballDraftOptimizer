@@ -1,0 +1,34 @@
+name: ESPN CORS probe (temporary)
+
+# TEMPORARY bring-up probe — answers one question for the league-ID live
+# sync: does lm-api-reads.fantasy.espn.com serve Access-Control-Allow-Origin
+# to a browser on nbergeland.github.io? Removed before merge, like the other
+# branch bring-up workflows.
+on:
+  push:
+    branches: ["claude/analytics-modeling-evaluation-dz5iic"]
+    paths: [".github/workflows/espn-cors-probe.yml"]
+
+permissions: {}
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: GET league endpoint with a foreign Origin
+        run: |
+          set -x
+          for url in \
+            "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/2026/segments/0/leagues/1866946?view=mDraftDetail&view=mTeam&view=mRoster&view=mSettings" \
+            "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/2026/segments/0/leaguedefaults/3?view=kona_player_info" \
+            "https://fantasy.espn.com/apis/v3/games/ffl/seasons/2026/segments/0/leagues/1866946?view=mTeam" ; do
+            echo "=================================================="
+            echo "URL: $url"
+            curl -sS -D - -o /tmp/body.json --max-time 25 \
+              -H "Origin: https://nbergeland.github.io" \
+              -H "Accept: application/json" \
+              "$url" | tr -d '\r' | grep -i -E "^HTTP|access-control|content-type|^x-fantasy" || true
+            echo "--- body head ---"
+            head -c 400 /tmp/body.json; echo
+          done
