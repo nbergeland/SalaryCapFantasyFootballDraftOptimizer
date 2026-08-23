@@ -101,9 +101,11 @@ const ok = (name, cond, extra) => {
       { firstQBround: R.firstQBround, picks: R.picks });
     ok(`slot ${slot}: a quarterback is still drafted in the startable range`,
       R.firstQBround !== null && R.firstQBround <= 10, R.firstQBround);
-    ok(`slot ${slot}: at most two tight ends on the whole roster`, R.te <= 2,
+    // the hard positional cap: one TE, one QB, ever — no insurance copies
+    ok(`slot ${slot}: exactly one tight end on the whole roster`, R.te === 1,
       { te: R.te, picks: R.picks });
-    ok(`slot ${slot}: at most two quarterbacks`, R.qb <= 2, { qb: R.qb, picks: R.picks });
+    ok(`slot ${slot}: exactly one quarterback on the whole roster`, R.qb === 1,
+      { qb: R.qb, picks: R.picks });
     ok(`slot ${slot}: exactly one quarterback starts`, R.starterQB === 1, R.starterQB);
     ok(`slot ${slot}: K and DST are the last two picks`, R.lastTwo === 'DST,K', R.picks);
     // the rollout always has the greedy's own move among its candidates, so it
@@ -114,8 +116,10 @@ const ok = (name, cond, extra) => {
     // objective, the rollout may trade a couple of starter points for a
     // playable bench mix (e.g. a first bench RB over a fifth WR) — that
     // trade is the point. The hard guarantee is on the full objective above.
-    ok(`slot ${slot}: starters stay within 1% of the greedy's`,
-      R.starterPts >= r.greedy.starterPts * 0.99,
+    // (1.5%: with QB/TE/K/DST hard-capped at one, bench seats all go to
+    // RB/WR depth, which is worth slightly more starter give-back.)
+    ok(`slot ${slot}: starters stay within 1.5% of the greedy's`,
+      R.starterPts >= r.greedy.starterPts * 0.985,
       { rollout: R.starterPts, greedy: r.greedy.starterPts });
     ok(`slot ${slot}: the whole recompute stays interactive`, r.ms < 400, r.ms);
   }
@@ -141,11 +145,12 @@ const ok = (name, cond, extra) => {
       return out;
     });
     ok('superflex starts two quarterbacks', r.sf1.starterQB === 2, r.sf1.picks);
-    ok('superflex still stops at three quarterbacks total', r.sf1.qb <= 3, r.sf1.picks);
+    ok('superflex stops at two quarterbacks total (the hard cap counts SFLEX)',
+      r.sf1.qb <= 2, r.sf1.picks);
     ok('superflex pulls the first quarterback forward',
       r.sf1.firstQBround < r.sf0.firstQBround,
       { sf: r.sf1.firstQBround, one: r.sf0.firstQBround });
-    ok('superflex does not stack tight ends either', r.sf1.te <= 2, r.sf1.picks);
+    ok('superflex does not stack tight ends either', r.sf1.te <= 1, r.sf1.picks);
     ok('K and DST still go last in superflex', r.sf1.lastTwo === 'DST,K', r.sf1.picks);
   }
 
@@ -180,9 +185,9 @@ const ok = (name, cond, extra) => {
         totalTE: owned.filter(p => p.pos === 'TE').length + shape.te,
       };
     });
-    ok('no third quarterback once one is owned', r.totalQB <= 2,
+    ok('no second quarterback once one is owned (hard cap)', r.totalQB === 1,
       { totalQB: r.totalQB, picks: r.shape.picks });
-    ok('no third tight end once one is owned', r.totalTE <= 2,
+    ok('no second tight end once one is owned (hard cap)', r.totalTE === 1,
       { totalTE: r.totalTE, picks: r.shape.picks });
     ok('K and DST are still deferred to the end', r.shape.lastTwo === 'DST,K',
       r.shape.picks);
@@ -220,8 +225,8 @@ const ok = (name, cond, extra) => {
       r.heroRB.rounds[0] === 'R1RB', r.heroRB.rounds);
     ok('Elite TE gets its tight end by round 3',
       r.eliteTE.rounds.slice(0, 3).some(x => /TE$/.test(x)), r.eliteTE.rounds);
-    ok('no build stacks tight ends',
-      Object.keys(r).filter(k => k !== 'ms').every(k => r[k].te <= 2),
+    ok('no build rosters a second tight end',
+      Object.keys(r).filter(k => k !== 'ms').every(k => r[k].te <= 1),
       Object.fromEntries(Object.keys(r).filter(k => k !== 'ms').map(k => [k, r[k].te])));
     ok('eight builds solve fast enough for the live panel', r.ms < 400, r.ms);
   }
