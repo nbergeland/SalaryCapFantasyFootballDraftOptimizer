@@ -39,7 +39,7 @@ exactly. On Safari/iPhone, export after entering keepers — belt and suspenders
 | Platform | How it works | Hands-free? |
 |---|---|---|
 | **Sleeper** | Enter your username → pick your league → **Auto-sync every 5s**. Pulls roster slots, budget, scoring, draft type, and your draft slot, then every pick and price as they happen. No login needed — Sleeper's API is public. | ✅ fully |
-| **ESPN** | Enter your **League ID** (or paste the league URL) → **Auto-sync every 10s**. Reads teams, slots, budget and every pick with its price straight from ESPN's API — verified to allow cross-origin reads from the hosted page. Public leagues need no login; private leagues work when this browser is logged into espn.com (Safari's cookie rules may block that — the **📡 bridge** bookmarklet and JSON paste remain as fallbacks). | ✅ fully |
+| **ESPN** | Enter your **League ID** (or paste the league URL) → **Auto-sync every 10s**. Reads teams, slots, budget and every pick with its price straight from ESPN's API — verified to allow cross-origin reads from the hosted page. Works with no login when the league is **viewable to the public** (League Settings → Basic Settings). Private leagues usually can't be read directly (browsers refuse to send ESPN's login cross-site) — use the **📡 bridge** bookmarklet: one click on your logged-in ESPN tab streams picks over every 12s. JSON paste remains as a last resort. | ✅ fully (public or bridge) |
 | **Yahoo** | Drag the **📡 BERG Yahoo bridge** bookmarklet, then click it in the draft room with the **Draft Results** panel visible — results stream over every 8s. | ✅ after one click |
 
 Manual entry is always available and takes about three seconds per sale. Bridges require
@@ -270,6 +270,7 @@ live re-optimization and instant max-bid advice possible. Monte Carlo sits on to
 | `tests/test_superflex.js` | Playwright suite for superflex leagues (optimizer, ranks, sync, sim) |
 | `tests/test_snake_plan.js` | Playwright suite for snake plan shape (QB timing, TE stacking, K/DST last) |
 | `tests/test_caps_review.js` | Playwright suite for hard positional caps, the league review, next-pick options, and ESPN sync wiring |
+| `tests/test_bridge.js` | Playwright suite for the ESPN bridge pipeline (postMessage → team pick → live picks/prices/settings) and the private-league 401 path |
 | `.nojekyll` | Lets Pages serve straight from a branch — see below |
 | `optimizer.py` | Python optimization engine (PuLP) |
 | `DraftOptimizer.ipynb` | Executed reference notebook |

@@ -440,9 +440,11 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
             apply budget/slots</label>
         </p>
         <p class="note">Reads your league, teams and every pick (with auction prices)
-          straight from ESPN — public leagues need no login; for a private league,
-          log into espn.com in this browser first. Pick your team once and every
-          sync lands picks automatically.</p>
+          straight from ESPN. Works with no login when the league is <b>viewable to
+          the public</b> (ESPN League Settings → Basic Settings — any league manager
+          can turn it on). Private leagues usually can't be read directly — browsers
+          won't send ESPN's login cross-site — so use the 📡 bridge below instead.
+          Pick your team once and every sync lands picks automatically.</p>
         <p class="note" id="esStatus"></p>
         <p class="note">🔗 <b>Fallbacks if the direct read is blocked</b> (private league
           + Safari's cookie rules, workplace proxies):
@@ -3614,10 +3616,14 @@ async function espnFetchNow(){
     const r=await fetch(espnUrl(), {credentials:"include"});
     if(!r.ok){
       if(r.status===401||r.status===403){
-        esStatus(`ESPN answered ${r.status} — a private league. Log into espn.com in `+
-          `this browser and try again; if your browser blocks cross-site cookies `+
-          `(Safari does), use the 📡 bridge bookmarklet below — it reads ESPN from `+
-          `your logged-in tab — or paste the league JSON.`);
+        esStatus(`ESPN answered ${r.status} — a private league, and browsers mostly `+
+          `refuse to hand ESPN's login to another site, so being logged in usually `+
+          `isn't enough. Two fixes: ① the league manager turns on “Make League `+
+          `Viewable to Public” (ESPN League Settings → Basic Settings) — then Sync `+
+          `again and full auto-sync works with no login at all; ② the 📡 bridge `+
+          `bookmarklet below — click it once on your logged-in ESPN league tab and `+
+          `picks stream here every 12s. The league JSON ↗ + paste path works too.`);
+        spotlightBridge();
         if(SYNC.es.timer) espnAutoToggle();
       }else esStatus(`ESPN answered HTTP ${r.status} — check the League ID and season.`);
       return false;
@@ -3630,6 +3636,15 @@ async function espnFetchNow(){
     if(SYNC.es.timer) espnAutoToggle();
     return false;
   }
+}
+// after a 401 the bridge IS the path — walk the eye straight to it
+function spotlightBridge(){
+  const a=$("#esBridge"); if(!a) return;
+  const p=a.closest("p")||a;
+  p.scrollIntoView({behavior:"smooth", block:"center"});
+  p.style.transition="background .4s"; p.style.borderRadius="6px";
+  p.style.background="color-mix(in srgb, var(--accent) 22%, transparent)";
+  setTimeout(()=>{ p.style.background=""; }, 2600);
 }
 function espnAutoToggle(){
   if(SYNC.es.timer){
@@ -3709,7 +3724,7 @@ function bridgeHref(kind){
     const id=espnLeagueId(), yr=$("#esSeason").value||"2026";
     if(!id) return null;
     js=`(()=>{var w=window.open(${JSON.stringify(app)},"bergsheets");`+
-      `var f=()=>fetch("https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${yr}/segments/0/leagues/${id}?view=mDraftDetail&view=mTeam&view=mRoster",{credentials:"include"})`+
+      `var f=()=>fetch("https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${yr}/segments/0/leagues/${id}?view=mDraftDetail&view=mTeam&view=mRoster&view=mSettings",{credentials:"include"})`+
       `.then(r=>r.json()).then(d=>w.postMessage({bergsheets:"espn",data:d},"*")).catch(()=>{});`+
       `f();setInterval(f,12000);alert("BERG ESPN bridge running - keep this tab open.");})()`;
   }else{
