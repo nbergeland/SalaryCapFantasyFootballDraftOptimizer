@@ -138,6 +138,54 @@ const ok = (name, cond, extra) => {
     ok('and its picks apply here', bc.applied === 1, bc.applied);
   }
 
+  // the in-page private-league flow: paste-anywhere + clipboard watch
+  const pw = await page.evaluate(() => {
+    const A = window.APP;
+    for (const p of A.S.players) p.drafted = null;
+    A.S.log = []; A.recompute();
+    const posId = { QB: 1, RB: 2, WR: 3, TE: 4 };
+    const stars = A.M.rows.filter(x => x.p.pos === 'WR' && !x.p.out)
+      .sort((a, b) => b.rpts - a.rpts).slice(0, 2).map(x => x.p);
+    const mk = (p, i) => ({ playerPoolEntry: { player:
+      { id: 8000 + i, fullName: p.name, defaultPositionId: posId[p.pos] } } });
+    const payload = JSON.stringify({
+      teams: [{ id: 1, name: 'Paste FC', roster: { entries: stars.map(mk) } }],
+      draftDetail: { picks: stars.map((p, i) => ({ playerId: 8000 + i, teamId: 1, bidAmount: 20 + i })) },
+    });
+    // garbage and non-league JSON are refused untouched
+    const junk = !A.tryEspnJson('hello world') && !A.tryEspnJson('{"a":1}');
+    // paste anywhere on the page body
+    const dt = new DataTransfer(); dt.setData('text/plain', payload);
+    const ev = new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true });
+    document.body.dispatchEvent(ev);
+    return new Promise(res => setTimeout(() => {
+      const sel = document.getElementById('esMyTeam');
+      const teams = [...sel.options].map(o => o.textContent);
+      sel.value = '1'; sel.dispatchEvent(new Event('change'));
+      setTimeout(() => {
+        const applied = A.S.players.filter(p => p.drafted).length;
+        // clipboard watch: stub the reader, arm, and fire a focus check
+        const p2 = JSON.parse(payload);
+        p2.teams[0].roster.entries.push(mk(A.M.rows.filter(x => x.p.pos === 'RB' && !x.p.out)
+          .sort((a, b) => b.rpts - a.rpts)[0].p, 5));
+        p2.draftDetail.picks.push({ playerId: 8005, teamId: 1, bidAmount: 41 });
+        Object.defineProperty(navigator, 'clipboard', {
+          value: { readText: async () => JSON.stringify(p2) }, configurable: true });
+        window.APP.espnClipToggle();               // arm (also does a first check)
+        setTimeout(() => res({
+          junk, teams, applied,
+          watchApplied: A.S.players.filter(p => p.drafted).length,
+          btn: document.getElementById('esClipWatch').textContent,
+        }), 300);
+      }, 250);
+    }, 250));
+  });
+  ok('junk on the clipboard is refused untouched', pw.junk);
+  ok('pasting league JSON anywhere populates teams', pw.teams.includes('Paste FC'), pw.teams);
+  ok('and applies the picks once my team is chosen', pw.applied === 2, pw.applied);
+  ok('clipboard watch pulls newer JSON hands-free', pw.watchApplied === 3, pw.watchApplied);
+  ok('the watch button reads armed', /watch: on/.test(pw.btn), pw.btn);
+
   // the no-bookmark console variant
   const nb = await page.evaluate(() => ({
     fn: typeof window.APP.bridgeScript === 'function',
