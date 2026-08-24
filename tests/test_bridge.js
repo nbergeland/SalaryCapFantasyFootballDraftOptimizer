@@ -104,6 +104,50 @@ const ok = (name, cond, extra) => {
   ok('review then buckets by ESPN team names',
     r.reviewTeams.includes('You') && r.reviewTeams.includes('Rival Sharks'), r.reviewTeams);
 
+  // multi-tab rebroadcast: a payload arriving on the BroadcastChannel (as
+  // rebroadcast by whichever window the bookmarklet targeted) applies here too
+  const bc = await page.evaluate(() => {
+    const A = window.APP;
+    for (const p of A.S.players) p.drafted = null;
+    A.S.log = []; A.recompute();
+    const posId = { QB: 1, RB: 2, WR: 3, TE: 4 };
+    const p1 = A.M.rows.filter(x => x.p.pos === 'RB' && !x.p.out)
+      .sort((a, b) => b.rpts - a.rpts)[0].p;
+    const payload = {
+      teams: [{ id: 1, name: 'BC Team', roster: { entries: [{ playerPoolEntry:
+        { player: { id: 7001, fullName: p1.name, defaultPositionId: posId[p1.pos] } } }] } }],
+      draftDetail: { picks: [{ playerId: 7001, teamId: 1, bidAmount: 31 }] },
+    };
+    return new Promise(res => {
+      try { new BroadcastChannel('bergsheets-bridge').postMessage(
+        { bergsheets: 'espn', data: payload }); }
+      catch (e) { res({ bcUnsupported: true }); return; }
+      setTimeout(() => {
+        const sel = document.getElementById('esMyTeam');
+        sel.value = '1'; sel.dispatchEvent(new Event('change'));
+        setTimeout(() => res({
+          teams: [...sel.options].map(o => o.textContent),
+          applied: A.S.players.filter(p => p.drafted).length,
+        }), 250);
+      }, 250);
+    });
+  });
+  if (bc.bcUnsupported) ok('BroadcastChannel unsupported here — skipped', true);
+  else {
+    ok('a channel payload populates this tab too', bc.teams.includes('BC Team'), bc.teams);
+    ok('and its picks apply here', bc.applied === 1, bc.applied);
+  }
+
+  // the no-bookmark console variant
+  const nb = await page.evaluate(() => ({
+    fn: typeof window.APP.bridgeScript === 'function',
+    // file:// can't build the hosted script — it must refuse, not crash
+    nullOffline: window.APP.bridgeScript('espn') === null,
+    button: !!document.getElementById('esBridgeCopy'),
+  }));
+  ok('bridgeScript exists and refuses off the hosted site', nb.fn && nb.nullOffline, nb);
+  ok('the copy-console button is present', nb.button);
+
   // the 401 spotlight path (fetch stubbed to a private-league answer)
   const s = await page.evaluate(async () => {
     document.getElementById('esLeague').value = '30578399';
