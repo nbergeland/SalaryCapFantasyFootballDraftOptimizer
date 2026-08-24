@@ -450,9 +450,14 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
           + Safari's cookie rules, workplace proxies):
           <a id="esBridge" href="#">📡 BERG ESPN bridge</a> — drag this to your
           bookmarks bar; on draft day log into ESPN in a tab, click the bookmark once,
-          and it streams every pick here every 12 seconds. Or copy the
+          and it streams every pick here every 12 seconds.
+          <button class="small" id="esBridgeCopy"
+            title="The same bridge with no bookmarking: copy, open your logged-in ESPN league tab, press F12 (Console), paste, Enter. Chrome asks you to type “allow pasting” once — that's its normal paste guard.">no-bookmark
+            version: copy console script</button>
+          Or copy the
           <a id="esLink" href="#" target="_blank" rel="noopener">league JSON ↗</a>
-          and paste it below.</p>
+          and paste it below. Prefer zero setup? Any league manager can turn on
+          <b>Make League Viewable to Public</b> and the direct sync above just works.</p>
         <textarea id="esPaste" placeholder='Paste the ESPN league JSON here…' style="min-height:70px"></textarea>
         <p>
           <button id="esRead">Read JSON</button>
@@ -3716,23 +3721,27 @@ function espnApply(opts){
   }
 }
 /* ---------- live bridge (bookmarklets): ESPN/Yahoo tab -> this app ---------- */
-function bridgeHref(kind){
+// the raw script, shared by the draggable bookmarklet and the copy-paste
+// console variant (same bridge, no bookmarking: F12 on the logged-in
+// ESPN/Yahoo tab, paste, Enter)
+function bridgeScript(kind){
   if(!location.protocol.startsWith("http")) return null;  // needs the hosted site
   const app=location.origin+location.pathname;
-  let js;
   if(kind==="espn"){
     const id=espnLeagueId(), yr=$("#esSeason").value||"2026";
     if(!id) return null;
-    js=`(()=>{var w=window.open(${JSON.stringify(app)},"bergsheets");`+
+    return `(()=>{var w=window.open(${JSON.stringify(app)},"bergsheets");`+
       `var f=()=>fetch("https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${yr}/segments/0/leagues/${id}?view=mDraftDetail&view=mTeam&view=mRoster&view=mSettings",{credentials:"include"})`+
       `.then(r=>r.json()).then(d=>w.postMessage({bergsheets:"espn",data:d},"*")).catch(()=>{});`+
       `f();setInterval(f,12000);alert("BERG ESPN bridge running - keep this tab open.");})()`;
-  }else{
-    js=`(()=>{var w=window.open(${JSON.stringify(app)},"bergsheets");`+
-      `var f=()=>{try{w.postMessage({bergsheets:"yahoo",text:document.body.innerText},"*")}catch(e){}};`+
-      `f();setInterval(f,8000);alert("BERG Yahoo bridge running - keep this tab open with Draft Results visible.");})()`;
   }
-  return "javascript:"+encodeURIComponent(js);
+  return `(()=>{var w=window.open(${JSON.stringify(app)},"bergsheets");`+
+    `var f=()=>{try{w.postMessage({bergsheets:"yahoo",text:document.body.innerText},"*")}catch(e){}};`+
+    `f();setInterval(f,8000);alert("BERG Yahoo bridge running - keep this tab open with Draft Results visible.");})()`;
+}
+function bridgeHref(kind){
+  const js=bridgeScript(kind);
+  return js? "javascript:"+encodeURIComponent(js) : null;
 }
 function refreshBridgeLinks(){
   const es=$("#esBridge"), yh=$("#yhBridge");
@@ -4616,9 +4625,13 @@ function bind(){
   $("#esMyTeam").addEventListener("change",()=>{
     if(SYNC.es.livePending){ SYNC.es.livePending=false; espnApply({live:true}); }
   });
-  // live bridge receiver: bookmarklets on ESPN/Yahoo tabs postMessage picks here
-  window.addEventListener("message",e=>{
-    const d=e.data;
+  // live bridge receiver: bookmarklets on ESPN/Yahoo tabs postMessage picks
+  // here. The bookmarklet targets ONE window, but on draft day the user is
+  // often working in an older app tab — so every payload is rebroadcast on a
+  // BroadcastChannel and applied by every open tab of this app.
+  let bridgeBC=null;
+  try{ bridgeBC=new BroadcastChannel("bergsheets-bridge"); }catch(_){ /* very old browser */ }
+  const handleBridge=(d, fromBC)=>{
     if(!d || typeof d!=="object") return;
     if(d.bergsheets==="espn" && d.data && Array.isArray(d.data.teams)){
       try{ espnIngest(d.data, true); }
@@ -4629,8 +4642,11 @@ function bind(){
       yhStatus(`Live bridge ✓ ${new Date().toLocaleTimeString()} — ${res.applied} new, `+
         `${res.skipped} already in`+
         (picks.length? "" : " · no picks recognized — keep the Draft Results panel visible"));
-    }
-  });
+    }else return;
+    if(!fromBC && bridgeBC){ try{ bridgeBC.postMessage(d); }catch(_){} }
+  };
+  window.addEventListener("message",e=>handleBridge(e.data, false));
+  if(bridgeBC) bridgeBC.addEventListener("message",e=>handleBridge(e.data, true));
   // A bookmarklet clicked *inside* this page would run on our origin, where
   // ESPN/Yahoo block the request — explain instead of failing silently.
   for(const [sel,label] of [["#esBridge","ESPN"],["#yhBridge","Yahoo"]]){
@@ -4662,6 +4678,15 @@ function bind(){
   $("#esApply").addEventListener("click",espnApply);
   $("#esConnect").addEventListener("click",espnFetchNow);
   $("#esAuto").addEventListener("click",espnAutoToggle);
+  $("#esBridgeCopy").addEventListener("click",async()=>{
+    const js=bridgeScript("espn");
+    if(!js){ toast(espnLeagueId()? "Open the hosted site to build the bridge."
+      : "Enter your League ID first — the script needs it."); return; }
+    if(await copyText(js)){
+      $("#esBridgeCopy").textContent="copied ✓ — paste in the ESPN tab's console";
+      setTimeout(()=>{ $("#esBridgeCopy").textContent="no-bookmark version: copy console script"; }, 3000);
+    }else toast("Couldn't reach the clipboard — drag the bookmarklet instead.");
+  });
   $("#yhApply").addEventListener("click",yahooApply);
   $("#kpJump").addEventListener("click",gotoKeepers);
   $("#kcAdd").addEventListener("click",()=>{
@@ -4731,7 +4756,7 @@ window.APP={get S(){return S},get M(){return M},get R(){return R},
   SYNC,applyExternalPicks,sleeperFind,sleeperLoad,sleeperSync,sleeperRefreshRanks,
   refreshData,renderAsOf,defaultPoolMeta,todayISO,
   buildStateBlob,restoreFromBackup,mirrorState,idbGet,idbPut,idbKeys,quarantine,
-  espnRead,espnApply,espnIngest,bridgeHref,espnLeagueId,espnUrl,
+  espnRead,espnApply,espnIngest,bridgeHref,bridgeScript,espnLeagueId,espnUrl,
   yahooParse,yahooApply,normName,matchPlayer,buildNameIndex,
   get LEAGUES(){return LEAGUES},switchLeague,addLeague,activeLeague,saveState,loadState,
   simulateRoster,simIfWon,outlookRoster,addKeeper,removeKeeper,findPoolPlayer,
