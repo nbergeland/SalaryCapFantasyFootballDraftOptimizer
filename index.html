@@ -446,18 +446,25 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
           won't send ESPN's login cross-site — so use the 📡 bridge below instead.
           Pick your team once and every sync lands picks automatically.</p>
         <p class="note" id="esStatus"></p>
-        <p class="note">🔗 <b>Fallbacks if the direct read is blocked</b> (private league
-          + Safari's cookie rules, workplace proxies):
-          <a id="esBridge" href="#">📡 BERG ESPN bridge</a> — drag this to your
-          bookmarks bar; on draft day log into ESPN in a tab, click the bookmark once,
-          and it streams every pick here every 12 seconds.
-          <button class="small" id="esBridgeCopy"
+        <p class="note">🔒 <b>Private league?</b> The simplest all-in-this-page flow:
+          open the <a id="esLink" href="#" target="_blank" rel="noopener">league
+          JSON ↗</a> (it opens logged-in), press <b>Ctrl/Cmd+A</b> then
+          <b>Ctrl/Cmd+C</b>, come back here and press <b>Ctrl/Cmd+V anywhere</b> —
+          picks, prices and settings apply instantly. Arm
+          <button class="small" id="esClipWatch">📋 clipboard watch: off</button>
+          and you can skip even the paste: returning to this tab with league JSON
+          copied syncs it automatically (Chrome/Edge; Safari still wants the ⌘V).
+          Re-copy whenever you want fresher picks.</p>
+        <p class="note">🔗 <b>Fully hands-free options:</b> any league manager can turn
+          on <b>Make League Viewable to Public</b> (League Settings → Basic Settings) —
+          then the direct sync above runs itself, no login. Or the
+          <a id="esBridge" href="#">📡 BERG ESPN bridge</a> — drag to your bookmarks
+          bar, click it once on your logged-in ESPN tab on draft day, and it streams
+          every pick here every 12 seconds
+          (<button class="small" id="esBridgeCopy"
             title="The same bridge with no bookmarking: copy, open your logged-in ESPN league tab, press F12 (Console), paste, Enter. Chrome asks you to type “allow pasting” once — that's its normal paste guard.">no-bookmark
-            version: copy console script</button>
-          Or copy the
-          <a id="esLink" href="#" target="_blank" rel="noopener">league JSON ↗</a>
-          and paste it below. Prefer zero setup? Any league manager can turn on
-          <b>Make League Viewable to Public</b> and the direct sync above just works.</p>
+            version: copy console script</button>).
+          Manual JSON paste into the box below still works too.</p>
         <textarea id="esPaste" placeholder='Paste the ESPN league JSON here…' style="min-height:70px"></textarea>
         <p>
           <button id="esRead">Read JSON</button>
@@ -3623,11 +3630,13 @@ async function espnFetchNow(){
       if(r.status===401||r.status===403){
         esStatus(`ESPN answered ${r.status} — a private league, and browsers mostly `+
           `refuse to hand ESPN's login to another site, so being logged in usually `+
-          `isn't enough. Two fixes: ① the league manager turns on “Make League `+
-          `Viewable to Public” (ESPN League Settings → Basic Settings) — then Sync `+
-          `again and full auto-sync works with no login at all; ② the 📡 bridge `+
-          `bookmarklet below — click it once on your logged-in ESPN league tab and `+
-          `picks stream here every 12s. The league JSON ↗ + paste path works too.`);
+          `isn't enough. Three fixes: ① all in this page — open the league JSON ↗ `+
+          `link (it opens logged-in), Ctrl/Cmd+A then C, come back and press `+
+          `Ctrl/Cmd+V anywhere (or arm 📋 clipboard watch and just switch tabs); `+
+          `② the league manager turns on “Make League Viewable to Public” (ESPN `+
+          `League Settings → Basic Settings) — then Sync again and full auto-sync `+
+          `works with no login at all; ③ the 📡 bridge bookmarklet below — one `+
+          `click on your logged-in ESPN tab streams picks here every 12s.`);
         spotlightBridge();
         if(SYNC.es.timer) espnAutoToggle();
       }else esStatus(`ESPN answered HTTP ${r.status} — check the League ID and season.`);
@@ -3642,9 +3651,9 @@ async function espnFetchNow(){
     return false;
   }
 }
-// after a 401 the bridge IS the path — walk the eye straight to it
+// after a 401 the in-page JSON-copy flow is the path — walk the eye to it
 function spotlightBridge(){
-  const a=$("#esBridge"); if(!a) return;
+  const a=$("#esLink")||$("#esBridge"); if(!a) return;
   const p=a.closest("p")||a;
   p.scrollIntoView({behavior:"smooth", block:"center"});
   p.style.transition="background .4s"; p.style.borderRadius="6px";
@@ -3659,6 +3668,40 @@ function espnAutoToggle(){
     SYNC.es.timer=setInterval(espnFetchNow, 10000);
     $("#esAuto").textContent="⏸ Stop auto-sync";
     espnFetchNow();
+  }
+}
+// the fully in-page private-league flow: the league JSON link opens
+// logged-in (a normal tab navigation carries the ESPN session even though a
+// cross-site fetch can't), so the user copies that tab and this page eats
+// the clipboard — a paste anywhere on the page, or hands-free on tab focus
+// once clipboard watch is armed. Anything that isn't ESPN league JSON is
+// ignored untouched.
+function tryEspnJson(txt){
+  if(!txt || txt.length<50 || txt[0]!=="{") return false;
+  let d; try{ d=JSON.parse(txt); }catch(_){ return false; }
+  if(!d || !Array.isArray(d.teams) || !d.teams.length || !d.draftDetail) return false;
+  espnIngest(d, true);
+  toast("ESPN league JSON received — synced.");
+  return true;
+}
+async function espnClipCheck(){
+  if(!SYNC.es.clipWatch) return;
+  try{
+    const txt=await navigator.clipboard.readText();
+    if(txt && txt!==SYNC.es.lastClip){
+      SYNC.es.lastClip=txt;
+      tryEspnJson(txt);
+    }
+  }catch(_){ /* no permission / unfocused / Safari's gesture rule — paste still works */ }
+}
+function espnClipToggle(){
+  SYNC.es.clipWatch=!SYNC.es.clipWatch;
+  const b=$("#esClipWatch");
+  if(b) b.textContent=`📋 clipboard watch: ${SYNC.es.clipWatch?"on":"off"}`;
+  if(SYNC.es.clipWatch){
+    toast("Armed. Copy the league JSON tab (Ctrl/Cmd+A, C) and switch back here — "+
+      "it syncs on its own. Safari makes you press Ctrl/Cmd+V instead.");
+    espnClipCheck();   // this click is the user gesture the permission prompt needs
   }
 }
 function espnRead(){
@@ -4647,6 +4690,18 @@ function bind(){
   };
   window.addEventListener("message",e=>handleBridge(e.data, false));
   if(bridgeBC) bridgeBC.addEventListener("message",e=>handleBridge(e.data, true));
+  // paste-anywhere: league JSON dropped on the page body syncs immediately;
+  // pastes into real inputs keep their normal meaning
+  document.addEventListener("paste",e=>{
+    const t=e.target;
+    if(t && (t.tagName==="INPUT"||t.tagName==="TEXTAREA")) return;
+    const txt=e.clipboardData? e.clipboardData.getData("text") : "";
+    if(tryEspnJson(txt)) e.preventDefault();
+  });
+  // clipboard watch: hands-free variant of the same flow (Chrome/Edge grant
+  // read-on-focus after one permission prompt; Safari requires the paste)
+  $("#esClipWatch").addEventListener("click",espnClipToggle);
+  window.addEventListener("focus",espnClipCheck);
   // A bookmarklet clicked *inside* this page would run on our origin, where
   // ESPN/Yahoo block the request — explain instead of failing silently.
   for(const [sel,label] of [["#esBridge","ESPN"],["#yhBridge","Yahoo"]]){
@@ -4757,6 +4812,7 @@ window.APP={get S(){return S},get M(){return M},get R(){return R},
   refreshData,renderAsOf,defaultPoolMeta,todayISO,
   buildStateBlob,restoreFromBackup,mirrorState,idbGet,idbPut,idbKeys,quarantine,
   espnRead,espnApply,espnIngest,bridgeHref,bridgeScript,espnLeagueId,espnUrl,
+  tryEspnJson,espnClipToggle,espnClipCheck,
   yahooParse,yahooApply,normName,matchPlayer,buildNameIndex,
   get LEAGUES(){return LEAGUES},switchLeague,addLeague,activeLeague,saveState,loadState,
   simulateRoster,simIfWon,outlookRoster,addKeeper,removeKeeper,findPoolPlayer,
