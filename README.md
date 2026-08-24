@@ -175,6 +175,32 @@ The generated briefing is ordered by severity rather than by ADP: season-enders 
 cross-source team disagreements and ADP risers — each tier capped so one kind of news
 cannot crowd out the rest.
 
+### Optional: ESPN private league — let the repo pull it
+
+A private ESPN league can't be read by the app directly (browsers refuse to send your
+ESPN login cross-site), but **your own repo can pull it server-side** with your ESPN
+session stored as repository secrets. The credentials stay in GitHub's encrypted
+secrets and are sent only to ESPN; the committed `data/espn_league.json` carries the
+league payload and a pulled-at stamp, never the cookies.
+
+One-time setup (~3 minutes):
+
+1. On espn.com, logged in, open DevTools → **Application → Cookies →
+   `https://www.espn.com`** and copy the values of **`espn_s2`** (long string) and
+   **`SWID`** (a GUID in braces — braces optional when pasting).
+2. Repo **Settings → Secrets and variables → Actions**: add secrets **`ESPN_S2`** and
+   **`SWID`**, and (under Variables) **`ESPN_LEAGUE_ID`** with your league's number.
+3. Run the **Pull ESPN league** workflow from the Actions tab (it also runs nightly).
+   It commits `data/espn_league.json`, Pages redeploys, and the app's
+   **🛰 Load pulled league file** button (Data & News → ESPN) ingests it — teams,
+   picks, prices, budget and slots.
+
+Notes: `espn_s2` expires when you log out or after ESPN rotates it (~a year) — if a
+pull fails with 401, refresh the two secret values. Without the secrets the workflow
+exits "skipped" and commits nothing, so forks stay green. For live draft-second
+latency, use the in-page JSON copy flow or the bridge; the repo pull is the
+set-and-forget season companion (rosters, keepers, post-draft review).
+
 ### Optional: FantasyPros
 
 FantasyPros' free personal API tier needs a key you request from them. It is entirely
@@ -262,6 +288,7 @@ live re-optimization and instant max-bid advice possible. Monte Carlo sits on to
 | `scripts/build_data.py` | Nightly data builder: fetches, cross-validates and splices the player pool |
 | `.github/workflows/data-refresh.yml` | Runs the builder daily at 09:20 UTC and commits the result |
 | `.github/workflows/pages.yml` | Auto-deploys the app to GitHub Pages on every push to `main` |
+| `scripts/pull_espn_league.py` + `.github/workflows/espn-league-pull.yml` | Optional server-side pull of a private ESPN league using the owner's repo secrets |
 | `DATA_REPORT.md` | Written by each data build — source status, disagreements, calibration |
 | `tests/test_build_data.py` | Builder unit tests (stdlib `unittest`, offline via fixtures) |
 | `tests/fixtures/` | Schema-faithful slices of the six upstream payloads (injury cases included) |
