@@ -186,6 +186,56 @@ const ok = (name, cond, extra) => {
   ok('clipboard watch pulls newer JSON hands-free', pw.watchApplied === 3, pw.watchApplied);
   ok('the watch button reads armed', /watch: on/.test(pw.btn), pw.btn);
 
+  // the repo-pull loader: data/espn_league.json (committed by the Actions
+  // pull) ingests through the same live path
+  const rp = await page.evaluate(() => {
+    const A = window.APP;
+    for (const p of A.S.players) p.drafted = null;
+    A.S.log = []; A.recompute();
+    const posId = { QB: 1, RB: 2, WR: 3, TE: 4 };
+    const p1 = A.M.rows.filter(x => x.p.pos === 'TE' && !x.p.out)
+      .sort((a, b) => b.rpts - a.rpts)[0].p;
+    const env = { pulled: '2026-08-24T00:30:00+00:00', league_id: '30578399',
+      season: 2026, teams: 1, picks: 1,
+      data: { teams: [{ id: 9, name: 'Pulled FC', roster: { entries: [
+        { playerPoolEntry: { player: { id: 9101, fullName: p1.name,
+          defaultPositionId: posId[p1.pos] } } }] } }],
+        draftDetail: { picks: [{ playerId: 9101, teamId: 9, bidAmount: 17 }] } } };
+    const orig = window.fetch;
+    window.fetch = (u, o) => /espn_league\.json/.test(String(u))
+      ? Promise.resolve({ ok: true, json: async () => env }) : orig(u, o);
+    return window.APP.espnLoadRepoFile().then(okFlag => new Promise(res => {
+      // the stamp is the status until the user picks a team, at which point
+      // the live-apply message rightly takes over
+      const stamp = document.getElementById('esStatus').textContent;
+      const sel = document.getElementById('esMyTeam');
+      const teams = [...sel.options].map(o => o.textContent);
+      sel.value = '9'; sel.dispatchEvent(new Event('change'));
+      setTimeout(() => {
+        window.fetch = orig;
+        res({ okFlag, teams, stamp,
+          applied: A.S.players.filter(p => p.drafted).length,
+          status: document.getElementById('esStatus').textContent });
+      }, 250);
+    }));
+  });
+  ok('repo-pulled file loads and reports its stamp', rp.okFlag &&
+    /Repo-pulled league loaded/.test(rp.stamp) && /2026-08-24/.test(rp.stamp), rp.stamp);
+  ok('its teams and picks flow through the live path',
+    rp.teams.includes('Pulled FC') && rp.applied === 1,
+    { teams: rp.teams, applied: rp.applied });
+
+  // a missing file explains the setup instead of erroring
+  const rm = await page.evaluate(async () => {
+    const orig = window.fetch;
+    window.fetch = () => Promise.resolve({ ok: false, status: 404 });
+    const okFlag = await window.APP.espnLoadRepoFile();
+    window.fetch = orig;
+    return { okFlag, status: document.getElementById('esStatus').textContent };
+  });
+  ok('a missing pulled file points at the setup', rm.okFlag === false &&
+    /ESPN_S2/.test(rm.status), rm.status);
+
   // the no-bookmark console variant
   const nb = await page.evaluate(() => ({
     fn: typeof window.APP.bridgeScript === 'function',

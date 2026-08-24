@@ -465,6 +465,14 @@ svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
             title="The same bridge with no bookmarking: copy, open your logged-in ESPN league tab, press F12 (Console), paste, Enter. Chrome asks you to type “allow pasting” once — that's its normal paste guard.">no-bookmark
             version: copy console script</button>).
           Manual JSON paste into the box below still works too.</p>
+        <p class="note">🛰 <b>Repo pull:</b>
+          <button class="small" id="esRepoLoad">Load pulled league file</button>
+          — your own repo can fetch the private league server-side using your ESPN
+          session stored as <b>repository secrets</b> (<code>ESPN_S2</code> +
+          <code>SWID</code>, sent only to ESPN — see the README's "ESPN private
+          league" section). The <i>Pull ESPN league</i> workflow commits
+          <code>data/espn_league.json</code> on demand and nightly; this button
+          loads it.</p>
         <textarea id="esPaste" placeholder='Paste the ESPN league JSON here…' style="min-height:70px"></textarea>
         <p>
           <button id="esRead">Read JSON</button>
@@ -3704,6 +3712,34 @@ function espnClipToggle(){
     espnClipCheck();   // this click is the user gesture the permission prompt needs
   }
 }
+// the repo-pull path: the "Pull ESPN league" workflow (owner's espn_s2/SWID
+// as repo secrets, sent only to ESPN) commits data/espn_league.json next to
+// this page, so loading it is a plain same-origin fetch — no CORS, no login.
+async function espnLoadRepoFile(){
+  try{
+    const r=await fetch("data/espn_league.json", {cache:"no-store"});
+    if(!r.ok){
+      esStatus("No pulled league file on this site yet. One-time setup: add "+
+        "ESPN_S2 and SWID as repository secrets and run the “Pull ESPN league” "+
+        "workflow — the README's ESPN private league section has the steps.");
+      return false;
+    }
+    const j=await r.json();
+    if(!j || !j.data || !Array.isArray(j.data.teams) || !j.data.teams.length){
+      esStatus("data/espn_league.json exists but carries no teams — the last "+
+        "pull failed; check the “Pull ESPN league” run on the Actions tab.");
+      return false;
+    }
+    espnIngest(j.data, true);
+    esStatus(`Repo-pulled league loaded — fetched ${j.pulled||"?"} `+
+      `(${j.teams} teams, ${j.picks} picks). Pick “My team” above if you haven't — `+
+      `picks apply automatically. Re-run the “Pull ESPN league” workflow for fresher data.`);
+    return true;
+  }catch(e){
+    esStatus("Couldn't load data/espn_league.json ("+e.message+").");
+    return false;
+  }
+}
 function espnRead(){
   try{ espnIngest(JSON.parse($("#esPaste").value), false); }
   catch(e){ esStatus("Couldn't parse that JSON: "+e.message); }
@@ -4733,6 +4769,7 @@ function bind(){
   $("#esApply").addEventListener("click",espnApply);
   $("#esConnect").addEventListener("click",espnFetchNow);
   $("#esAuto").addEventListener("click",espnAutoToggle);
+  $("#esRepoLoad").addEventListener("click",espnLoadRepoFile);
   $("#esBridgeCopy").addEventListener("click",async()=>{
     const js=bridgeScript("espn");
     if(!js){ toast(espnLeagueId()? "Open the hosted site to build the bridge."
@@ -4812,7 +4849,7 @@ window.APP={get S(){return S},get M(){return M},get R(){return R},
   refreshData,renderAsOf,defaultPoolMeta,todayISO,
   buildStateBlob,restoreFromBackup,mirrorState,idbGet,idbPut,idbKeys,quarantine,
   espnRead,espnApply,espnIngest,bridgeHref,bridgeScript,espnLeagueId,espnUrl,
-  tryEspnJson,espnClipToggle,espnClipCheck,
+  tryEspnJson,espnClipToggle,espnClipCheck,espnLoadRepoFile,
   yahooParse,yahooApply,normName,matchPlayer,buildNameIndex,
   get LEAGUES(){return LEAGUES},switchLeague,addLeague,activeLeague,saveState,loadState,
   simulateRoster,simIfWon,outlookRoster,addKeeper,removeKeeper,findPoolPlayer,

@@ -1,0 +1,60 @@
+name: Pull ESPN league
+
+# Fetches the owner's (possibly private) ESPN league JSON server-side, using
+# their own espn_s2 + SWID session cookies stored as repository secrets — the
+# credentials never leave GitHub's encrypted secrets except to ESPN itself.
+# The committed data/espn_league.json is what the app's "Load pulled league
+# file" button reads (same-origin on the deployed site).
+#
+# Runs on demand, and nightly after the data build; with no secrets set the
+# script exits "skipped" and nothing is committed, so forks stay green.
+on:
+  workflow_dispatch:
+    inputs:
+      league_id:
+        description: "ESPN League ID (defaults to the ESPN_LEAGUE_ID repo variable)"
+        required: false
+      season:
+        description: "Season year"
+        required: false
+        default: "2026"
+  schedule:
+    - cron: "50 9 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: espn-league-pull
+  cancel-in-progress: true
+
+jobs:
+  pull:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Pull the league JSON
+        env:
+          ESPN_S2: ${{ secrets.ESPN_S2 }}
+          SWID: ${{ secrets.SWID }}
+          ESPN_LEAGUE_ID: ${{ inputs.league_id || vars.ESPN_LEAGUE_ID }}
+          ESPN_SEASON: ${{ inputs.season || '2026' }}
+        run: python3 scripts/pull_espn_league.py data/espn_league.json
+      - name: Commit if changed
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- data/espn_league.json && \
+             ! git status --porcelain data/espn_league.json | grep -q .; then
+            echo "No changes."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/espn_league.json
+          git commit -m "Pull ESPN league ($(date -u +%Y-%m-%dT%H:%MZ))"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
