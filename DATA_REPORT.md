@@ -1,8 +1,8 @@
 # Data build report
 
-- Built: 2026-08-24T10:05:08+00:00
+- Built: 2026-08-25T09:52:18+00:00
 - Season: 2026
-- Players in bundle: **614**
+- Players in bundle: **615**
 - News lines: 25
 
 ## Source status
@@ -14,66 +14,68 @@
 | ffc_adp | ok |
 | espn_kona | ok |
 | espn_byes | ok |
-| boone | ok (278 ranks, 0 values, 4d old) |
+| boone | ok (278 ranks, 0 values, 5d old) |
 | fantasypros | skipped (no key) |
 
 ## Counts
 
-- Sleeper players DB entries: 4386
-- Sleeper projection rows: 3301
-- Dropped (no stats, no ADP): 2357
-- ESPN matched / added: 641 / 0
-- FFC matched / added: 267 / 0
-- Backfilled from the Sleeper players DB: 35 (0 team corrections)
-- Players marked OUT: 9
-- Carrying a superflex (2QB) ADP: 341 (of which QB: 45)
+- Sleeper players DB entries: 4387
+- Sleeper projection rows: 3302
+- Dropped (no stats, no ADP): 2352
+- ESPN matched / added: 640 / 0
+- FFC matched / added: 269 / 1
+- Backfilled from the Sleeper players DB: 37 (0 team corrections)
+- Players marked OUT: 10
+- Carrying a superflex (2QB) ADP: 340 (of which QB: 45)
 - FantasyPros headlines parsed: 0
-- Pool before cutoff: 867 → kept 614
+- Pool before cutoff: 873 → kept 615
 
 ### Position breakdown
 
 - QB: 59
 - RB: 139
-- WR: 203
-- TE: 92
-- K: 89
+- WR: 201
+- TE: 94
+- K: 90
 - DST: 32
 
 ## Auction values
 
 - Replacement points: {'DST': 91.9, 'QB': 291.1, 'WR': 169.9, 'RB': 168.8, 'TE': 156.0, 'K': 116.2}
-- $/VORP scale: 0.4082 (calibration factor 0.9341)
+- $/VORP scale: 0.4064 (calibration factor 0.9337)
 - ESPN-priced players: 100
 - Sleeper-priced players: 0 (auction keys seen in the feed: none)
-- Mean abs error of the VORP model vs ESPN prices: 5.89
+- Mean abs error of the VORP model vs ESPN prices: 5.77
 
-## Marked OUT (excluded from recommendations) (9)
+## Marked OUT (excluded from recommendations) (10)
 
 - Brandon Aiyuk (SF WR): sleeper injury_status=DNR, espn injuryStatus=OUT
+- Corey Rucker (LV WR): sleeper injury_status=IR
 - Jack Stoll (CLE TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Jake Bobo (SEA WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Jaren Kanak (TEN TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Jayden Higgins (HOU WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- Jerome Ford (WAS RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - John Michael Gyllenborg (KC TE): sleeper injury_status=IR
 - Julian Hill (NE TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Ricky Pearsall (SF WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
+- Xavier Weaver (ARI WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 
-## Teamless season-enders dropped (retired-player DB residue) (2)
+## Teamless season-enders dropped (retired-player DB residue) (3)
 
 - Adam Vinatieri (K)
+- Dion Lewis (RB)
 - Stephen Hauschka (K)
 
 ## D/ST opening-month schedule (softest slate first) (32)
 
-- Chiefs D/ST: avg opponent offense rank 24.5 (vs DEN, IND, MIA, LV) — season proj 91
-- Falcons D/ST: avg opponent offense rank 22.2 (vs PIT, CAR, GB, NO) — season proj 78
-- Raiders D/ST: avg opponent offense rank 21.2 (vs MIA, LAC, NO, KC) — season proj 62
-- Lions D/ST: avg opponent offense rank 20.8 (vs NO, BUF, NYJ, CAR) — season proj 104
-- Ravens D/ST: avg opponent offense rank 20.0 (vs IND, NO, DAL, TEN) — season proj 106
+- Chiefs D/ST: avg opponent offense rank 24.2 (vs DEN, IND, MIA, LV) — season proj 91
+- Falcons D/ST: avg opponent offense rank 22.5 (vs PIT, CAR, GB, NO) — season proj 78
+- Raiders D/ST: avg opponent offense rank 21.5 (vs MIA, LAC, NO, KC) — season proj 62
+- Lions D/ST: avg opponent offense rank 21.0 (vs NO, BUF, NYJ, CAR) — season proj 104
+- Ravens D/ST: avg opponent offense rank 20.2 (vs IND, NO, DAL, TEN) — season proj 106
 - 49ers D/ST: avg opponent offense rank 19.8 (vs LAR, MIA, ARI, DEN) — season proj 81
-- Chargers D/ST: avg opponent offense rank 19.8 (vs ARI, LV, BUF, SEA) — season proj 81
 - Cowboys D/ST: avg opponent offense rank 19.8 (vs NYG, WAS, BAL, HOU) — season proj 76
+- Chargers D/ST: avg opponent offense rank 19.5 (vs ARI, LV, BUF, SEA) — season proj 81
 - Bengals D/ST: avg opponent offense rank 19.5 (vs TB, HOU, PIT, JAX) — season proj 72
 - Browns D/ST: avg opponent offense rank 19.2 (vs JAX, TB, CAR, PIT) — season proj 72
 - Vikings D/ST: avg opponent offense rank 18.2 (vs GB, CHI, TB, MIA) — season proj 104
@@ -91,20 +93,21 @@
 - Buccaneers D/ST: avg opponent offense rank 14.2 (vs CIN, CLE, MIN, GB) — season proj 91
 - Jets D/ST: avg opponent offense rank 14.2 (vs TEN, GB, DET, CHI) — season proj 78
 - Steelers D/ST: avg opponent offense rank 13.8 (vs ATL, NE, CIN, CLE) — season proj 106
-- Saints D/ST: avg opponent offense rank 13.8 (vs DET, BAL, LV, ATL) — season proj 71
-- Dolphins D/ST: avg opponent offense rank 13.2 (vs LV, SF, KC, MIN) — season proj 69
+- Saints D/ST: avg opponent offense rank 13.5 (vs DET, BAL, LV, ATL) — season proj 71
 - Rams D/ST: avg opponent offense rank 13.2 (vs SF, NYG, DEN, PHI) — season proj 99
 - Commanders D/ST: avg opponent offense rank 13.0 (vs PHI, DAL, SEA, IND) — season proj 71
+- Dolphins D/ST: avg opponent offense rank 13.0 (vs LV, SF, KC, MIN) — season proj 69
 - Bills D/ST: avg opponent offense rank 11.8 (vs HOU, DET, LAC, NE) — season proj 90
 - Broncos D/ST: avg opponent offense rank 9.0 (vs KC, JAX, LAR, SF) — season proj 110
 - Texans D/ST: avg opponent offense rank 7.5 (vs BUF, CIN, IND, DAL) — season proj 114
 
 
-- Boone matched: 268 ranks, 0 salary-cap values
-## Boone rows with no pool match (10)
+- Boone matched: 267 ranks, 0 salary-cap values
+## Boone rows with no pool match (11)
 
 - Days of Fantasy (rank 29)
 - E. All Jr. (rank 265)
+- J. Johnson (rank 159)
 - J. Williams (rank 43)
 - J. Williams (rank 50)
 - K. Allen (rank 162)
@@ -127,7 +130,7 @@
 
 _none_
 
-## Projection splits (188)
+## Projection splits (187)
 
 - Steelers D/ST (DST): sleeper=88.0 espn=132.7
 - Jets D/ST (DST): sleeper=64.0 espn=99.8
@@ -136,7 +139,7 @@ _none_
 - Kendre Miller (RB): sleeper=5.6 espn=80.6
 - Zach Charbonnet (RB): sleeper=67.2 espn=137.0
 - Keaton Mitchell (RB): sleeper=96.9 espn=27.5
-- DeMario Douglas (WR): sleeper=68.8 espn=141.7
+- DeMario Douglas (WR): sleeper=80.4 espn=141.7
 - Marvin Mims (WR): sleeper=69.9 espn=149.1
 - Parker Washington (WR): sleeper=212.4 espn=44.4
 - Dontayvion Wicks (WR): sleeper=70.4 espn=20.5
@@ -169,9 +172,9 @@ _none_
 - Nick Westbrook-Ikhine (WR): sleeper=29.5 espn=109.5
 - Darnell Mooney (WR): sleeper=58.6 espn=160.8
 - Jauan Jennings (WR): sleeper=105.7 espn=192.7
-- …and 148 more
+- …and 147 more
 
-## ESPN rows not matched and not added (359)
+## ESPN rows not matched and not added (360)
 
 - Kene Nwangwu (NYJ RB) rank=431
 - Bam Knight (ARI RB) rank=435
@@ -201,7 +204,6 @@ _none_
 - Lewis Bond (HOU WR) rank=1269
 - Johnny Mundt (PHI TE) rank=1274
 - Riley Nowakowski (PIT RB) rank=1276
-- Brycen Tremayne (CAR WR) rank=1279
 - Drew Lock (SEA QB) rank=1280
 - Reggie Gilliam (NE RB) rank=1281
 - Patrick Ricard (NYG RB) rank=1291
@@ -213,11 +215,12 @@ _none_
 - Britain Covey (PHI WR) rank=1346
 - Ke'Shawn Williams (CIN WR) rank=1350
 - Michael Bandy (DEN WR) rank=1359
-- …and 319 more
+- Mason Kinsey (TEN WR) rank=1361
+- …and 320 more
 
-## FFC rows with no Sleeper match (0)
+## FFC rows with no Sleeper match (1)
 
-_none_
+- Bub Means (NO WR) adp=167.8
 
 ---
 
