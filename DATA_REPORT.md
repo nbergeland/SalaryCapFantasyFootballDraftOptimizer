@@ -1,8 +1,8 @@
 # Data build report
 
-- Built: 2026-08-27T19:51:36+00:00
+- Built: 2026-08-28T20:55:32+00:00
 - Season: 2026
-- Players in bundle: **615**
+- Players in bundle: **611**
 - News lines: 25
 
 ## Source status
@@ -14,29 +14,29 @@
 | ffc_adp | ok |
 | espn_kona | ok |
 | espn_byes | ok |
-| boone | ok (278 ranks, 0 values, 7d old) |
+| boone | ok (278 ranks, 0 values, 8d old) |
 | fantasypros | skipped (no key) |
 
 ## Counts
 
 - Sleeper players DB entries: 4388
 - Sleeper projection rows: 3303
-- Dropped (no stats, no ADP): 2356
-- ESPN matched / added: 636 / 0
-- FFC matched / added: 266 / 1
-- Backfilled from the Sleeper players DB: 37 (0 team corrections)
-- Players marked OUT: 11
-- Carrying a superflex (2QB) ADP: 343 (of which QB: 46)
+- Dropped (no stats, no ADP): 2355
+- ESPN matched / added: 631 / 0
+- FFC matched / added: 264 / 1
+- Backfilled from the Sleeper players DB: 38 (0 team corrections)
+- Players marked OUT: 12
+- Carrying a superflex (2QB) ADP: 340 (of which QB: 45)
 - FantasyPros headlines parsed: 0
-- Pool before cutoff: 871 → kept 615
+- Pool before cutoff: 871 → kept 611
 
 ### Position breakdown
 
-- QB: 61
-- RB: 131
-- WR: 206
-- TE: 94
-- K: 91
+- QB: 60
+- RB: 138
+- WR: 203
+- TE: 89
+- K: 89
 - DST: 32
 
 ## Auction values
@@ -47,7 +47,7 @@
 - Sleeper-priced players: 0 (auction keys seen in the feed: none)
 - Mean abs error of the VORP model vs ESPN prices: 5.67
 
-## Marked OUT (excluded from recommendations) (11)
+## Marked OUT (excluded from recommendations) (12)
 
 - Brandon Aiyuk (SF WR): sleeper injury_status=DNR, espn injuryStatus=OUT
 - Jack Stoll (CLE TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
@@ -57,6 +57,7 @@
 - Jeshaun Jones (MIN WR): sleeper injury_status=Sus, espn injuryStatus=SUSPENSION
 - John Michael Gyllenborg (KC TE): sleeper injury_status=IR
 - Julian Hill (NE TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
+- Nikola Kalinic (CHI TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Ricky Pearsall (SF WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Trey Benson (ARI RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Xavier Weaver (ARI WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
@@ -102,11 +103,12 @@
 - Texans D/ST: avg opponent offense rank 7.8 (vs BUF, CIN, IND, DAL) — season proj 114
 
 
-- Boone matched: 268 ranks, 0 salary-cap values
-## Boone rows with no pool match (10)
+- Boone matched: 267 ranks, 0 salary-cap values
+## Boone rows with no pool match (11)
 
 - Days of Fantasy (rank 29)
 - E. All Jr. (rank 265)
+- J. Johnson (rank 159)
 - J. Williams (rank 43)
 - J. Williams (rank 50)
 - K. Allen (rank 162)
@@ -172,7 +174,7 @@ _none_
 - Rico Dowdle (RB): sleeper=161.1 espn=84.0
 - …and 143 more
 
-## ESPN rows not matched and not added (364)
+## ESPN rows not matched and not added (369)
 
 - Kene Nwangwu (NYJ RB) rank=431
 - Bam Knight (ARI RB) rank=435
@@ -200,6 +202,7 @@ _none_
 - Andrew Beck (NYJ RB) rank=1267
 - Jonathan Mingo (DAL WR) rank=1269
 - Riley Nowakowski (PIT RB) rank=1276
+- Brycen Tremayne (CAR WR) rank=1279
 - Drew Lock (SEA QB) rank=1280
 - Reggie Gilliam (NE RB) rank=1281
 - Patrick Ricard (NYG RB) rank=1290
@@ -213,12 +216,11 @@ _none_
 - Ke'Shawn Williams (CIN WR) rank=1348
 - Michael Bandy (DEN WR) rank=1356
 - Mason Kinsey (TEN WR) rank=1358
-- Laquon Treadwell (IND WR) rank=1362
-- …and 324 more
+- …and 329 more
 
 ## FFC rows with no Sleeper match (1)
 
-- Bub Means (NO WR) adp=167.8
+- Lewis Bond (HOU WR) adp=142.6
 
 ---
 
