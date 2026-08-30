@@ -1,8 +1,8 @@
 # Data build report
 
-- Built: 2026-08-29T14:29:54+00:00
+- Built: 2026-08-30T14:25:35+00:00
 - Season: 2026
-- Players in bundle: **612**
+- Players in bundle: **616**
 - News lines: 25
 
 ## Source status
@@ -14,29 +14,29 @@
 | ffc_adp | ok |
 | espn_kona | ok |
 | espn_byes | ok |
-| boone | ok (278 ranks, 0 values, 9d old) |
+| boone | ok (278 ranks, 0 values, 10d old) |
 | fantasypros | skipped (no key) |
 
 ## Counts
 
 - Sleeper players DB entries: 4388
 - Sleeper projection rows: 3303
-- Dropped (no stats, no ADP): 2350
-- ESPN matched / added: 636 / 0
+- Dropped (no stats, no ADP): 2339
+- ESPN matched / added: 637 / 0
 - FFC matched / added: 270 / 1
-- Backfilled from the Sleeper players DB: 38 (0 team corrections)
+- Backfilled from the Sleeper players DB: 38 (1 team corrections)
 - Players marked OUT: 10
-- Carrying a superflex (2QB) ADP: 342 (of which QB: 47)
+- Carrying a superflex (2QB) ADP: 344 (of which QB: 46)
 - FantasyPros headlines parsed: 0
-- Pool before cutoff: 875 → kept 612
+- Pool before cutoff: 886 → kept 616
 
 ### Position breakdown
 
-- QB: 59
-- RB: 144
-- WR: 199
-- TE: 88
-- K: 90
+- QB: 62
+- RB: 150
+- WR: 195
+- TE: 90
+- K: 87
 - DST: 32
 
 ## Auction values
@@ -65,7 +65,7 @@
 - Adam Vinatieri (K)
 - Jake Rudock (QB)
 - Stephen Hauschka (K)
-- Tyreek Hill (WR)
+- Theo Riddick (RB)
 
 ## D/ST opening-month schedule (softest slate first) (32)
 
@@ -103,12 +103,13 @@
 - Texans D/ST: avg opponent offense rank 7.8 (vs BUF, CIN, IND, DAL) — season proj 114
 
 
-- Boone matched: 267 ranks, 0 salary-cap values
-## Boone rows with no pool match (11)
+- Boone matched: 266 ranks, 0 salary-cap values
+## Boone rows with no pool match (12)
 
 - Days of Fantasy (rank 29)
 - E. All Jr. (rank 265)
 - J. Johnson (rank 159)
+- J. Jordan (rank 283)
 - J. Williams (rank 43)
 - J. Williams (rank 50)
 - K. Allen (rank 162)
@@ -118,11 +119,12 @@
 - N. Whittington (rank 297)
 - R. White (rank 114)
 
-## Injury disagreements (Sleeper vs ESPN) (5)
+## Injury disagreements (Sleeper vs ESPN) (6)
 
 - Isaac Guerendo (RB): sleeper=PUP/Active espn=OUT
 - Luke Musgrave (TE): sleeper=PUP/Active espn=OUT
 - Tip Reiman (TE): sleeper=PUP/Active espn=OUT
+- Tyreek Hill (WR): sleeper=Questionable/Active espn=OUT
 - Tyrell Shavers (WR): sleeper=PUP/Active espn=OUT
 - Zach Charbonnet (RB): sleeper=PUP/Active espn=OUT
 
@@ -174,7 +176,7 @@ _none_
 - Rico Dowdle (RB): sleeper=161.1 espn=84.0
 - …and 143 more
 
-## ESPN rows not matched and not added (364)
+## ESPN rows not matched and not added (363)
 
 - Kene Nwangwu (NYJ RB) rank=431
 - Bam Knight (ARI RB) rank=435
@@ -216,11 +218,11 @@ _none_
 - Ke'Shawn Williams (CIN WR) rank=1348
 - Michael Bandy (DEN WR) rank=1356
 - Mason Kinsey (TEN WR) rank=1358
-- …and 324 more
+- …and 323 more
 
 ## FFC rows with no Sleeper match (1)
 
-- Bub Means (NO WR) adp=167.0
+- Bub Means ( WR) adp=177.6
 
 ---
 
