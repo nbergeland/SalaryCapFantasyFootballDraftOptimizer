@@ -1,8 +1,8 @@
 # Data build report
 
-- Built: 2026-09-01T14:09:48+00:00
+- Built: 2026-09-02T13:41:47+00:00
 - Season: 2026
-- Players in bundle: **628**
+- Players in bundle: **626**
 - News lines: 25
 
 ## Source status
@@ -14,35 +14,35 @@
 | ffc_adp | ok |
 | espn_kona | ok |
 | espn_byes | ok |
-| boone | ok (278 ranks, 0 values, 12d old) |
+| boone | ok (278 ranks, 0 values, 13d old) |
 | fantasypros | skipped (no key) |
 
 ## Counts
 
-- Sleeper players DB entries: 4388
-- Sleeper projection rows: 3303
-- Dropped (no stats, no ADP): 2332
-- ESPN matched / added: 633 / 0
-- FFC matched / added: 268 / 0
+- Sleeper players DB entries: 4389
+- Sleeper projection rows: 3304
+- Dropped (no stats, no ADP): 2328
+- ESPN matched / added: 637 / 0
+- FFC matched / added: 264 / 0
 - Backfilled from the Sleeper players DB: 38 (0 team corrections)
 - Players marked OUT: 25
 - Carrying a superflex (2QB) ADP: 343 (of which QB: 45)
 - FantasyPros headlines parsed: 0
-- Pool before cutoff: 894 → kept 628
+- Pool before cutoff: 897 → kept 626
 
 ### Position breakdown
 
-- QB: 52
-- RB: 153
-- WR: 207
-- TE: 98
-- K: 86
+- QB: 53
+- RB: 146
+- WR: 210
+- TE: 102
+- K: 83
 - DST: 32
 
 ## Auction values
 
-- Replacement points: {'DST': 91.9, 'QB': 291.5, 'WR': 169.9, 'RB': 168.7, 'TE': 156.0, 'K': 116.6}
-- $/VORP scale: 0.4123 (calibration factor 0.9381)
+- Replacement points: {'DST': 91.9, 'QB': 291.5, 'WR': 169.9, 'RB': 168.7, 'TE': 156.0, 'K': 116.2}
+- $/VORP scale: 0.4123 (calibration factor 0.936)
 - ESPN-priced players: 96
 - Sleeper-priced players: 0 (auction keys seen in the feed: none)
 - Mean abs error of the VORP model vs ESPN prices: 5.9
@@ -59,6 +59,7 @@
 - Dillon Gabriel (CLE QB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Dont'e Thornton (LV WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Grant Calcaterra (PHI TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
+- Isiah Pacheco (DET RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Jake Bobo (SEA WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - James Conner (ARI RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Jaren Kanak (TEN TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
@@ -73,11 +74,11 @@
 - Tank Dell (HOU WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Trevor Etienne (CAR RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Trey Benson (ARI RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- Xavier Weaver (ARI WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 
-## Teamless season-enders dropped (retired-player DB residue) (2)
+## Teamless season-enders dropped (retired-player DB residue) (3)
 
 - Adam Vinatieri (K)
+- Josh Hill (TE)
 - Stephen Hauschka (K)
 
 ## D/ST opening-month schedule (softest slate first) (32)
@@ -119,9 +120,9 @@
 - Boone matched: 262 ranks, 0 salary-cap values
 ## Boone rows with no pool match (16)
 
-- A. Williams (rank 187)
 - Days of Fantasy (rank 29)
 - E. All Jr. (rank 265)
+- J. Hill (rank 205)
 - J. Johnson (rank 159)
 - J. Williams (rank 43)
 - J. Williams (rank 50)
@@ -145,11 +146,11 @@
 - Tyrell Shavers (WR): sleeper=PUP/Active espn=OUT
 - Zach Charbonnet (RB): sleeper=PUP/Active espn=OUT
 
-## Team disagreements (1)
+## Team disagreements (0)
 
-- Cameron Latu (TE): sleeper=PHI espn=NE ffc=—
+_none_
 
-## Projection splits (182)
+## Projection splits (183)
 
 - Steelers D/ST (DST): sleeper=88.0 espn=132.7
 - Jets D/ST (DST): sleeper=64.0 espn=99.8
@@ -191,9 +192,9 @@
 - Darnell Mooney (WR): sleeper=73.4 espn=160.8
 - Jauan Jennings (WR): sleeper=105.7 espn=192.7
 - Rico Dowdle (RB): sleeper=161.1 espn=84.0
-- …and 142 more
+- …and 143 more
 
-## ESPN rows not matched and not added (367)
+## ESPN rows not matched and not added (363)
 
 - Kene Nwangwu (NYJ RB) rank=403
 - Bam Knight (ARI RB) rank=404
@@ -235,7 +236,7 @@
 - Cooper Rush (ATL QB) rank=1336
 - Case Keenum (CHI QB) rank=1345
 - Gunner Olszewski (NYG WR) rank=1347
-- …and 327 more
+- …and 323 more
 
 ## FFC rows with no Sleeper match (0)
 
