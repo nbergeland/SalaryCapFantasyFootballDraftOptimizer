@@ -1,8 +1,8 @@
 # Data build report
 
-- Built: 2026-09-02T13:41:47+00:00
+- Built: 2026-09-03T13:36:05+00:00
 - Season: 2026
-- Players in bundle: **626**
+- Players in bundle: **629**
 - News lines: 25
 
 ## Source status
@@ -14,38 +14,38 @@
 | ffc_adp | ok |
 | espn_kona | ok |
 | espn_byes | ok |
-| boone | ok (278 ranks, 0 values, 13d old) |
+| boone | ok (278 ranks, 0 values, 14d old) |
 | fantasypros | skipped (no key) |
 
 ## Counts
 
 - Sleeper players DB entries: 4389
 - Sleeper projection rows: 3304
-- Dropped (no stats, no ADP): 2328
+- Dropped (no stats, no ADP): 2325
 - ESPN matched / added: 637 / 0
 - FFC matched / added: 264 / 0
 - Backfilled from the Sleeper players DB: 38 (0 team corrections)
 - Players marked OUT: 25
 - Carrying a superflex (2QB) ADP: 343 (of which QB: 45)
 - FantasyPros headlines parsed: 0
-- Pool before cutoff: 897 → kept 626
+- Pool before cutoff: 901 → kept 629
 
 ### Position breakdown
 
 - QB: 53
-- RB: 146
-- WR: 210
-- TE: 102
-- K: 83
+- RB: 143
+- WR: 224
+- TE: 92
+- K: 85
 - DST: 32
 
 ## Auction values
 
 - Replacement points: {'DST': 91.9, 'QB': 291.5, 'WR': 169.9, 'RB': 168.7, 'TE': 156.0, 'K': 116.2}
-- $/VORP scale: 0.4123 (calibration factor 0.936)
+- $/VORP scale: 0.4171 (calibration factor 0.947)
 - ESPN-priced players: 96
 - Sleeper-priced players: 0 (auction keys seen in the feed: none)
-- Mean abs error of the VORP model vs ESPN prices: 5.9
+- Mean abs error of the VORP model vs ESPN prices: 5.61
 
 ## Marked OUT (excluded from recommendations) (25)
 
@@ -75,10 +75,9 @@
 - Trevor Etienne (CAR RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Trey Benson (ARI RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 
-## Teamless season-enders dropped (retired-player DB residue) (3)
+## Teamless season-enders dropped (retired-player DB residue) (2)
 
 - Adam Vinatieri (K)
-- Josh Hill (TE)
 - Stephen Hauschka (K)
 
 ## D/ST opening-month schedule (softest slate first) (32)
@@ -117,12 +116,11 @@
 - Texans D/ST: avg opponent offense rank 7.5 (vs BUF, CIN, IND, DAL) — season proj 114
 
 
-- Boone matched: 262 ranks, 0 salary-cap values
-## Boone rows with no pool match (16)
+- Boone matched: 263 ranks, 0 salary-cap values
+## Boone rows with no pool match (15)
 
 - Days of Fantasy (rank 29)
 - E. All Jr. (rank 265)
-- J. Hill (rank 205)
 - J. Johnson (rank 159)
 - J. Williams (rank 43)
 - J. Williams (rank 50)
@@ -196,46 +194,46 @@ _none_
 
 ## ESPN rows not matched and not added (363)
 
-- Kene Nwangwu (NYJ RB) rank=403
-- Bam Knight (ARI RB) rank=404
-- Eli Heidenreich (PIT RB) rank=436
+- Kene Nwangwu (NYJ RB) rank=405
+- Bam Knight (ARI RB) rank=431
+- Eli Heidenreich (PIT RB) rank=438
 - Erick All Jr. (CIN TE) rank=443
-- Riley Nowakowski (PIT RB) rank=456
-- Kyle Juszczyk (SF RB) rank=457
-- Hunter Luepke (DAL RB) rank=458
+- Riley Nowakowski (PIT RB) rank=458
 - Jalon Daniels (TB QB) rank=479
 - Sam Howell (DAL QB) rank=485
+- Kyle Juszczyk (SF RB) rank=1002
 - Hollywood Brown (PHI WR) rank=1047
-- Laquon Treadwell (IND WR) rank=1157
-- Alec Ingold (LAC RB) rank=1162
-- Ben Sims (MIA TE) rank=1173
-- Tay Martin (DET WR) rank=1185
-- Adam Prentice ( RB) rank=1207
-- Connor Heyward (LV RB) rank=1209
-- Dohnte Meyers (CIN WR) rank=1210
-- Michael Burton (CLE RB) rank=1211
-- Max Bredeson (MIN RB) rank=1218
-- Jackson Meeks (DET TE) rank=1226
-- Kenny Pickett (CAR QB) rank=1236
-- Matthew Hibner (BAL TE) rank=1250
-- Andrew Beck (NYJ RB) rank=1256
-- Jonathan Mingo (DAL WR) rank=1257
-- Hunter Long (ARI TE) rank=1259
-- Johnny Mundt (PHI TE) rank=1263
-- Carsen Ryan (CLE TE) rank=1264
-- Kyle McCord (MIA QB) rank=1268
-- Brycen Tremayne (CAR WR) rank=1270
-- Drew Lock (SEA QB) rank=1271
-- Reggie Gilliam (NE RB) rank=1272
-- Patrick Ricard (NYG RB) rank=1276
-- Braxton Berrios ( WR) rank=1321
-- British Brooks (HOU RB) rank=1323
-- Ke'Shawn Williams (CIN WR) rank=1325
-- Myles Price (MIN WR) rank=1326
-- Ray-Ray McCloud III (CHI WR) rank=1335
-- Cooper Rush (ATL QB) rank=1336
-- Case Keenum (CHI QB) rank=1345
-- Gunner Olszewski (NYG WR) rank=1347
+- Hunter Luepke (DAL RB) rank=1095
+- Laquon Treadwell (IND WR) rank=1155
+- Alec Ingold (LAC RB) rank=1164
+- Tay Martin (DET WR) rank=1184
+- Adam Prentice ( RB) rank=1204
+- Connor Heyward (LV RB) rank=1207
+- Dohnte Meyers (CIN WR) rank=1208
+- Michael Burton (CLE RB) rank=1209
+- Kenny Pickett (CAR QB) rank=1234
+- Matthew Hibner (BAL TE) rank=1247
+- Andrew Beck (NYJ RB) rank=1253
+- Jonathan Mingo (DAL WR) rank=1254
+- Hunter Long (ARI TE) rank=1256
+- Johnny Mundt (PHI TE) rank=1261
+- Carsen Ryan (CLE TE) rank=1262
+- Kyle McCord (MIA QB) rank=1266
+- Brycen Tremayne (CAR WR) rank=1268
+- Drew Lock (SEA QB) rank=1269
+- Reggie Gilliam (NE RB) rank=1270
+- Patrick Ricard (NYG RB) rank=1274
+- Braxton Berrios ( WR) rank=1317
+- British Brooks (HOU RB) rank=1318
+- Ke'Shawn Williams (CIN WR) rank=1321
+- Myles Price (MIN WR) rank=1322
+- Ray-Ray McCloud III (CHI WR) rank=1330
+- Cooper Rush (ATL QB) rank=1331
+- Case Keenum (CHI QB) rank=1339
+- Gunner Olszewski (NYG WR) rank=1341
+- AJ Dillon (CAR RB) rank=1343
+- Trey Sermon (ATL RB) rank=1345
+- Elijah Moore (PHI WR) rank=1346
 - …and 323 more
 
 ## FFC rows with no Sleeper match (0)
