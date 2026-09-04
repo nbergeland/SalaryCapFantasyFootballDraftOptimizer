@@ -1,8 +1,8 @@
 # Data build report
 
-- Built: 2026-09-03T13:36:05+00:00
+- Built: 2026-09-04T13:32:58+00:00
 - Season: 2026
-- Players in bundle: **629**
+- Players in bundle: **628**
 - News lines: 25
 
 ## Source status
@@ -14,7 +14,7 @@
 | ffc_adp | ok |
 | espn_kona | ok |
 | espn_byes | ok |
-| boone | ok (278 ranks, 0 values, 14d old) |
+| boone | ok (278 ranks, 0 values, 15d old) |
 | fantasypros | skipped (no key) |
 
 ## Counts
@@ -22,21 +22,21 @@
 - Sleeper players DB entries: 4389
 - Sleeper projection rows: 3304
 - Dropped (no stats, no ADP): 2325
-- ESPN matched / added: 637 / 0
-- FFC matched / added: 264 / 0
-- Backfilled from the Sleeper players DB: 38 (0 team corrections)
-- Players marked OUT: 25
-- Carrying a superflex (2QB) ADP: 343 (of which QB: 45)
+- ESPN matched / added: 635 / 0
+- FFC matched / added: 267 / 0
+- Backfilled from the Sleeper players DB: 39 (0 team corrections)
+- Players marked OUT: 24
+- Carrying a superflex (2QB) ADP: 341 (of which QB: 45)
 - FantasyPros headlines parsed: 0
-- Pool before cutoff: 901 → kept 629
+- Pool before cutoff: 901 → kept 628
 
 ### Position breakdown
 
 - QB: 53
-- RB: 143
-- WR: 224
+- RB: 145
+- WR: 222
 - TE: 92
-- K: 85
+- K: 84
 - DST: 32
 
 ## Auction values
@@ -47,7 +47,7 @@
 - Sleeper-priced players: 0 (auction keys seen in the feed: none)
 - Mean abs error of the VORP model vs ESPN prices: 5.61
 
-## Marked OUT (excluded from recommendations) (25)
+## Marked OUT (excluded from recommendations) (24)
 
 - Adam Randall (BAL RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Brandon Aiyuk (SF WR): sleeper injury_status=DNR, espn injuryStatus=OUT
@@ -55,7 +55,6 @@
 - Christian Kirk (SF WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Coleman Owen (IND WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - David Sills (TB WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- Devin Neal (NO RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Dillon Gabriel (CLE QB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Dont'e Thornton (LV WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Grant Calcaterra (PHI TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
@@ -116,8 +115,8 @@
 - Texans D/ST: avg opponent offense rank 7.5 (vs BUF, CIN, IND, DAL) — season proj 114
 
 
-- Boone matched: 263 ranks, 0 salary-cap values
-## Boone rows with no pool match (15)
+- Boone matched: 264 ranks, 0 salary-cap values
+## Boone rows with no pool match (14)
 
 - Days of Fantasy (rank 29)
 - E. All Jr. (rank 265)
@@ -130,7 +129,6 @@
 - M. Washington (rank 157)
 - M. Washington Jr. (rank 153)
 - N. Whittington (rank 297)
-- R. Davis (rank 167)
 - R. White (rank 114)
 - T. Benson (rank 278)
 - T. Etienne (rank 279)
@@ -192,7 +190,7 @@ _none_
 - Rico Dowdle (RB): sleeper=161.1 espn=84.0
 - …and 143 more
 
-## ESPN rows not matched and not added (363)
+## ESPN rows not matched and not added (365)
 
 - Kene Nwangwu (NYJ RB) rank=405
 - Bam Knight (ARI RB) rank=431
@@ -234,7 +232,7 @@ _none_
 - AJ Dillon (CAR RB) rank=1343
 - Trey Sermon (ATL RB) rank=1345
 - Elijah Moore (PHI WR) rank=1346
-- …and 323 more
+- …and 325 more
 
 ## FFC rows with no Sleeper match (0)
 
