@@ -1,8 +1,8 @@
 # Data build report
 
-- Built: 2026-09-05T12:44:29+00:00
+- Built: 2026-09-06T12:54:06+00:00
 - Season: 2026
-- Players in bundle: **629**
+- Players in bundle: **634**
 - News lines: 25
 
 ## Source status
@@ -14,28 +14,28 @@
 | ffc_adp | ok |
 | espn_kona | ok |
 | espn_byes | ok |
-| boone | ok (278 ranks, 0 values, 16d old) |
+| boone | ok (278 ranks, 0 values, 17d old) |
 | fantasypros | skipped (no key) |
 
 ## Counts
 
 - Sleeper players DB entries: 4389
 - Sleeper projection rows: 3304
-- Dropped (no stats, no ADP): 2325
-- ESPN matched / added: 636 / 1
+- Dropped (no stats, no ADP): 2317
+- ESPN matched / added: 637 / 1
 - FFC matched / added: 263 / 0
-- Backfilled from the Sleeper players DB: 39 (0 team corrections)
+- Backfilled from the Sleeper players DB: 40 (0 team corrections)
 - Players marked OUT: 23
 - Carrying a superflex (2QB) ADP: 342 (of which QB: 45)
 - FantasyPros headlines parsed: 0
-- Pool before cutoff: 901 → kept 629
+- Pool before cutoff: 907 → kept 634
 
 ### Position breakdown
 
-- QB: 52
-- RB: 148
-- WR: 226
-- TE: 86
+- QB: 53
+- RB: 144
+- WR: 235
+- TE: 85
 - K: 85
 - DST: 32
 
@@ -73,9 +73,10 @@
 - Trevor Etienne (CAR RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Trey Benson (ARI RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 
-## Teamless season-enders dropped (retired-player DB residue) (2)
+## Teamless season-enders dropped (retired-player DB residue) (3)
 
 - Adam Vinatieri (K)
+- Isaiah Weston (WR)
 - Stephen Hauschka (K)
 
 ## D/ST opening-month schedule (softest slate first) (32)
@@ -190,7 +191,7 @@ _none_
 - Rico Dowdle (RB): sleeper=161.1 espn=84.0
 - …and 142 more
 
-## ESPN rows not matched and not added (363)
+## ESPN rows not matched and not added (362)
 
 - Kene Nwangwu (NYJ RB) rank=405
 - Bam Knight (ARI RB) rank=431
@@ -232,7 +233,7 @@ _none_
 - Trey Sermon (ATL RB) rank=1345
 - Elijah Moore (PHI WR) rank=1346
 - Zach Wilson (NO QB) rank=1347
-- …and 323 more
+- …and 322 more
 
 ## FFC rows with no Sleeper match (0)
 
