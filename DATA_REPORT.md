@@ -1,8 +1,8 @@
 # Data build report
 
-- Built: 2026-09-06T12:54:06+00:00
+- Built: 2026-09-07T15:03:56+00:00
 - Season: 2026
-- Players in bundle: **634**
+- Players in bundle: **641**
 - News lines: 25
 
 ## Source status
@@ -14,29 +14,29 @@
 | ffc_adp | ok |
 | espn_kona | ok |
 | espn_byes | ok |
-| boone | ok (278 ranks, 0 values, 17d old) |
+| boone | ok (278 ranks, 0 values, 18d old) |
 | fantasypros | skipped (no key) |
 
 ## Counts
 
 - Sleeper players DB entries: 4389
 - Sleeper projection rows: 3304
-- Dropped (no stats, no ADP): 2317
-- ESPN matched / added: 637 / 1
+- Dropped (no stats, no ADP): 2299
+- ESPN matched / added: 638 / 1
 - FFC matched / added: 263 / 0
-- Backfilled from the Sleeper players DB: 40 (0 team corrections)
+- Backfilled from the Sleeper players DB: 39 (0 team corrections)
 - Players marked OUT: 23
-- Carrying a superflex (2QB) ADP: 342 (of which QB: 45)
+- Carrying a superflex (2QB) ADP: 343 (of which QB: 45)
 - FantasyPros headlines parsed: 0
-- Pool before cutoff: 907 → kept 634
+- Pool before cutoff: 927 → kept 641
 
 ### Position breakdown
 
-- QB: 53
+- QB: 54
 - RB: 144
-- WR: 235
-- TE: 85
-- K: 85
+- WR: 238
+- TE: 94
+- K: 79
 - DST: 32
 
 ## Auction values
@@ -73,10 +73,9 @@
 - Trevor Etienne (CAR RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Trey Benson (ARI RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 
-## Teamless season-enders dropped (retired-player DB residue) (3)
+## Teamless season-enders dropped (retired-player DB residue) (2)
 
 - Adam Vinatieri (K)
-- Isaiah Weston (WR)
 - Stephen Hauschka (K)
 
 ## D/ST opening-month schedule (softest slate first) (32)
@@ -134,10 +133,11 @@
 - R. White (rank 114)
 - T. Etienne (rank 279)
 
-## Injury disagreements (Sleeper vs ESPN) (6)
+## Injury disagreements (Sleeper vs ESPN) (7)
 
 - Isaac Guerendo (RB): sleeper=PUP/Active espn=OUT
 - Joe Royer (TE): sleeper=PUP/Active espn=OUT
+- Michael Penix (QB): sleeper=Questionable/Active espn=OUT
 - Tip Reiman (TE): sleeper=PUP/Active espn=OUT
 - Tyreek Hill (WR): sleeper=Questionable/Active espn=OUT
 - Tyrell Shavers (WR): sleeper=PUP/Active espn=OUT
@@ -191,7 +191,7 @@ _none_
 - Rico Dowdle (RB): sleeper=161.1 espn=84.0
 - …and 142 more
 
-## ESPN rows not matched and not added (362)
+## ESPN rows not matched and not added (361)
 
 - Kene Nwangwu (NYJ RB) rank=405
 - Bam Knight (ARI RB) rank=431
@@ -233,7 +233,7 @@ _none_
 - Trey Sermon (ATL RB) rank=1345
 - Elijah Moore (PHI WR) rank=1346
 - Zach Wilson (NO QB) rank=1347
-- …and 322 more
+- …and 321 more
 
 ## FFC rows with no Sleeper match (0)
 
