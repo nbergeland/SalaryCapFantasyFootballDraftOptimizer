@@ -1,8 +1,8 @@
 # Data build report
 
-- Built: 2026-09-14T15:54:09+00:00
+- Built: 2026-09-15T14:20:36+00:00
 - Season: 2026
-- Players in bundle: **658**
+- Players in bundle: **657**
 - News lines: 25
 
 ## Source status
@@ -14,7 +14,7 @@
 | ffc_adp | ok |
 | espn_kona | ok |
 | espn_byes | ok |
-| boone | ok (278 ranks, 0 values, 25d old) |
+| boone | ok (278 ranks, 0 values, 26d old) |
 | fantasypros | skipped (no key) |
 
 ## Counts
@@ -22,20 +22,20 @@
 - Sleeper players DB entries: 4389
 - Sleeper projection rows: 3304
 - Dropped (no stats, no ADP): 2241
-- ESPN matched / added: 640 / 1
+- ESPN matched / added: 639 / 1
 - FFC matched / added: 194 / 0
 - Backfilled from the Sleeper players DB: 39 (0 team corrections)
 - Players marked OUT: 84
-- Carrying a superflex (2QB) ADP: 340 (of which QB: 46)
+- Carrying a superflex (2QB) ADP: 338 (of which QB: 46)
 - FantasyPros headlines parsed: 0
-- Pool before cutoff: 983 → kept 658
+- Pool before cutoff: 983 → kept 657
 
 ### Position breakdown
 
 - QB: 66
-- RB: 156
-- WR: 225
-- TE: 111
+- RB: 155
+- WR: 227
+- TE: 109
 - K: 68
 - DST: 32
 
@@ -51,13 +51,13 @@
 
 - A.J. Brown (NE WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Adam Randall (BAL RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- Alvin Kamara (NO RB): sleeper injury_status=Out
+- Alvin Kamara (NO RB): sleeper injury_status=Out, espn injuryStatus=OUT
 - Audric Estime (NO RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Ben Yurosek (MIN TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Blake Grupe (NYJ K): sleeper injury_status=Out
 - Brandon Aiyuk (SF WR): sleeper injury_status=DNR, espn injuryStatus=OUT
 - Brevin Jordan (HOU TE): sleeper injury_status=Out
-- Brock Bowers (LV TE): sleeper injury_status=Out
+- Brock Bowers (LV TE): sleeper injury_status=Out, espn injuryStatus=OUT
 - CJ Daniels (LAR WR): sleeper injury_status=Out
 - Carson Beck (ARI QB): sleeper injury_status=Out
 - Christian Kirk (SF WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
@@ -67,11 +67,11 @@
 - David Sills (TB WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - De'Zhaun Stribling (SF WR): sleeper injury_status=Out
 - Demond Claiborne (MIN RB): sleeper injury_status=Out
-- Devontez Walker (BAL WR): sleeper injury_status=Out
+- Devontez Walker (BAL WR): sleeper injury_status=Out, espn injuryStatus=OUT
 - Dillon Gabriel (CLE QB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Dont'e Thornton (LV WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Drew Allar (PIT QB): sleeper injury_status=Out
-- Dylan Sampson (CLE RB): sleeper injury_status=Out
+- Dylan Sampson (CLE RB): sleeper injury_status=Out, espn injuryStatus=OUT
 - Efton Chism (NE WR): sleeper injury_status=Out
 - Eli Stowers (PHI TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Elijah Sarratt (BAL WR): sleeper injury_status=Out
@@ -83,7 +83,7 @@
 - Ja'Tavion Sanders (CAR TE): sleeper injury_status=Out
 - Jack Endries (CIN TE): sleeper injury_status=Out
 - Jake Bobo (SEA WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- Jalen McMillan (TB WR): sleeper injury_status=Out
+- Jalen McMillan (TB WR): sleeper injury_status=Out, espn injuryStatus=OUT
 - Jalen Milroe (SEA QB): sleeper injury_status=Out
 - Jalen Tolbert (MIA WR): sleeper injury_status=Out
 - James Conner (ARI RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
@@ -157,21 +157,17 @@
 - T. Etienne (rank 279)
 - T. Ferguson (rank 171)
 
-## Injury disagreements (Sleeper vs ESPN) (59)
+## Injury disagreements (Sleeper vs ESPN) (46)
 
-- Alvin Kamara (RB): sleeper=Out/Active espn=QUESTIONABLE
 - Blake Grupe (K): sleeper=Out/Active espn=ACTIVE
 - Brevin Jordan (TE): sleeper=Out/Active espn=ACTIVE
-- Brock Bowers (TE): sleeper=Out/Active espn=QUESTIONABLE
 - CJ Daniels (WR): sleeper=Out/Active espn=ACTIVE
 - Carson Beck (QB): sleeper=Out/Active espn=ACTIVE
 - DJ Giddens (RB): sleeper=Out/Active espn=ACTIVE
 - Dalevon Campbell (WR): sleeper=Questionable/Inactive espn=INJURY_RESERVE
 - De'Zhaun Stribling (WR): sleeper=Out/Active espn=DOUBTFUL
 - Demond Claiborne (RB): sleeper=Out/Active espn=ACTIVE
-- Devontez Walker (WR): sleeper=Out/Active espn=QUESTIONABLE
 - Drew Allar (QB): sleeper=Out/Active espn=ACTIVE
-- Dylan Sampson (RB): sleeper=Out/Active espn=QUESTIONABLE
 - Efton Chism (WR): sleeper=Out/Active espn=ACTIVE
 - Elijah Sarratt (WR): sleeper=Out/Active espn=ACTIVE
 - Isaac Guerendo (RB): sleeper=PUP/Active espn=OUT
@@ -180,7 +176,6 @@
 - Ja'Kobi Lane (WR): sleeper=Out/Active espn=DOUBTFUL
 - Ja'Tavion Sanders (TE): sleeper=Out/Active espn=ACTIVE
 - Jack Endries (TE): sleeper=Out/Active espn=ACTIVE
-- Jalen McMillan (WR): sleeper=Out/Active espn=QUESTIONABLE
 - Jalen Milroe (QB): sleeper=Out/Active espn=ACTIVE
 - Jalen Tolbert (WR): sleeper=Out/Active espn=ACTIVE
 - Joe Royer (TE): sleeper=PUP/Active espn=OUT
@@ -191,15 +186,20 @@
 - Kyler Murray (QB): sleeper=Out/Active espn=QUESTIONABLE
 - Luke McCaffrey (WR): sleeper=Out/Active espn=ACTIVE
 - Max Klare (TE): sleeper=Out/Active espn=ACTIVE
-- Michael Penix (QB): sleeper=Out/Active espn=QUESTIONABLE
 - Najee Harris (RB): sleeper=Out/Active espn=ACTIVE
 - Nicholas Singleton (RB): sleeper=Out/Active espn=ACTIVE
 - Omar Cooper (WR): sleeper=Out/Active espn=QUESTIONABLE
-- Oscar Delp (TE): sleeper=Out/Active espn=QUESTIONABLE
 - Quinn Ewers (QB): sleeper=Out/Active espn=ACTIVE
 - Reggie Virgil (WR): sleeper=Out/Active espn=ACTIVE
 - Riley Leonard (QB): sleeper=Out/Active espn=ACTIVE
-- …and 19 more
+- Sam Darnold (QB): sleeper=Out/Active espn=DOUBTFUL
+- Skyler Bell (WR): sleeper=Out/Active espn=ACTIVE
+- Tanner Koziol (TE): sleeper=Out/Active espn=ACTIVE
+- Tanner McKee (QB): sleeper=Out/Active espn=ACTIVE
+- Taylen Green (QB): sleeper=Out/Active espn=ACTIVE
+- Tip Reiman (TE): sleeper=PUP/Active espn=OUT
+- Treylon Burks (WR): sleeper=Out/Active espn=ACTIVE
+- …and 6 more
 
 ## Team disagreements (0)
 
@@ -249,7 +249,7 @@ _none_
 - Rico Dowdle (RB): sleeper=161.1 espn=84.0
 - …and 138 more
 
-## ESPN rows not matched and not added (359)
+## ESPN rows not matched and not added (360)
 
 - Malik Davis (DAL RB) rank=329
 - Kene Nwangwu (NYJ RB) rank=408
@@ -265,7 +265,7 @@ _none_
 - Laquon Treadwell (IND WR) rank=1153
 - Alec Ingold (LAC RB) rank=1162
 - Tay Martin (DET WR) rank=1182
-- Adam Prentice ( RB) rank=1203
+- Adam Prentice (DEN RB) rank=1203
 - Dohnte Meyers (CIN WR) rank=1207
 - Michael Burton (CLE RB) rank=1208
 - Kenny Pickett (CAR QB) rank=1233
@@ -291,7 +291,7 @@ _none_
 - Elijah Moore (PHI WR) rank=1346
 - Zach Wilson (NO QB) rank=1347
 - Simi Fehoko (ARI WR) rank=1352
-- …and 319 more
+- …and 320 more
 
 ## FFC rows with no Sleeper match (0)
 
