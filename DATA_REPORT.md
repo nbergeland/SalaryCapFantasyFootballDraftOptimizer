@@ -1,8 +1,8 @@
 # Data build report
 
-- Built: 2026-09-24T14:13:21+00:00
+- Built: 2026-09-25T14:36:56+00:00
 - Season: 2026
-- Players in bundle: **653**
+- Players in bundle: **652**
 - News lines: 25
 
 ## Source status
@@ -14,29 +14,29 @@
 | ffc_adp | ok |
 | espn_kona | ok |
 | espn_byes | ok |
-| boone | ok (278 ranks, 0 values, 35d old - STALE, re-run the boone-refresh workflow) |
+| boone | ok (278 ranks, 0 values, 36d old - STALE, re-run the boone-refresh workflow) |
 | fantasypros | skipped (no key) |
 
 ## Counts
 
 - Sleeper players DB entries: 4390
 - Sleeper projection rows: 3305
-- Dropped (no stats, no ADP): 2243
-- ESPN matched / added: 640 / 1
-- FFC matched / added: 40 / 0
+- Dropped (no stats, no ADP): 2240
+- ESPN matched / added: 641 / 1
+- FFC matched / added: 29 / 0
 - Backfilled from the Sleeper players DB: 39 (0 team corrections)
-- Players marked OUT: 45
+- Players marked OUT: 44
 - Carrying a superflex (2QB) ADP: 338 (of which QB: 46)
 - FantasyPros headlines parsed: 0
-- Pool before cutoff: 979 → kept 653
+- Pool before cutoff: 982 → kept 652
 
 ### Position breakdown
 
 - QB: 67
-- RB: 153
+- RB: 155
 - WR: 231
-- TE: 101
-- K: 69
+- TE: 100
+- K: 67
 - DST: 32
 
 ## Auction values
@@ -47,7 +47,7 @@
 - Sleeper-priced players: 0 (auction keys seen in the feed: none)
 - Mean abs error of the VORP model vs ESPN prices: 6.23
 
-## Marked OUT (excluded from recommendations) (45)
+## Marked OUT (excluded from recommendations) (44)
 
 - A.J. Brown (NE WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Adam Randall (BAL RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
@@ -73,7 +73,7 @@
 - Jake Tonges (SF TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - James Conner (ARI RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Jaren Kanak (TEN TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- Jaxson Dart (NYG QB): sleeper injury_status=Out, espn injuryStatus=OUT
+- Jaxson Dart (NYG QB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Jayden Daniels (WAS QB): sleeper injury_status=Out, espn injuryStatus=OUT
 - Jayden Higgins (HOU WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Jayden Reed (GB WR): sleeper injury_status=Out, espn injuryStatus=OUT
@@ -85,11 +85,11 @@
 - Julian Hill (NE TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - KeAndre Lambert-Smith (LAC WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Myles Montgomery (NE RB): sleeper injury_status=IR
-- Nikola Kalinic (CHI TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Omar Cooper (NYJ WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Ricky Pearsall (SF WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Ronnie Rivers (LAR RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- …and 5 more
+- Savion Williams (GB WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
+- …and 4 more
 
 ## Teamless season-enders dropped (retired-player DB residue) (7)
 
@@ -172,7 +172,7 @@
 
 _none_
 
-## Projection splits (183)
+## Projection splits (182)
 
 - Steelers D/ST (DST): sleeper=88.0 espn=132.7
 - Jets D/ST (DST): sleeper=64.0 espn=99.8
@@ -214,9 +214,9 @@ _none_
 - Darnell Mooney (WR): sleeper=73.4 espn=160.8
 - Jauan Jennings (WR): sleeper=105.7 espn=192.7
 - Rico Dowdle (RB): sleeper=161.1 espn=84.0
-- …and 143 more
+- …and 142 more
 
-## ESPN rows not matched and not added (359)
+## ESPN rows not matched and not added (358)
 
 - Malik Davis (DAL RB) rank=329
 - Kene Nwangwu (NYJ RB) rank=408
@@ -233,7 +233,6 @@ _none_
 - Alec Ingold (LAC RB) rank=1162
 - Tay Martin (DET WR) rank=1182
 - Adam Prentice (DEN RB) rank=1203
-- Dohnte Meyers (CIN WR) rank=1207
 - Michael Burton (CLE RB) rank=1208
 - Kenny Pickett (CAR QB) rank=1233
 - Matthew Hibner (BAL TE) rank=1245
@@ -243,7 +242,6 @@ _none_
 - Johnny Mundt (PHI TE) rank=1259
 - Carsen Ryan (CLE TE) rank=1261
 - Kyle McCord (MIA QB) rank=1266
-- Brycen Tremayne (CAR WR) rank=1267
 - Drew Lock (SEA QB) rank=1268
 - Patrick Ricard (NYG RB) rank=1273
 - Corey Kiner (NE RB) rank=1294
@@ -258,7 +256,9 @@ _none_
 - Zach Wilson (NO QB) rank=1347
 - Simi Fehoko (ARI WR) rank=1352
 - Sam Ehlinger (DEN QB) rank=1353
-- …and 319 more
+- D.J. Montgomery (IND WR) rank=1355
+- Calvin Austin III (NYG WR) rank=1359
+- …and 318 more
 
 ## FFC rows with no Sleeper match (0)
 
