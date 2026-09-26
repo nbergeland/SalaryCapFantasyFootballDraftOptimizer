@@ -1,6 +1,6 @@
 # Data build report
 
-- Built: 2026-09-25T14:36:56+00:00
+- Built: 2026-09-26T13:45:17+00:00
 - Season: 2026
 - Players in bundle: **652**
 - News lines: 25
@@ -14,29 +14,29 @@
 | ffc_adp | ok |
 | espn_kona | ok |
 | espn_byes | ok |
-| boone | ok (278 ranks, 0 values, 36d old - STALE, re-run the boone-refresh workflow) |
+| boone | ok (278 ranks, 0 values, 37d old - STALE, re-run the boone-refresh workflow) |
 | fantasypros | skipped (no key) |
 
 ## Counts
 
 - Sleeper players DB entries: 4390
 - Sleeper projection rows: 3305
-- Dropped (no stats, no ADP): 2240
+- Dropped (no stats, no ADP): 2241
 - ESPN matched / added: 641 / 1
 - FFC matched / added: 29 / 0
 - Backfilled from the Sleeper players DB: 39 (0 team corrections)
-- Players marked OUT: 44
+- Players marked OUT: 53
 - Carrying a superflex (2QB) ADP: 338 (of which QB: 46)
 - FantasyPros headlines parsed: 0
-- Pool before cutoff: 982 → kept 652
+- Pool before cutoff: 981 → kept 652
 
 ### Position breakdown
 
 - QB: 67
-- RB: 155
+- RB: 154
 - WR: 231
 - TE: 100
-- K: 67
+- K: 68
 - DST: 32
 
 ## Auction values
@@ -47,16 +47,21 @@
 - Sleeper-priced players: 0 (auction keys seen in the feed: none)
 - Mean abs error of the VORP model vs ESPN prices: 6.23
 
-## Marked OUT (excluded from recommendations) (44)
+## Marked OUT (excluded from recommendations) (53)
 
 - A.J. Brown (NE WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Adam Randall (BAL RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Alec Pierce (IND WR): sleeper injury_status=Out, espn injuryStatus=OUT
 - Andrei Iosivas (CIN WR): sleeper injury_status=Out, espn injuryStatus=OUT
 - Arian Smith (NYJ WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
+- Ashton Dulin (IND WR): sleeper injury_status=Out, espn injuryStatus=OUT
+- Barion Brown (NO WR): sleeper injury_status=Out, espn injuryStatus=OUT
 - Ben Yurosek (MIN TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Brandon Aiyuk (SF WR): sleeper injury_status=DNR, espn injuryStatus=OUT
+- Brenen Thompson (LAC WR): sleeper injury_status=Out, espn injuryStatus=OUT
+- Caleb Douglas (MIA WR): sleeper injury_status=Out, espn injuryStatus=OUT
 - Charlie Kolar (LAC TE): sleeper injury_status=Out, espn injuryStatus=OUT
+- Chig Okonkwo (WAS TE): sleeper injury_status=Out, espn injuryStatus=OUT
 - Christian Kirk (SF WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Dalevon Campbell (LAC WR): espn injuryStatus=INJURY_RESERVE
 - David Njoku (LAC TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
@@ -79,17 +84,12 @@
 - Jayden Reed (GB WR): sleeper injury_status=Out, espn injuryStatus=OUT
 - Jeremy McNichols (WAS RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - John Michael Gyllenborg (KC TE): sleeper injury_status=IR
+- Jonah Coleman (DEN RB): sleeper injury_status=Out, espn injuryStatus=OUT
 - Jonathon Brooks (CAR RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Jordan Mason (MIN RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Jordyn Tyson (NO WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Julian Hill (NE TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- KeAndre Lambert-Smith (LAC WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- Myles Montgomery (NE RB): sleeper injury_status=IR
-- Omar Cooper (NYJ WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- Ricky Pearsall (SF WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- Ronnie Rivers (LAR RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- Savion Williams (GB WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- …and 4 more
+- …and 13 more
 
 ## Teamless season-enders dropped (retired-player DB residue) (7)
 
@@ -103,36 +103,36 @@
 
 ## D/ST opening-month schedule (softest slate first) (32)
 
-- Seahawks D/ST: avg opponent offense rank 23.5 (vs NE, ARI, WAS, LAC) — season proj 110
-- Falcons D/ST: avg opponent offense rank 23.2 (vs PIT, CAR, GB, NO) — season proj 78
-- Cowboys D/ST: avg opponent offense rank 22.5 (vs NYG, WAS, BAL, HOU) — season proj 76
-- Chiefs D/ST: avg opponent offense rank 22.2 (vs DEN, IND, MIA, LV) — season proj 91
-- Raiders D/ST: avg opponent offense rank 20.8 (vs MIA, LAC, NO, KC) — season proj 62
-- 49ers D/ST: avg opponent offense rank 20.0 (vs LAR, MIA, ARI, DEN) — season proj 81
-- Lions D/ST: avg opponent offense rank 20.0 (vs NO, BUF, NYJ, CAR) — season proj 104
+- Cowboys D/ST: avg opponent offense rank 25.2 (vs NYG, WAS, BAL, HOU) — season proj 76
+- Seahawks D/ST: avg opponent offense rank 23.2 (vs NE, ARI, WAS, LAC) — season proj 110
+- Falcons D/ST: avg opponent offense rank 22.5 (vs PIT, CAR, GB, NO) — season proj 78
+- Chiefs D/ST: avg opponent offense rank 21.5 (vs DEN, IND, MIA, LV) — season proj 91
+- Raiders D/ST: avg opponent offense rank 20.0 (vs MIA, LAC, NO, KC) — season proj 62
+- Colts D/ST: avg opponent offense rank 20.0 (vs BAL, KC, HOU, WAS) — season proj 95
 - Titans D/ST: avg opponent offense rank 19.5 (vs NYJ, PHI, NYG, BAL) — season proj 71
-- Vikings D/ST: avg opponent offense rank 18.8 (vs GB, CHI, TB, MIA) — season proj 104
-- Ravens D/ST: avg opponent offense rank 18.5 (vs IND, NO, DAL, TEN) — season proj 106
+- 49ers D/ST: avg opponent offense rank 19.2 (vs LAR, MIA, ARI, DEN) — season proj 81
+- Lions D/ST: avg opponent offense rank 19.2 (vs NO, BUF, NYJ, CAR) — season proj 104
 - Eagles D/ST: avg opponent offense rank 18.2 (vs WAS, TEN, CHI, LAR) — season proj 98
-- Chargers D/ST: avg opponent offense rank 18.2 (vs ARI, LV, BUF, SEA) — season proj 81
-- Jaguars D/ST: avg opponent offense rank 17.2 (vs CLE, DEN, NE, CIN) — season proj 90
-- Bears D/ST: avg opponent offense rank 17.2 (vs CAR, MIN, PHI, NYJ) — season proj 87
-- Steelers D/ST: avg opponent offense rank 17.0 (vs ATL, NE, CIN, CLE) — season proj 106
-- Colts D/ST: avg opponent offense rank 17.0 (vs BAL, KC, HOU, WAS) — season proj 95
-- Cardinals D/ST: avg opponent offense rank 16.8 (vs LAC, SEA, SF, NYG) — season proj 79
+- Vikings D/ST: avg opponent offense rank 18.2 (vs GB, CHI, TB, MIA) — season proj 104
+- Bengals D/ST: avg opponent offense rank 17.8 (vs TB, HOU, PIT, JAX) — season proj 72
+- Ravens D/ST: avg opponent offense rank 17.5 (vs IND, NO, DAL, TEN) — season proj 106
+- Chargers D/ST: avg opponent offense rank 17.2 (vs ARI, LV, BUF, SEA) — season proj 81
+- Bears D/ST: avg opponent offense rank 17.0 (vs CAR, MIN, PHI, NYJ) — season proj 87
+- Jaguars D/ST: avg opponent offense rank 16.8 (vs CLE, DEN, NE, CIN) — season proj 90
+- Steelers D/ST: avg opponent offense rank 16.5 (vs ATL, NE, CIN, CLE) — season proj 106
+- Bills D/ST: avg opponent offense rank 16.5 (vs HOU, DET, LAC, NE) — season proj 90
+- Cardinals D/ST: avg opponent offense rank 16.5 (vs LAC, SEA, SF, NYG) — season proj 79
 - Browns D/ST: avg opponent offense rank 15.8 (vs JAX, TB, CAR, PIT) — season proj 72
-- Buccaneers D/ST: avg opponent offense rank 15.5 (vs CIN, CLE, MIN, GB) — season proj 91
-- Giants D/ST: avg opponent offense rank 15.5 (vs DAL, LAR, TEN, ARI) — season proj 93
-- Rams D/ST: avg opponent offense rank 14.8 (vs SF, NYG, DEN, PHI) — season proj 99
-- Packers D/ST: avg opponent offense rank 14.8 (vs MIN, NYJ, ATL, TB) — season proj 92
-- Bengals D/ST: avg opponent offense rank 14.8 (vs TB, HOU, PIT, JAX) — season proj 72
-- Panthers D/ST: avg opponent offense rank 14.8 (vs CHI, ATL, CLE, DET) — season proj 69
-- Jets D/ST: avg opponent offense rank 14.5 (vs TEN, GB, DET, CHI) — season proj 78
-- Bills D/ST: avg opponent offense rank 14.2 (vs HOU, DET, LAC, NE) — season proj 90
-- Saints D/ST: avg opponent offense rank 13.0 (vs DET, BAL, LV, ATL) — season proj 71
+- Buccaneers D/ST: avg opponent offense rank 15.0 (vs CIN, CLE, MIN, GB) — season proj 91
+- Packers D/ST: avg opponent offense rank 15.0 (vs MIN, NYJ, ATL, TB) — season proj 92
+- Giants D/ST: avg opponent offense rank 14.5 (vs DAL, LAR, TEN, ARI) — season proj 93
+- Rams D/ST: avg opponent offense rank 14.5 (vs SF, NYG, DEN, PHI) — season proj 99
+- Panthers D/ST: avg opponent offense rank 14.5 (vs CHI, ATL, CLE, DET) — season proj 69
+- Jets D/ST: avg opponent offense rank 13.8 (vs TEN, GB, DET, CHI) — season proj 78
+- Patriots D/ST: avg opponent offense rank 13.2 (vs SEA, PIT, JAX, BUF) — season proj 96
 - Commanders D/ST: avg opponent offense rank 12.8 (vs PHI, DAL, SEA, IND) — season proj 71
-- Patriots D/ST: avg opponent offense rank 12.8 (vs SEA, PIT, JAX, BUF) — season proj 96
-- Dolphins D/ST: avg opponent offense rank 11.2 (vs LV, SF, KC, MIN) — season proj 69
+- Saints D/ST: avg opponent offense rank 12.5 (vs DET, BAL, LV, ATL) — season proj 71
+- Dolphins D/ST: avg opponent offense rank 10.8 (vs LV, SF, KC, MIN) — season proj 69
 - Texans D/ST: avg opponent offense rank 6.8 (vs BUF, CIN, IND, DAL) — season proj 114
 - Broncos D/ST: avg opponent offense rank 6.2 (vs KC, JAX, LAR, SF) — season proj 110
 
