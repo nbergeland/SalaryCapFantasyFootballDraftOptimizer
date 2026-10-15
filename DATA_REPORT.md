@@ -1,8 +1,8 @@
 # Data build report
 
-- Built: 2026-10-14T14:31:31+00:00
+- Built: 2026-10-15T14:10:50+00:00
 - Season: 2026
-- Players in bundle: **666**
+- Players in bundle: **665**
 - News lines: 25
 
 ## Source status
@@ -14,21 +14,21 @@
 | ffc_adp | ok |
 | espn_kona | ok |
 | espn_byes | ok |
-| boone | ok (278 ranks, 0 values, 55d old - STALE, re-run the boone-refresh workflow) |
+| boone | ok (278 ranks, 0 values, 56d old - STALE, re-run the boone-refresh workflow) |
 | fantasypros | skipped (no key) |
 
 ## Counts
 
 - Sleeper players DB entries: 4391
 - Sleeper projection rows: 3306
-- Dropped (no stats, no ADP): 2230
+- Dropped (no stats, no ADP): 2231
 - ESPN matched / added: 650 / 1
 - FFC matched / added: 29 / 0
 - Backfilled from the Sleeper players DB: 40 (0 team corrections)
 - Players marked OUT: 76
 - Carrying a superflex (2QB) ADP: 338 (of which QB: 46)
 - FantasyPros headlines parsed: 0
-- Pool before cutoff: 995 → kept 666
+- Pool before cutoff: 995 → kept 665
 
 ### Position breakdown
 
@@ -36,7 +36,7 @@
 - RB: 162
 - WR: 234
 - TE: 106
-- K: 69
+- K: 68
 - DST: 32
 
 ## Auction values
@@ -91,13 +91,12 @@
 - Jaylin Lane (WAS WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - …and 36 more
 
-## Teamless season-enders dropped (retired-player DB residue) (5)
+## Teamless season-enders dropped (retired-player DB residue) (4)
 
 - Adam Vinatieri (K)
 - Alex Tanney (QB)
 - Nick Keizer (TE)
 - Stephen Hauschka (K)
-- Tyreek Hill (WR)
 
 ## D/ST opening-month schedule (softest slate first) (32)
 
