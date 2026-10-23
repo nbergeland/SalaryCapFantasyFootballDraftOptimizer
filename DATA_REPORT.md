@@ -1,6 +1,6 @@
 # Data build report
 
-- Built: 2026-10-22T14:31:47+00:00
+- Built: 2026-10-23T14:15:02+00:00
 - Season: 2026
 - Players in bundle: **666**
 - News lines: 25
@@ -14,7 +14,7 @@
 | ffc_adp | ok |
 | espn_kona | ok |
 | espn_byes | ok |
-| boone | ok (278 ranks, 0 values, 63d old - STALE, re-run the boone-refresh workflow) |
+| boone | ok (278 ranks, 0 values, 64d old - STALE, re-run the boone-refresh workflow) |
 | fantasypros | skipped (no key) |
 
 ## Counts
@@ -25,7 +25,7 @@
 - ESPN matched / added: 650 / 1
 - FFC matched / added: 29 / 0
 - Backfilled from the Sleeper players DB: 40 (0 team corrections)
-- Players marked OUT: 75
+- Players marked OUT: 77
 - Carrying a superflex (2QB) ADP: 338 (of which QB: 46)
 - FantasyPros headlines parsed: 0
 - Pool before cutoff: 995 → kept 666
@@ -42,27 +42,29 @@
 ## Auction values
 
 - Replacement points: {'DST': 91.9, 'QB': 291.5, 'WR': 169.9, 'RB': 168.7, 'TE': 156.0, 'K': 116.6}
-- $/VORP scale: 0.4234 (calibration factor 0.9477)
+- $/VORP scale: 0.4239 (calibration factor 0.9478)
 - ESPN-priced players: 96
 - Sleeper-priced players: 0 (auction keys seen in the feed: none)
-- Mean abs error of the VORP model vs ESPN prices: 6.36
+- Mean abs error of the VORP model vs ESPN prices: 6.43
 
-## Marked OUT (excluded from recommendations) (75)
+## Marked OUT (excluded from recommendations) (77)
 
 - Adam Randall (BAL RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Alec Pierce (IND WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Andrei Iosivas (CIN WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Arian Smith (NYJ WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
+- Ben Skowronek (PIT WR): sleeper injury_status=Out, espn injuryStatus=OUT
 - Blake Grupe (LAR K): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Brandon Aiyuk (SF WR): sleeper injury_status=DNR, espn injuryStatus=OUT
 - British Brooks (HOU RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
+- Case Keenum (CHI QB): sleeper injury_status=Out, espn injuryStatus=OUT
 - Chris Brooks (GB RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Christian Kirk (SF WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
+- Cole Kmet (CHI TE): sleeper injury_status=Out
 - DJ Moore (BUF WR): sleeper injury_status=Out
 - Dalevon Campbell (LAC WR): espn injuryStatus=INJURY_RESERVE
 - Davante Adams (LAR WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - David Njoku (LAC TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- David Sills V (TB WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - De'Von Achane (MIA RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - De'Zhaun Stribling (SF WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Deebo Samuel Sr. (SF WR): sleeper injury_status=Out, espn injuryStatus=OUT
@@ -72,7 +74,7 @@
 - Durham Smythe (BAL TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Dylan Sampson (CLE RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Eli Stowers (PHI TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- Elijah Arroyo (SEA TE): sleeper injury_status=Out, espn injuryStatus=OUT
+- Elijah Arroyo (SEA TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Grant Calcaterra (PHI TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Isiah Pacheco (DET RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Jacardia Wright (SEA RB): sleeper injury_status=Out
@@ -87,9 +89,7 @@
 - Jaren Kanak (TEN TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Jawhar Jordan (HOU RB): sleeper injury_status=Out, espn injuryStatus=OUT
 - Jaxson Dart (NYG QB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- Jayden Higgins (HOU WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- Jayden Reed (GB WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- …and 35 more
+- …and 37 more
 
 ## Teamless season-enders dropped (retired-player DB residue) (4)
 
@@ -100,7 +100,7 @@
 
 ## D/ST opening-month schedule (softest slate first) (32)
 
-- Seahawks D/ST: avg opponent offense rank 24.2 (vs NE, ARI, WAS, LAC) — season proj 110
+- Seahawks D/ST: avg opponent offense rank 24.0 (vs NE, ARI, WAS, LAC) — season proj 110
 - 49ers D/ST: avg opponent offense rank 23.0 (vs LAR, MIA, ARI, DEN) — season proj 81
 - Falcons D/ST: avg opponent offense rank 22.8 (vs PIT, CAR, GB, NO) — season proj 78
 - Raiders D/ST: avg opponent offense rank 22.5 (vs MIA, LAC, NO, KC) — season proj 62
@@ -109,23 +109,23 @@
 - Chargers D/ST: avg opponent offense rank 20.8 (vs ARI, LV, BUF, SEA) — season proj 81
 - Lions D/ST: avg opponent offense rank 20.8 (vs NO, BUF, NYJ, CAR) — season proj 104
 - Cardinals D/ST: avg opponent offense rank 20.8 (vs LAC, SEA, SF, NYG) — season proj 79
-- Eagles D/ST: avg opponent offense rank 19.8 (vs WAS, TEN, CHI, LAR) — season proj 98
+- Eagles D/ST: avg opponent offense rank 20.0 (vs WAS, TEN, CHI, LAR) — season proj 98
 - Rams D/ST: avg opponent offense rank 19.8 (vs SF, NYG, DEN, PHI) — season proj 99
 - Bears D/ST: avg opponent offense rank 19.2 (vs CAR, MIN, PHI, NYJ) — season proj 87
 - Giants D/ST: avg opponent offense rank 17.8 (vs DAL, LAR, TEN, ARI) — season proj 93
-- Vikings D/ST: avg opponent offense rank 17.5 (vs GB, CHI, TB, MIA) — season proj 104
+- Vikings D/ST: avg opponent offense rank 17.8 (vs GB, CHI, TB, MIA) — season proj 104
 - Cowboys D/ST: avg opponent offense rank 17.2 (vs NYG, WAS, BAL, HOU) — season proj 76
 - Ravens D/ST: avg opponent offense rank 17.2 (vs IND, NO, DAL, TEN) — season proj 106
 - Commanders D/ST: avg opponent offense rank 16.8 (vs PHI, DAL, SEA, IND) — season proj 71
-- Jaguars D/ST: avg opponent offense rank 15.0 (vs CLE, DEN, NE, CIN) — season proj 90
 - Patriots D/ST: avg opponent offense rank 14.8 (vs SEA, PIT, JAX, BUF) — season proj 96
+- Jaguars D/ST: avg opponent offense rank 14.8 (vs CLE, DEN, NE, CIN) — season proj 90
 - Browns D/ST: avg opponent offense rank 14.8 (vs JAX, TB, CAR, PIT) — season proj 72
-- Steelers D/ST: avg opponent offense rank 14.5 (vs ATL, NE, CIN, CLE) — season proj 106
-- Panthers D/ST: avg opponent offense rank 14.0 (vs CHI, ATL, CLE, DET) — season proj 69
+- Steelers D/ST: avg opponent offense rank 14.2 (vs ATL, NE, CIN, CLE) — season proj 106
+- Panthers D/ST: avg opponent offense rank 14.2 (vs CHI, ATL, CLE, DET) — season proj 69
 - Buccaneers D/ST: avg opponent offense rank 13.8 (vs CIN, CLE, MIN, GB) — season proj 91
-- Jets D/ST: avg opponent offense rank 12.8 (vs TEN, GB, DET, CHI) — season proj 78
-- Bills D/ST: avg opponent offense rank 12.0 (vs HOU, DET, LAC, NE) — season proj 90
+- Jets D/ST: avg opponent offense rank 13.0 (vs TEN, GB, DET, CHI) — season proj 78
 - Colts D/ST: avg opponent offense rank 11.8 (vs BAL, KC, HOU, WAS) — season proj 95
+- Bills D/ST: avg opponent offense rank 11.8 (vs HOU, DET, LAC, NE) — season proj 90
 - Dolphins D/ST: avg opponent offense rank 11.5 (vs LV, SF, KC, MIN) — season proj 69
 - Packers D/ST: avg opponent offense rank 11.2 (vs MIN, NYJ, ATL, TB) — season proj 92
 - Bengals D/ST: avg opponent offense rank 11.0 (vs TB, HOU, PIT, JAX) — season proj 72
@@ -159,6 +159,7 @@
 
 ## Injury disagreements (Sleeper vs ESPN) (10)
 
+- Cole Kmet (TE): sleeper=Out/Active espn=QUESTIONABLE
 - DJ Moore (WR): sleeper=Out/Active espn=QUESTIONABLE
 - Dalevon Campbell (WR): sleeper=Questionable/Inactive espn=INJURY_RESERVE
 - Isaac Guerendo (RB): sleeper=PUP/Active espn=OUT
@@ -168,13 +169,12 @@
 - Tip Reiman (TE): sleeper=PUP/Active espn=OUT
 - Tre' Harris (WR): sleeper=Out/Active espn=QUESTIONABLE
 - Tyrell Shavers (WR): sleeper=PUP/Active espn=OUT
-- Zach Charbonnet (RB): sleeper=PUP/Inactive espn=OUT
 
 ## Team disagreements (0)
 
 _none_
 
-## Projection splits (189)
+## Projection splits (190)
 
 - Steelers D/ST (DST): sleeper=88.0 espn=132.7
 - Jets D/ST (DST): sleeper=64.0 espn=99.8
@@ -216,7 +216,7 @@ _none_
 - Darnell Mooney (WR): sleeper=73.4 espn=160.8
 - Jauan Jennings (WR): sleeper=105.7 espn=192.7
 - Rico Dowdle (RB): sleeper=161.1 espn=84.0
-- …and 149 more
+- …and 150 more
 
 ## ESPN rows not matched and not added (349)
 
