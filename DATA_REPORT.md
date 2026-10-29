@@ -1,6 +1,6 @@
 # Data build report
 
-- Built: 2026-10-28T16:05:12+00:00
+- Built: 2026-10-29T16:08:44+00:00
 - Season: 2026
 - Players in bundle: **666**
 - News lines: 25
@@ -14,27 +14,27 @@
 | ffc_adp | ok |
 | espn_kona | ok |
 | espn_byes | ok |
-| boone | ok (278 ranks, 0 values, 69d old - STALE, re-run the boone-refresh workflow) |
+| boone | ok (278 ranks, 0 values, 70d old - STALE, re-run the boone-refresh workflow) |
 | fantasypros | skipped (no key) |
 
 ## Counts
 
 - Sleeper players DB entries: 4391
 - Sleeper projection rows: 3306
-- Dropped (no stats, no ADP): 2229
+- Dropped (no stats, no ADP): 2228
 - ESPN matched / added: 650 / 1
 - FFC matched / added: 29 / 0
 - Backfilled from the Sleeper players DB: 40 (0 team corrections)
-- Players marked OUT: 71
-- Carrying a superflex (2QB) ADP: 338 (of which QB: 46)
+- Players marked OUT: 73
+- Carrying a superflex (2QB) ADP: 336 (of which QB: 45)
 - FantasyPros headlines parsed: 0
-- Pool before cutoff: 997 → kept 666
+- Pool before cutoff: 998 → kept 666
 
 ### Position breakdown
 
 - QB: 63
-- RB: 162
-- WR: 234
+- RB: 161
+- WR: 235
 - TE: 106
 - K: 69
 - DST: 32
@@ -47,7 +47,7 @@
 - Sleeper-priced players: 0 (auction keys seen in the feed: none)
 - Mean abs error of the VORP model vs ESPN prices: 6.44
 
-## Marked OUT (excluded from recommendations) (71)
+## Marked OUT (excluded from recommendations) (73)
 
 - Adam Randall (BAL RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Alec Pierce (IND WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
@@ -61,6 +61,7 @@
 - Chris Brooks (GB RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Cole Kmet (CHI TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Dalevon Campbell (LAC WR): espn injuryStatus=INJURY_RESERVE
+- Dameon Pierce (PHI RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Davante Adams (LAR WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - David Montgomery (HOU RB): sleeper injury_status=Out
 - David Njoku (LAC TE): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
@@ -87,9 +88,8 @@
 - Jayden Higgins (HOU WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Jayden Reed (GB WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
 - Jaylin Lane (WAS WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- John Michael Gyllenborg (KC TE): sleeper injury_status=IR
-- Jonathon Brooks (CAR RB): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
-- …and 31 more
+- Jaylin Noel (HOU WR): sleeper injury_status=IR, espn injuryStatus=INJURY_RESERVE
+- …and 33 more
 
 ## Teamless season-enders dropped (retired-player DB residue) (4)
 
@@ -174,7 +174,7 @@
 
 - Justin Tucker (K): sleeper=KC espn=BAL ffc=—
 
-## Projection splits (188)
+## Projection splits (189)
 
 - Steelers D/ST (DST): sleeper=88.0 espn=132.7
 - Jets D/ST (DST): sleeper=64.0 espn=99.8
@@ -216,7 +216,7 @@
 - Darnell Mooney (WR): sleeper=73.4 espn=160.8
 - Jauan Jennings (WR): sleeper=105.7 espn=192.7
 - Rico Dowdle (RB): sleeper=161.1 espn=84.0
-- …and 148 more
+- …and 149 more
 
 ## ESPN rows not matched and not added (349)
 
